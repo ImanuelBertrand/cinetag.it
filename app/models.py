@@ -1,8 +1,7 @@
+from datetime import datetime
 from typing import List
 
-import app.services.movie_service
 from app.extensions import db
-from datetime import datetime
 
 
 class User(db.Model):
@@ -15,6 +14,7 @@ class User(db.Model):
     email_confirmed = db.Column(db.Boolean, default=False)
     region = db.Column(db.String(2), nullable=True)
     language = db.Column(db.String(5), nullable=True)
+    is_temporary = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

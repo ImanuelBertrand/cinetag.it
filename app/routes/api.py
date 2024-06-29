@@ -1,59 +1,58 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token
+from werkzeug.exceptions import Unauthorized, BadRequest
 
 from app.extensions import db
 from app.models import User, UserMovie
-from app.utils.email import send_confirmation_email, send_password_reset_email
-from app.utils.tmdb import fetch_movie_details
-from app.utils.user_management import (
+from app.services.user_service import (
     register_user,
     authenticate_user,
     confirm_user_email,
     reset_user_password,
+)
+from app.utils.user_management import (
     get_movies_based_on_filter,
+    fetch_user_calendar_events,
 )
 
 api = Blueprint("api", __name__)
 
-# User Authentication
 
-
-@api.route("/api/auth/register", methods=["POST"])
+@api.route("/auth/register", methods=["POST"])
 def register():
     data = request.get_json()
     try:
-        user = register_user(data)
-        send_confirmation_email(user)
+        register_user(data)
         return jsonify({"message": "User registered successfully."}), 201
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-    except KeyError:
-        return jsonify({"error": "Username or email already exists."}), 409
+    except Exception as e:
+        return jsonify({"error": str(e)}), 409
 
 
-@api.route("/api/auth/login", methods=["POST"])
+@api.route("/auth/login", methods=["POST"])
 def login():
     data = request.get_json()
     try:
-        user = authenticate_user(data)
-        access_token = create_access_token(identity=user.id)
+        access_token = authenticate_user(data)
         return jsonify({"token": access_token}), 200
-    except ValueError as e:
+    except Unauthorized as e:
         return jsonify({"error": str(e)}), 401
 
 
-@api.route("/api/auth/confirm-email/<token>", methods=["GET"])
+@api.route("/auth/confirm-email/<token>", methods=["GET"])
 def confirm_email(token):
     try:
         confirm_user_email(token)
         return jsonify({"message": "Email confirmed successfully."}), 200
-    except ValueError as e:
+    except BadRequest as e:
         return jsonify({"error": str(e)}), 400
     except KeyError:
         return jsonify({"error": "User not found."}), 404
 
 
-@api.route("/api/auth/reset-password-request", methods=["POST"])
+@api.route("/auth/reset-password-request", methods=["POST"])
 def reset_password_request():
     data = request.get_json()
     email = data.get("email")
@@ -67,7 +66,7 @@ def reset_password_request():
         return jsonify({"error": str(e)}), 500
 
 
-@api.route("/api/auth/reset-password", methods=["POST"])
+@api.route("/auth/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json()
     token = data.get("token")
@@ -75,16 +74,13 @@ def reset_password():
     try:
         reset_user_password(token, new_password)
         return jsonify({"message": "Password reset successfully."}), 200
-    except ValueError as e:
+    except BadRequest as e:
         return jsonify({"error": str(e)}), 400
     except KeyError:
         return jsonify({"error": "User not found."}), 404
 
 
-# Movie Data Handling
-
-
-@api.route("/api/user/movies/review", methods=["POST"])
+@api.route("/user/movies/review", methods=["POST"])
 @jwt_required()
 def review_movie():
     user_id = get_jwt_identity()
@@ -106,7 +102,7 @@ def review_movie():
         return jsonify({"error": str(e)}), 409
 
 
-@api.route("/api/user/movies", methods=["GET"])
+@api.route("/user/movies", methods=["GET"])
 @jwt_required()
 def get_movies():
     user_id = get_jwt_identity()
@@ -119,7 +115,7 @@ def get_movies():
         return jsonify({"error": str(e)}), 500
 
 
-@api.route("/api/movies/<int:movie_id>", methods=["GET"])
+@api.route("/movies/<int:movie_id>", methods=["GET"])
 def get_movie_details(movie_id):
     try:
         movie = fetch_movie_details(movie_id)
@@ -130,7 +126,7 @@ def get_movie_details(movie_id):
         return jsonify({"error": str(e)}), 500
 
 
-@api.route("/api/user/movies/reviewed/<int:movie_id>", methods=["DELETE"])
+@api.route("/user/movies/reviewed/<int:movie_id>", methods=["DELETE"])
 @jwt_required()
 def remove_reviewed_movie(movie_id):
     user_id = get_jwt_identity()
@@ -149,10 +145,7 @@ def remove_reviewed_movie(movie_id):
         return jsonify({"error": str(e)}), 500
 
 
-# Schedule Management
-
-
-@api.route("/api/user/calendar", methods=["GET"])
+@api.route("/user/calendar", methods=["GET"])
 @jwt_required()
 def get_user_calendar():
     user_id = get_jwt_identity()
@@ -161,9 +154,6 @@ def get_user_calendar():
         return jsonify({"events": calendar_events}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-# General Error Responses
 
 
 @api.errorhandler(400)

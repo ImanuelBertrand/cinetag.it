@@ -1,0 +1,12 @@
+requests
+flask
+PyJWT
+werkzeug
+PyYAML
+Flask-SQLAlchemy
+Flask-Bcrypt
+Flask-JWT-Extended
+Flask-Mail
+Flask-Migrate
+Flask-Caching
+Flask-Babel
