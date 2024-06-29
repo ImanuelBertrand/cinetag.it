@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List, Callable, Any
 
 import requests
 from flask import current_app
@@ -7,34 +8,32 @@ from app.exceptions import TMDbAPIError
 from app.extensions import cache
 
 
-def get_base_url():
-    """
-    Retrieve the base URL for the TMDb API.
-
-    Returns:
-        str: The base URL for the TMDb API.
-    """
+def get_base_url() -> str:
     return "https://api.themoviedb.org/3"
+
+
+def get_tmdb_url(path: str) -> str:
+    return f"{get_base_url()}/{path.lstrip('/')}"
 
 
 def get_tmdb_api_key() -> str:
     """
     Retrieve the TMDb API key from the application configuration.
-
-    Returns:
-        str: The TMDb API key.
+    :return: The TMDb API key
     """
     return current_app.config.get("TMDB_API_KEY")
 
 
-def _cached_tmdb_call(cache_key, fetch_function, ttl, *args, **kwargs):
+def _cached_tmdb_call(
+    cache_key: str, fetch_function: Callable, ttl: int, *args, **kwargs
+) -> Any:
     """
     Helper function to cache the results of a TMDb API call.
     :param cache_key:
     :param fetch_function:
     :param args:
     :param kwargs:
-    :return:
+    :return: The cached data or the fetched data
     """
     data = cache.get(cache_key)
 
@@ -45,12 +44,11 @@ def _cached_tmdb_call(cache_key, fetch_function, ttl, *args, **kwargs):
     return data
 
 
-def uncached_fetch_upcoming_movies(region="US", language="en-US"):
+def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     api_key = get_tmdb_api_key()
     if not api_key:
         raise TMDbAPIError("TMDb API key is not configured.")
 
-    base_url = get_base_url()
     now = datetime.now()
     params = {
         "api_key": api_key,
@@ -60,7 +58,7 @@ def uncached_fetch_upcoming_movies(region="US", language="en-US"):
         "release_date.lte": (now + timedelta(days=30)).strftime("%Y-%m-%d"),
     }
 
-    url = f"{base_url}/discover/movie"
+    url = get_tmdb_url("discover/movie")
     response = requests.get(url, params=params)
     if response.status_code != 200:
         raise TMDbAPIError(
@@ -71,16 +69,14 @@ def uncached_fetch_upcoming_movies(region="US", language="en-US"):
     return response.json().get("results", [])
 
 
-def fetch_upcoming_movies(region="US", language="en-US"):
+def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     """
-    Fetch a list of upcoming movies from TMDb for a specific region using the discover endpoint.
+    Fetch a list of upcoming movies from TMDb for a specific region
+    using the discover endpoint.
 
-    Args:
-        region (str): The region code to fetch upcoming movies for (default is 'US').
-        language (str): The language code to fetch movies in (default is 'en-US').
-
-    Returns:
-        list: A list of dictionaries, each containing details of an upcoming movie.
+    :param region: The region code to fetch upcoming movies for.
+    :param language: The language code to fetch movies in.
+    :return: A list of upcoming movies
     """
     return _cached_tmdb_call(
         f"upcoming_movies_{region}_{language}",
