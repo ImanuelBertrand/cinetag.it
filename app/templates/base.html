@@ -4,12 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}cinetag.it{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% assets "scss_all" %}
+        <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+    {% endassets %}
+    <script>
+        window.cinetagit = {
+            csrf_token: "{{ csrf_token() }}"
+        };
+    </script>
 </head>
 <body>
 <header>
     <nav>
-        <a href="{{ url_for('html.home') }}">Home</a>
+    <h1 id="logo"><a href="/">cinetag.it</a></h1>
+        <a href="{{ url_for('html.get_movies') }}">Movies</a>
         {% if not True %}
             <a href="{{ url_for('html.login') }}">Login</a>
             <a href="{{ url_for('html.register') }}">Register</a>
@@ -18,15 +26,22 @@
             <form action="{{ url_for('html.logout') }}" method="post"
                   style="display: inline;" accept-charset="UTF-8"
                   enctype="application/x-www-form-urlencoded">
-                <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="csrf_token" name="csrf_token"
+                       value="{{ csrf_token() }}">
                 <button name="logout" type="submit" value="logout">Logout</button>
             </form>
         {% endif %}
     </nav>
 </header>
 <main>
+    {% if get_flashed_messages(with_categories=true) %}
+        <ul>
+            {% for category, message in get_flashed_messages(with_categories=true) %}
+                <li class="alert alert-{{ category }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
     {% block content %}{% endblock %}
 </main>
-{% include 'footer.html' %}
 </body>
 </html>

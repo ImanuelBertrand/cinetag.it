@@ -1,3 +1,4 @@
+Flask-Assets
 Flask-Babel
 Flask-Bcrypt
 Flask-Caching
@@ -11,3 +12,4 @@ PyYAML
 flask
 requests
 werkzeug
+libsass

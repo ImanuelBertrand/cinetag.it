@@ -3,29 +3,60 @@
 {% block title %}Movies{% endblock %}
 
 {% block content %}
-<h1>Movies</h1>
-<form method="GET" action="{{ url_for('html.get_movies') }}">
-    <label for="filter">Filter:</label>
-    <select id="filter" name="filter">
-        <option value="pending">Pending</option>
-        <option value="reviewed">Reviewed</option>
-        <option value="approved">Approved</option>
-        <option value="disapproved">Disapproved</option>
-    </select>
-    <button type="submit">Apply</button>
-</form>
-<ul>
-    {% for movie in movies %}
-        <li>
-            <a href="{{ url_for('html.get_movie_details', movie_id=movie.id) }}">{{ movie.original_title }}</a>
-        </li>
-    {% endfor %}
-</ul>
-{% if get_flashed_messages() %}
-    <ul>
-        {% for message in get_flashed_messages() %}
-            <li>{{ message }}</li>
+    <h2>Movies to tag</h2>
+    <div class="movie-grid">
+        {% for movie in movies %}
+            <div class="movie-item" id="movie-{{ movie.id }}">
+                <img src="https://image.tmdb.org/t/p/w500/{{ movie.poster_path }}"
+                     alt="{{ movie.title }}"
+                     class="movie-poster" loading="lazy">
+                <div class="overlay">
+                    <span class="decide approve" data-movie-id="{{ movie.id }}">✔</span>
+                    <span class="decide disapprove"
+                          data-movie-id="{{ movie.id }}">✘</span>
+                    <a class="details-link"
+                       href="{{ url_for('html.get_movie_details', movie_id=movie.id) }}">{{ movie.title }}</a>
+                </div>
+            </div>
         {% endfor %}
-    </ul>
-{% endif %}
+    </div>
 {% endblock %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.decide').forEach(function (element) {
+            element.addEventListener('click', function () {
+                const movieId = this.getAttribute('data-movie-id');
+                const decision = this.classList.contains('approve') ? 'approve' : 'disapprove';
+                handleDecision(movieId, decision);
+            });
+        });
+
+        function handleDecision(movieId, decision) {
+            fetch(`/api/user/movies/review`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.cinetagit.csrf_token
+                },
+                body: JSON.stringify({movie_id: movieId, decision: decision})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        const movieElement = document.getElementById(`movie-${movieId}`);
+                        movieElement.style.opacity = '0.5';
+                        if (decision === 'approve') {
+                            movieElement.style.backgroundColor = 'green';
+                        } else {
+                            movieElement.style.backgroundColor = 'red';
+                        }
+                    } else if (data.error) {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    });
+
+</script>

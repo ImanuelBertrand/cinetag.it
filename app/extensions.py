@@ -1,4 +1,5 @@
 from flask import request
+from flask_assets import Environment, Bundle
 from flask_babel import Babel
 from flask_bcrypt import Bcrypt
 from flask_caching import Cache
@@ -17,6 +18,7 @@ migrate = Migrate()
 cache = Cache()
 babel = Babel()
 csrf = CSRFProtect()
+assets_env = Environment()
 
 
 def get_locale():
@@ -36,6 +38,11 @@ def init_extensions(app):
     cache.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
     csrf.init_app(app)
+    assets_env.init_app(app)
+
+    # Configure Flask-Assets
+    scss = Bundle("src/style.scss", filters="libsass", output="dist/style.css")
+    assets_env.register("scss_all", scss)
 
     with app.app_context():
         db.create_all()

@@ -9,11 +9,4 @@
         <li>{{ event.title }} - {{ event.start_date }}</li>
     {% endfor %}
 </ul>
-{% if get_flashed_messages() %}
-    <ul>
-        {% for message in get_flashed_messages() %}
-            <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
-{% endif %}
 {% endblock %}

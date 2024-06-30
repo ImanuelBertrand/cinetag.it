@@ -13,11 +13,4 @@
     <br>
     <button type="submit">Login</button>
 </form>
-{% if get_flashed_messages() %}
-    <ul>
-        {% for message in get_flashed_messages() %}
-            <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
-{% endif %}
 {% endblock %}

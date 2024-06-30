@@ -5,7 +5,7 @@ from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
-from app.models import User, UserMovie, Movie, MovieRegionInfo, MovieLanguageInfo
+from app.models import User, UserMovie, Movie
 from app.utils.email import send_email
 
 
@@ -169,6 +169,7 @@ def get_movies_based_on_filter(user: User, filter_mode):
                 "original_title": movie.original_title,
                 "release_date": region_info.release_date.strftime("%Y-%m-%d"),
                 "overview": lang_info.overview,
+                "poster_path": lang_info.poster_path,
             }
         )
     return result
