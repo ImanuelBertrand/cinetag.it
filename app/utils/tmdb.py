@@ -28,7 +28,7 @@ def get_tmdb_api_key() -> str:
 
 
 def _cached_tmdb_call(
-    cache_key: str, fetch_function: Callable, ttl: int, *args, **kwargs
+    cache_key: str, ttl: int, fetch_function: Callable, *args, **kwargs
 ) -> Any:
     """
     Helper function to cache the results of a TMDb API call.
@@ -51,12 +51,13 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     api_key = get_tmdb_api_key()
 
     now = datetime.now()
+    cutoff_date = now + timedelta(days=30)
     params = {
         "api_key": api_key,
         "region": region,
         "language": language,
-        "release_date.gte": now.strftime("%Y-%m-%d"),
-        "release_date.lte": (now + timedelta(days=30)).strftime("%Y-%m-%d"),
+        "primary_release_date.gte": now.strftime("%Y-%m-%d"),
+        "primary_release_date.lte": cutoff_date.strftime("%Y-%m-%d"),
     }
 
     url = get_tmdb_url("discover/movie")
@@ -81,8 +82,32 @@ def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     """
     return _cached_tmdb_call(
         f"upcoming_movies_{region}_{language}",
-        uncached_fetch_upcoming_movies,
         3600,
+        uncached_fetch_upcoming_movies,
         region,
+        language,
+    )
+
+
+def uncached_fetch_movie_details(movie_id: int, language: str) -> dict:
+    api_key = get_tmdb_api_key()
+
+    url = get_tmdb_url(f"movie/{movie_id}")
+    params = {"api_key": api_key, "language": language}
+    response = requests.get(url, params=params)
+    if response.status_code != 200:
+        raise TMDbAPIError(
+            f"TMDb API request failed with status code {response.status_code}",
+            status_code=response.status_code,
+        )
+    return response.json()
+
+
+def fetch_movie_details(movie_id: int, language: str) -> dict:
+    return _cached_tmdb_call(
+        f"movie_{movie_id}_{language}",
+        86400,
+        uncached_fetch_movie_details,
+        movie_id,
         language,
     )

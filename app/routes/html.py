@@ -25,6 +25,7 @@ from app.services.user_service import (
     reset_user_password,
     get_current_user,
 )
+from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
     fetch_user_calendar_events,
@@ -181,7 +182,8 @@ def get_movies():
 @html.route("/movies/<int:movie_id>", methods=["GET"])
 def get_movie_details(movie_id):
     try:
-        movie = fetch_movie_details(movie_id)
+        user = initialize_user()
+        movie = fetch_movie_details(movie_id, user.language or "en-US")
         if not movie:
             flash("Movie not found.", "danger")
             return redirect(url_for("html.profile"))
