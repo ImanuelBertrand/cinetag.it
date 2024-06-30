@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Movie Details{% endblock %}
+
+{% block content %}
+<h1>{{ movie.title }}</h1>
+<p>{{ movie.overview }}</p>
+<p>Release Date: {{ movie.release_date }}</p>
+<form method="POST" action="{{ url_for('html.review_movie') }}">
+    <input type="hidden" name="movie_id" value="{{ movie.id }}">
+    <label for="decision">Decision:</label>
+    <select id="decision" name="decision">
+        <option value="approve">Approve</option>
+        <option value="disapprove">Disapprove</option>
+    </select>
+    <button type="submit">Submit</button>
+</form>
+{% if get_flashed_messages() %}
+    <ul>
+        {% for message in get_flashed_messages() %}
+            <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}
