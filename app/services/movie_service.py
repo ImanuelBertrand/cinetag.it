@@ -22,7 +22,7 @@ def sync_upcoming_movies(region: str, language: str) -> List[Movie]:
         movie.id: movie
         for movie in Movie.query.filter(Movie.id.in_(movie_ids)).all()
     }
-    existing_language_info = {
+    existing_lang_info = {
         info.movie_id: info
         for info in MovieLanguageInfo.query.filter(
             MovieLanguageInfo.movie_id.in_(movie_ids),
@@ -50,16 +50,18 @@ def sync_upcoming_movies(region: str, language: str) -> List[Movie]:
             movie.original_title = tmdb_movie["original_title"]
             db.session.add(movie)
 
-        region_info = existing_region_info.get(tmdb_movie["id"])
+        region_info: MovieRegionInfo = existing_region_info.get(tmdb_movie["id"])
         if not region_info:
-            region_info_to_add.append(MovieRegionInfo.create_from_tmdb(tmdb_movie))
+            region_info_to_add.append(
+                MovieRegionInfo.create_from_tmdb(tmdb_movie, region)
+            )
         elif region_info.update_from_tmdb(tmdb_movie):
             db.session.add(region_info)
 
-        language_info = existing_language_info.get(tmdb_movie["id"])
+        language_info: MovieLanguageInfo = existing_lang_info.get(tmdb_movie["id"])
         if not language_info:
             language_info_to_add.append(
-                MovieLanguageInfo.create_from_tmdb(tmdb_movie)
+                MovieLanguageInfo.create_from_tmdb(tmdb_movie, language)
             )
         elif language_info.update_from_tmdb(tmdb_movie):
             db.session.add(language_info)

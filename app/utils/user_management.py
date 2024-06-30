@@ -5,7 +5,7 @@ from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
-from app.models import User, UserMovie, Movie
+from app.models import User, UserMovie, Movie, MovieRegionInfo, MovieLanguageInfo
 from app.utils.email import send_email
 
 
@@ -125,18 +125,15 @@ def get_user_from_token(token):
         raise ValueError("Invalid token.")
 
 
-def get_movies_based_on_filter(user_id, filter_mode):
-    user = User.query.get(user_id)
-    if not user:
-        raise ValueError("User not found.")
-
-    user_movies_query = UserMovie.query.filter_by(user_id=user_id)
+def get_movies_based_on_filter(user: User, filter_mode):
+    user_movies_query = UserMovie.query.filter_by(user_id=user.id)
     reviewed_movie_ids = {um.movie_id for um in user_movies_query}
 
+    region = user.region or "US"
+    language = user.language or "en-US"
+
     # Sync upcoming movies from TMDb with the local database
-    upcoming_movies = Movie.get_upcoming_movies(
-        region=user.region, language=user.language
-    )
+    upcoming_movies = Movie.get_upcoming_movies(region, language)
     upcoming_movie_ids = {movie.id for movie in upcoming_movies}
 
     if filter_mode == "pending":
@@ -158,15 +155,23 @@ def get_movies_based_on_filter(user_id, filter_mode):
 
     filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
 
-    return [
-        {
-            "id": movie.id,
-            "title": movie.title,
-            "release_date": movie.release_date,
-            "overview": movie.overview,
-        }
-        for movie in filtered_movies
-    ]
+    result = []
+    for movie in filtered_movies:
+        region_info = next(r for r in movie.region_info if r.region == region)
+        lang_info = next(
+            li for li in movie.language_info if li.language == language
+        )
+
+        result.append(
+            {
+                "id": movie.id,
+                "title": lang_info.title,
+                "original_title": movie.original_title,
+                "release_date": region_info.release_date.strftime("%Y-%m-%d"),
+                "overview": lang_info.overview,
+            }
+        )
+    return result
 
 
 def fetch_user_calendar_events(user_id):

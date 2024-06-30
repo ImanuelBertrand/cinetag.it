@@ -8,9 +8,9 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    password = db.Column(db.String(128), nullable=True)
     email_confirmed = db.Column(db.Boolean, default=False)
     region = db.Column(db.String(2), nullable=True)
     language = db.Column(db.String(5), nullable=True)
@@ -69,22 +69,23 @@ class MovieRegionInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
     region = db.Column(db.String(2), nullable=False)
-    release_date = db.Column(db.DateTime, nullable=False)
+    release_date = db.Column(db.Date, nullable=False)
 
     movie = db.relationship("Movie", back_populates="region_info")
 
     @staticmethod
-    def create_from_tmdb(data: dict) -> "MovieRegionInfo":
+    def create_from_tmdb(data: dict, region: str) -> "MovieRegionInfo":
         return MovieRegionInfo(
             movie_id=data["id"],
-            region=data["region"],
-            release_date=data["release_date"],
+            region=region,
+            release_date=datetime.strptime(data["release_date"], "%Y-%m-%d"),
         )
 
     def update_from_tmdb(self, data) -> bool:
         updated = False
-        if self.release_date != data["release_date"]:
-            self.release_date = data["release_date"]
+        release_date = datetime.strptime(data["release_date"], "%Y-%m-%d")
+        if self.release_date != release_date:
+            self.release_date = release_date
             updated = True
         return updated
 
@@ -102,10 +103,10 @@ class MovieLanguageInfo(db.Model):
     movie = db.relationship("Movie", back_populates="language_info")
 
     @staticmethod
-    def create_from_tmdb(data: dict) -> "MovieLanguageInfo":
+    def create_from_tmdb(data: dict, language: str) -> "MovieLanguageInfo":
         return MovieLanguageInfo(
             movie_id=data["id"],
-            language=data["language"],
+            language=language,
             title=data["title"],
             poster_path=data["poster_path"],
             overview=data["overview"],

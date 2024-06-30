@@ -21,7 +21,10 @@ def get_tmdb_api_key() -> str:
     Retrieve the TMDb API key from the application configuration.
     :return: The TMDb API key
     """
-    return current_app.config.get("TMDB_API_KEY")
+    key = current_app.config.get("TMDB_API_KEY")
+    if not key:
+        raise TMDbAPIError("TMDb API key is not configured.")
+    return key
 
 
 def _cached_tmdb_call(
@@ -29,10 +32,10 @@ def _cached_tmdb_call(
 ) -> Any:
     """
     Helper function to cache the results of a TMDb API call.
-    :param cache_key:
-    :param fetch_function:
-    :param args:
-    :param kwargs:
+    :param cache_key: The cache key to use
+    :param fetch_function: The (uncached) function to fetch the data
+    :param args: The arguments to pass to the fetch function
+    :param kwargs: The keyword arguments to pass to the fetch function
     :return: The cached data or the fetched data
     """
     data = cache.get(cache_key)
@@ -46,8 +49,6 @@ def _cached_tmdb_call(
 
 def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     api_key = get_tmdb_api_key()
-    if not api_key:
-        raise TMDbAPIError("TMDb API key is not configured.")
 
     now = datetime.now()
     params = {

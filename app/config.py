@@ -9,14 +9,14 @@ class Config:
     def load_config(self, config_file):
         with open(config_file, "r") as file:
             config_data = yaml.safe_load(file)
-        for key, value in config_data.items():
-            setattr(self, key, value)
+        if config_data:
+            for key, value in config_data.items():
+                setattr(self, key, value)
 
     @staticmethod
     def init_app(app):
         pass
 
-    # Shared configuration settings
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
@@ -27,29 +27,25 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
     SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-jwt-secret-key")
-    CACHE_TYPE = os.environ.get(
-        "CACHE_TYPE", "simple"
-    )  # Can be "memcached", "redis", etc.
+    JWT_TOKEN_LOCATION = ["cookies"]
+    JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
+    JWT_ACCESS_COOKIE_PATH = "/"
+    JWT_ACCESS_TOKEN_EXPIRES = 86400 * 365
+    JWT_COOKIE_CSRF_PROTECT = True
+    JWT_REFRESH_COOKIE_PATH = "/"
+    JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
 
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        db_type = os.environ.get("DB_TYPE", "sqlite")  # default to sqlite
-        if db_type == "mariadb":
-            return (
-                os.environ.get("DATABASE_URI")
-                or "mysql+pymysql://user:password@localhost/db_name"
-            )
-        elif db_type == "sqlite":
-            return os.environ.get("DATABASE_URI") or "sqlite:///app.db"
-        else:
-            raise ValueError("Unsupported database type.")
+    CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
 
 
 class DevelopmentConfig(Config):
+    JWT_COOKIE_SECURE = False
     DEBUG = True
 
 
 class ProductionConfig(Config):
+    JWT_COOKIE_SECURE = True
     DEBUG = False
 
 

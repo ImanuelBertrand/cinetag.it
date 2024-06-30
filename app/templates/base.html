@@ -7,23 +7,26 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <header>
-        <nav>
-            <a href="{{ url_for('html.home') }}">Home</a>
-            {% if not current_user.is_authenticated %}
-                <a href="{{ url_for('html.login') }}">Login</a>
-                <a href="{{ url_for('html.register') }}">Register</a>
-            {% else %}
-                <a href="{{ url_for('html.profile') }}">Profile</a>
-                <form action="{{ url_for('html.logout') }}" method="post" style="display: inline;">
-                    <button type="submit">Logout</button>
-                </form>
-            {% endif %}
-        </nav>
-    </header>
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-    {% include 'footer.html' %}
+<header>
+    <nav>
+        <a href="{{ url_for('html.home') }}">Home</a>
+        {% if not True %}
+            <a href="{{ url_for('html.login') }}">Login</a>
+            <a href="{{ url_for('html.register') }}">Register</a>
+        {% else %}
+            <a href="{{ url_for('html.profile') }}">Profile</a>
+            <form action="{{ url_for('html.logout') }}" method="post"
+                  style="display: inline;" accept-charset="UTF-8"
+                  enctype="application/x-www-form-urlencoded">
+                <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+                <button name="logout" type="submit" value="logout">Logout</button>
+            </form>
+        {% endif %}
+    </nav>
+</header>
+<main>
+    {% block content %}{% endblock %}
+</main>
+{% include 'footer.html' %}
 </body>
 </html>

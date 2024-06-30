@@ -6,12 +6,14 @@ from flask import (
     url_for,
     flash,
     make_response,
+    g,
 )
 from flask_jwt_extended import (
     set_access_cookies,
-    unset_jwt_cookies,
     jwt_required,
     get_jwt_identity,
+    verify_jwt_in_request,
+    unset_jwt_cookies,
 )
 
 from app.extensions import db
@@ -21,6 +23,7 @@ from app.services.user_service import (
     authenticate_user,
     confirm_user_email,
     reset_user_password,
+    get_current_user,
 )
 from app.utils.user_management import (
     get_movies_based_on_filter,
@@ -31,8 +34,15 @@ from app.utils.user_management import (
 html = Blueprint("html", __name__)
 
 
+def initialize_user():
+    verify_jwt_in_request(optional=True)
+    g.current_user = get_current_user()
+    return g.current_user
+
+
 @html.route("/", methods=["GET"])
 def home():
+    initialize_user()
     return render_template("home.html")
 
 
@@ -70,17 +80,16 @@ def login():
 
 
 @html.route("/logout", methods=["POST"])
-@jwt_required()
 def logout():
+    flash("Logged out successfully.", "success")
     response = make_response(redirect(url_for("html.home")))
     unset_jwt_cookies(response)
-    flash("Logged out successfully.", "success")
     return response
 
 
 @html.route("/profile", methods=["GET"])
-@jwt_required()
 def profile():
+    initialize_user()
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     return render_template("profile.html", user=user)
@@ -157,13 +166,12 @@ def review_movie():
 
 
 @html.route("/movies", methods=["GET"])
-@jwt_required()
 def get_movies():
-    user_id = get_jwt_identity()
-    filter_mode = request.args.get("filter")
+    user = initialize_user()
+    filter_mode = request.args.get("filter", "pending")
 
     try:
-        movies = get_movies_based_on_filter(user_id, filter_mode)
+        movies = get_movies_based_on_filter(user, filter_mode)
         return render_template("movies.html", movies=movies)
     except Exception as e:
         flash(str(e), "danger")

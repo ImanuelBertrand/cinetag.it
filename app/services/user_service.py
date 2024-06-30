@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity
 from werkzeug.exceptions import Unauthorized
 
 from app.models import db, User
@@ -45,12 +45,14 @@ def reset_user_password(token, new_password):
     pass
 
 
-def create_temporary_user():
-    user = User(
-        username="temp_" + str(datetime.utcnow().timestamp()),
-        email="temp_" + str(datetime.utcnow().timestamp()) + "@example.com",
-        is_temporary=True,
-    )
+def create_temporary_user() -> User:
+    user = User(is_temporary=True)
     db.session.add(user)
     db.session.commit()
+    print("Temporary user created: " + str(user.id))
     return user
+
+
+def get_current_user() -> User:
+    user_id = get_jwt_identity()
+    return User.query.get(user_id) if user_id else create_temporary_user()

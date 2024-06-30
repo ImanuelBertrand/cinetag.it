@@ -17,7 +17,7 @@
 <ul>
     {% for movie in movies %}
         <li>
-            <a href="{{ url_for('html.get_movie_details', movie_id=movie.id) }}">{{ movie.title }}</a>
+            <a href="{{ url_for('html.get_movie_details', movie_id=movie.id) }}">{{ movie.original_title }}</a>
         </li>
     {% endfor %}
 </ul>
