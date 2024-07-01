@@ -13,8 +13,13 @@ from app.models import User
 from app.services.user_service import get_current_user
 import os
 
+log_dir = os.path.join(os.path.dirname(__file__), "logs")
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
 logging.basicConfig(
-    level=logging.INFO, filename=os.path.join(os.path.dirname(__file__), "app.log")
+    level=logging.INFO,
+    filename=os.path.join(log_dir, "app.log"),
 )
 
 

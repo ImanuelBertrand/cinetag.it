@@ -2,3 +2,6 @@
 config.yaml
 venv
 instance
+app/static/dist
+app/static/.webassets-cache
+app/logs
