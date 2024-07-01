@@ -17,7 +17,6 @@ bcrypt = Bcrypt()
 migrate = Migrate()
 cache = Cache()
 babel = Babel()
-csrf = CSRFProtect()
 assets_env = Environment()
 
 
@@ -37,7 +36,6 @@ def init_extensions(app):
     migrate.init_app(app, db)
     cache.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
-    csrf.init_app(app)
     assets_env.init_app(app)
 
     # Configure Flask-Assets

@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from flask_jwt_extended import create_access_token
 from werkzeug.exceptions import Unauthorized, BadRequest
 
 from app.extensions import db
@@ -10,7 +9,9 @@ from app.services.user_service import (
     authenticate_user,
     confirm_user_email,
     reset_user_password,
+    initialize_user,
 )
+from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
     fetch_user_calendar_events,
@@ -81,9 +82,8 @@ def reset_password():
 
 
 @api.route("/user/movies/review", methods=["POST"])
-@jwt_required()
 def review_movie():
-    user_id = get_jwt_identity()
+    user = initialize_user()
     data = request.get_json()
     movie_id = data.get("movie_id")
     decision = data.get("decision")
@@ -91,7 +91,8 @@ def review_movie():
     if decision not in ["approve", "disapprove"]:
         return jsonify({"error": "Invalid decision value."}), 400
 
-    user_movie = UserMovie(user_id=user_id, movie_id=movie_id, decision=decision)
+    UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).delete()
+    user_movie = UserMovie(user_id=user.id, movie_id=movie_id, decision=decision)
 
     db.session.add(user_movie)
     try:

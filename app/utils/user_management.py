@@ -153,7 +153,11 @@ def get_movies_based_on_filter(user: User, filter_mode):
     else:
         raise ValueError("Invalid filter mode.")
 
-    filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
+    filtered_movies = (
+        Movie.query.filter(Movie.id.in_(movie_ids))
+        .order_by(Movie.popularity.desc())
+        .all()
+    )
 
     result = []
     for movie in filtered_movies:

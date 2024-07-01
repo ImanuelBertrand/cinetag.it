@@ -1,6 +1,8 @@
 import os
 from app import create_app
 
+os.chdir(os.path.dirname(__file__))
+
 # Determine the configuration to use (development, production, etc.)
 config_name = os.getenv("FLASK_ENV", "production")
 

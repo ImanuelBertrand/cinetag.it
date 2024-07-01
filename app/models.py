@@ -42,6 +42,8 @@ class Movie(db.Model):
         "UserMovie", back_populates="movie", cascade="all, delete-orphan"
     )
 
+    popularity = db.Column(db.Float, nullable=True)
+
     def update_from_tmdb(self, data: dict) -> bool:
         updated = False
         if self.original_title != data["original_title"]:
@@ -54,6 +56,7 @@ class Movie(db.Model):
         return Movie(
             id=data["id"],
             original_title=data["original_title"],
+            popularity=data["popularity"],
         )
 
     @staticmethod

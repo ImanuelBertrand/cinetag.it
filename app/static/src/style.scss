@@ -47,6 +47,7 @@ main {
   flex: 1;
   padding: 20px;
 }
+
 h2 {
   font-weight: normal;
 }
@@ -128,6 +129,26 @@ footer {
   .movie-item {
     position: relative;
     overflow: hidden;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      background-color: transparent;
+      transition: background-color 0.3s ease;
+    }
+
+    &.approved::after {
+      background-color: rgba(0, 128, 0, 0.7);
+    }
+
+    &.disapproved::after {
+      background-color: rgba(128, 0, 0, 0.7);
+    }
 
     .movie-poster {
       width: 100%;

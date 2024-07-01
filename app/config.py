@@ -3,7 +3,7 @@ import yaml
 
 
 class Config:
-    def __init__(self, config_file="config.yaml"):
+    def __init__(self, config_file="app/config.yaml"):
         self.load_config(config_file)
 
     def load_config(self, config_file):
@@ -27,7 +27,7 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
     SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-jwt-secret-key")
-    JWT_TOKEN_LOCATION = ["cookies"]
+    JWT_TOKEN_LOCATION = ["headers", "cookies"]
     JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
     JWT_ACCESS_COOKIE_PATH = "/"
     JWT_ACCESS_TOKEN_EXPIRES = 86400 * 365

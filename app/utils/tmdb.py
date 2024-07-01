@@ -58,17 +58,26 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
         "language": language,
         "primary_release_date.gte": now.strftime("%Y-%m-%d"),
         "primary_release_date.lte": cutoff_date.strftime("%Y-%m-%d"),
+        "page": 1,
     }
 
     url = get_tmdb_url("discover/movie")
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
-        raise TMDbAPIError(
-            f"TMDb API request failed with status code {response.status_code}",
-            status_code=response.status_code,
-        )
+    all_movies = {}
+    while True:
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            raise TMDbAPIError(
+                f"TMDb API request failed with status code {response.status_code}",
+                status_code=response.status_code,
+            )
+        data = response.json()
+        for movie in data["results"]:
+            all_movies[movie["id"]] = movie
+        if data["page"] >= data["total_pages"]:
+            break
+        params["page"] += 1
 
-    return response.json().get("results", [])
+    return list(all_movies.values())
 
 
 def fetch_upcoming_movies(region: str, language: str) -> List[dict]:

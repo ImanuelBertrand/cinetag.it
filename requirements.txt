@@ -10,6 +10,6 @@ Flask-Script
 PyJWT
 PyYAML
 flask
+libsass
 requests
 werkzeug
-libsass

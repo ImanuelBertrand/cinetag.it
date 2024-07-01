@@ -1,3 +1,5 @@
+import logging
+
 from flask import (
     Blueprint,
     render_template,
@@ -6,24 +8,21 @@ from flask import (
     url_for,
     flash,
     make_response,
-    g,
 )
 from flask_jwt_extended import (
     set_access_cookies,
     jwt_required,
     get_jwt_identity,
-    verify_jwt_in_request,
     unset_jwt_cookies,
 )
 
-from app.extensions import db
-from app.models import User, UserMovie
+from app.models import User
 from app.services.user_service import (
     register_user,
     authenticate_user,
     confirm_user_email,
     reset_user_password,
-    get_current_user,
+    initialize_user,
 )
 from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
@@ -33,12 +32,7 @@ from app.utils.user_management import (
 )
 
 html = Blueprint("html", __name__)
-
-
-def initialize_user():
-    verify_jwt_in_request(optional=True)
-    g.current_user = get_current_user()
-    return g.current_user
+_logger = logging.getLogger(__name__)
 
 
 @html.route("/", methods=["GET"])
@@ -90,9 +84,7 @@ def logout():
 
 @html.route("/profile", methods=["GET"])
 def profile():
-    initialize_user()
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = initialize_user()
     return render_template("profile.html", user=user)
 
 
@@ -141,45 +133,29 @@ def reset_password(token):
     return render_template("reset_password.html", token=token)
 
 
-@html.route("/movies/review", methods=["POST"])
-@jwt_required()
-def review_movie():
-    user_id = get_jwt_identity()
-    data = request.form
-    movie_id = data.get("movie_id")
-    decision = data.get("decision")
-
-    if decision not in ["approve", "disapprove"]:
-        flash("Invalid decision value.", "danger")
-        return redirect(url_for("html.profile"))
-
-    user_movie = UserMovie(user_id=user_id, movie_id=movie_id, decision=decision)
-
-    db.session.add(user_movie)
-    try:
-        db.session.commit()
-        flash("Movie reviewed successfully.", "success")
-        return redirect(url_for("html.profile"))
-    except Exception as e:
-        db.session.rollback()
-        flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
-
-
-@html.route("/movies", methods=["GET"])
-def get_movies():
+@html.route("/movies/<filter_mode>", methods=["GET"])
+def get_movies(filter_mode):
     user = initialize_user()
-    filter_mode = request.args.get("filter", "pending")
+    if filter_mode not in {"pending", "reviewed", "approved", "disapproved"}:
+        flash("Invalid filter mode.", "danger")
+        return redirect(url_for("html.profile"))
 
+    templates = {
+        "pending": "movies_pending.html",
+        "reviewed": "movies_reviewed.html",
+        "approved": "movies_approved.html",
+        "disapproved": "movies_disapproved.html",
+    }
     try:
         movies = get_movies_based_on_filter(user, filter_mode)
-        return render_template("movies.html", movies=movies)
+        return render_template(templates[filter_mode], movies=movies)
     except Exception as e:
+        _logger.exception("Error fetching movies.")
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
 
 
-@html.route("/movies/<int:movie_id>", methods=["GET"])
+@html.route("/movie/<int:movie_id>", methods=["GET"])
 def get_movie_details(movie_id):
     try:
         user = initialize_user()
@@ -189,28 +165,6 @@ def get_movie_details(movie_id):
             return redirect(url_for("html.profile"))
         return render_template("movie_details.html", movie=movie)
     except Exception as e:
-        flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
-
-
-@html.route("/movies/reviewed/<int:movie_id>", methods=["POST"])
-@jwt_required()
-def remove_reviewed_movie(movie_id):
-    user_id = get_jwt_identity()
-    user_movie = UserMovie.query.filter_by(
-        user_id=user_id, movie_id=movie_id
-    ).first()
-    if not user_movie:
-        flash("Movie not found in reviewed list.", "danger")
-        return redirect(url_for("html.profile"))
-
-    db.session.delete(user_movie)
-    try:
-        db.session.commit()
-        flash("Movie removed from reviewed list.", "success")
-        return redirect(url_for("html.profile"))
-    except Exception as e:
-        db.session.rollback()
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
 
