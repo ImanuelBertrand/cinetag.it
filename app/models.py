@@ -59,12 +59,6 @@ class Movie(db.Model):
             popularity=data["popularity"],
         )
 
-    @staticmethod
-    def get_upcoming_movies(region, language) -> "List[Movie]":
-        from app.services.movie_service import sync_upcoming_movies
-
-        return sync_upcoming_movies(region, language)
-
 
 class MovieRegionInfo(db.Model):
     __tablename__ = "movie_region_info"

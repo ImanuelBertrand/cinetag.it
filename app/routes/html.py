@@ -8,6 +8,7 @@ from flask import (
     url_for,
     flash,
     make_response,
+    current_app,
 )
 from flask_jwt_extended import (
     set_access_cookies,
@@ -85,6 +86,9 @@ def logout():
 @html.route("/profile", methods=["GET"])
 def profile():
     user = initialize_user()
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("html.home"))
     return render_template("profile.html", user=user)
 
 
@@ -140,15 +144,11 @@ def get_movies(filter_mode):
         flash("Invalid filter mode.", "danger")
         return redirect(url_for("html.profile"))
 
-    templates = {
-        "pending": "movies_pending.html",
-        "reviewed": "movies_reviewed.html",
-        "approved": "movies_approved.html",
-        "disapproved": "movies_disapproved.html",
-    }
     try:
         movies = get_movies_based_on_filter(user, filter_mode)
-        return render_template(templates[filter_mode], movies=movies)
+        return render_template(
+            "movie_list.html", movies=movies, filter_mode=filter_mode
+        )
     except Exception as e:
         _logger.exception("Error fetching movies.")
         flash(str(e), "danger")
@@ -159,7 +159,8 @@ def get_movies(filter_mode):
 def get_movie_details(movie_id):
     try:
         user = initialize_user()
-        movie = fetch_movie_details(movie_id, user.language or "en-US")
+        language = user.language or current_app.config.DEFAULT_LANGUAGE
+        movie = fetch_movie_details(movie_id, language)
         if not movie:
             flash("Movie not found.", "danger")
             return redirect(url_for("html.profile"))

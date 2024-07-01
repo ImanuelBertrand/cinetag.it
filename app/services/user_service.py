@@ -1,14 +1,16 @@
-from flask import g
+import logging
+
+from crawlerdetect import CrawlerDetect
+from flask import g, request
 from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity,
     verify_jwt_in_request,
 )
 from werkzeug.exceptions import Unauthorized
-import logging
+
 from app.models import db, User
 from app.utils.email import send_confirmation_email
-
 
 _logger = logging.getLogger(__name__)
 
@@ -60,7 +62,6 @@ def create_temporary_user() -> User:
 
 def get_current_user(allow_guest: bool = True) -> User | None:
     user_id = get_jwt_identity()
-    _logger.info("User ID: %s", user_id)
     if user_id:
         user = User.query.get(user_id)
         if user:
@@ -72,11 +73,19 @@ def get_current_user(allow_guest: bool = True) -> User | None:
     return None
 
 
+def is_bot(user_agent: str) -> bool:
+    return CrawlerDetect().isCrawler(user_agent)
+
+
 def initialize_user(allow_guest: bool = True):
+    if is_bot(request.headers.get("User-Agent")):
+        return None
+
     try:
         verify_jwt_in_request(optional=True)
     except Exception as e:
         _logger.error("Error verifying JWT in request: %s", e)
         raise e
     g.current_user = get_current_user(allow_guest)
+
     return g.current_user

@@ -4,7 +4,7 @@ from app.models import db, Movie, MovieRegionInfo, MovieLanguageInfo
 from app.utils.tmdb import fetch_upcoming_movies
 
 
-def sync_upcoming_movies(region: str, language: str) -> List[Movie]:
+def sync_upcoming_movies(region: str, language: str) -> List[int]:
     """
     Fetch upcoming movies from TMDb and ensure they are stored in the database.
 
@@ -75,4 +75,4 @@ def sync_upcoming_movies(region: str, language: str) -> List[Movie]:
 
     db.session.commit()
 
-    return Movie.query.filter(Movie.id.in_(movie_ids)).all()
+    return movie_ids

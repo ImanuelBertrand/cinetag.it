@@ -7,7 +7,6 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -21,7 +20,8 @@ assets_env = Environment()
 
 
 def get_locale():
-    # You can get the user's locale from the request or user settings
+    # loading the authenticated users language
+    # doesn't work yet because of circular imports.
     return request.accept_languages.best_match(["en", "de"])
 
 

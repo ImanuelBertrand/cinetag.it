@@ -38,6 +38,9 @@ class Config:
     CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
 
+    DEFAULT_REGION = "US"
+    DEFAULT_LANGUAGE = "en-US"
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False

@@ -51,13 +51,14 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     api_key = get_tmdb_api_key()
 
     now = datetime.now()
-    cutoff_date = now + timedelta(days=30)
+    cutoff_date = now + timedelta(days=90)
     params = {
         "api_key": api_key,
         "region": region,
         "language": language,
-        "primary_release_date.gte": now.strftime("%Y-%m-%d"),
-        "primary_release_date.lte": cutoff_date.strftime("%Y-%m-%d"),
+        "release_date.gte": now.strftime("%Y-%m-%d"),
+        "release_date.lte": cutoff_date.strftime("%Y-%m-%d"),
+        "with_release_type": "3",  # Theatrical
         "page": 1,
     }
 

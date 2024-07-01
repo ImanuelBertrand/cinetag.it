@@ -1,11 +1,15 @@
+import math
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 import jwt
+from babel.dates import format_date
 from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
-from app.models import User, UserMovie, Movie
+from app.models import User, UserMovie, Movie, MovieRegionInfo
+from app.services.movie_service import sync_upcoming_movies
 from app.utils.email import send_email
 
 
@@ -125,27 +129,30 @@ def get_user_from_token(token):
         raise ValueError("Invalid token.")
 
 
-def get_movies_based_on_filter(user: User, filter_mode):
+def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
     reviewed_movie_ids = {um.movie_id for um in user_movies_query}
 
-    region = user.region or "US"
-    language = user.language or "en-US"
+    region = user.region or current_app.config.DEFAULT_REGION
+    lang = user.language or current_app.config.DEFAULT_LANGUAGE
+    lang_short = lang.split("-")[0]
+
+    def fmt_date(date):
+        return format_date(date, locale=lang_short) if date else None
 
     # Sync upcoming movies from TMDb with the local database
-    upcoming_movies = Movie.get_upcoming_movies(region, language)
-    upcoming_movie_ids = {movie.id for movie in upcoming_movies}
+    upcoming_movie_ids = set(sync_upcoming_movies(region, lang))
 
-    if filter_mode == "pending":
+    if mode == "pending":
         movie_ids = upcoming_movie_ids - reviewed_movie_ids
-    elif filter_mode == "reviewed":
+    elif mode == "reviewed":
         movie_ids = reviewed_movie_ids & upcoming_movie_ids
-    elif filter_mode == "approved":
+    elif mode == "approved":
         movie_ids = {
             um.movie_id for um in user_movies_query if um.decision == "approve"
         }
         movie_ids &= upcoming_movie_ids
-    elif filter_mode == "disapproved":
+    elif mode == "disapproved":
         movie_ids = {
             um.movie_id for um in user_movies_query if um.decision == "disapprove"
         }
@@ -153,30 +160,37 @@ def get_movies_based_on_filter(user: User, filter_mode):
     else:
         raise ValueError("Invalid filter mode.")
 
-    filtered_movies = (
-        Movie.query.filter(Movie.id.in_(movie_ids))
-        .order_by(Movie.popularity.desc())
-        .all()
-    )
+    filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
 
     result = []
+    now = datetime.now().date()
     for movie in filtered_movies:
-        region_info = next(r for r in movie.region_info if r.region == region)
-        lang_info = next(
-            li for li in movie.language_info if li.language == language
+        region_info: MovieRegionInfo = next(
+            r for r in movie.region_info if r.region == region
         )
-
+        if not region_info.release_date or region_info.release_date < now:
+            continue
+        lang_info = next(li for li in movie.language_info if li.language == lang)
+        wait_days = (region_info.release_date - now).total_seconds() / 86400
         result.append(
             {
                 "id": movie.id,
                 "title": lang_info.title,
                 "original_title": movie.original_title,
-                "release_date": region_info.release_date.strftime("%Y-%m-%d"),
+                "release_date": fmt_date(region_info.release_date),
+                "wait_days": wait_days,
                 "overview": lang_info.overview,
                 "poster_path": lang_info.poster_path,
+                "popularity": movie.popularity,
             }
         )
-    return result
+
+    def sort_func(item):
+        weeks_till_release = item["wait_days"] / 7
+        popularity = item["popularity"]
+        return popularity * math.exp(-weeks_till_release)
+
+    return sorted(result, key=sort_func, reverse=True)
 
 
 def fetch_user_calendar_events(user_id):
