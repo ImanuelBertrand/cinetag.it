@@ -1,5 +1,5 @@
 import os
-from app import create_app
+from app.create_app import create_app
 
 os.chdir(os.path.dirname(__file__))
 

@@ -1,4 +1,6 @@
 import logging
+import re
+from collections import defaultdict
 
 from flask import (
     Blueprint,
@@ -9,27 +11,29 @@ from flask import (
     flash,
     make_response,
     current_app,
+    g,
 )
 from flask_jwt_extended import (
-    set_access_cookies,
     jwt_required,
     get_jwt_identity,
     unset_jwt_cookies,
 )
 
+from app.extensions import db, bcrypt
 from app.models import User
 from app.services.user_service import (
-    register_user,
-    authenticate_user,
-    confirm_user_email,
     reset_user_password,
     initialize_user,
+    create_temporary_user,
 )
+from app.utils.email import send_confirmation_email
 from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
     fetch_user_calendar_events,
     send_password_reset_email,
+    confirm_user_email,
+    authenticate_user,
 )
 
 html = Blueprint("html", __name__)
@@ -42,34 +46,89 @@ def home():
     return render_template("home.html")
 
 
+def register_post(user: User):
+    """
+    Register a new user or update the temporary user with the provided data.
+    :param user: User
+    :return:
+    """
+    data = request.form
+    email = data.get("email")
+
+    # e-mail sanity check
+    if not email:
+        flash("Email is required.", "danger")
+        return None
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        flash("Invalid email.", "danger")
+        return None
+
+    # password sanity check
+    password = data.get("password")
+    if not password:
+        flash("Password is required.", "danger")
+        return None
+    if len(password) < 8:
+        flash("Password must be at least 8 characters.", "danger")
+        return None
+
+    if not user:
+        user = create_temporary_user()
+
+    user.email = email
+    user.email_confirmed = False
+    user.name = data.get("name")
+    user.password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    send_confirmation_email(user)
+
+    db.session.add(user)
+    db.session.commit()
+
+    try:
+        msg = (
+            "User registered successfully. Please check your email to confirm."
+            "You won't be able to login until you confirm your email."
+            "If you don't see the email, you can resend it in your profile."
+        )
+        flash(msg, "success")
+        return redirect(url_for("html.profile"))
+    except Exception as e:
+        flash(str(e), "danger")
+        return None
+
+
 @html.route("/register", methods=["GET", "POST"])
 def register():
+    user = initialize_user()
+    form_data = defaultdict(str)
+
     if request.method == "POST":
-        data = request.form
-        try:
-            user = register_user(data)
-            flash(
-                "User registered successfully. Please check your email to confirm.",
-                "success",
-            )
-            return redirect(url_for("html.login"))
-        except Exception as e:
-            flash(str(e), "danger")
-            return redirect(url_for("html.register"))
-    return render_template("register.html")
+        form_data.update(request.form)
+        register_result = register_post(user)
+        if register_result:
+            return register_result
+
+    return render_template("register.html", form_data=form_data)
 
 
 @html.route("/login", methods=["GET", "POST"])
 def login():
+    pre_login_user = initialize_user()
     if request.method == "POST":
         data = request.form
         try:
-            access_token = authenticate_user(data)
-            response = make_response(redirect(url_for("html.profile")))
-            set_access_cookies(response, access_token)
-            flash("Logged in successfully.", "success")
-            return response
+            user = authenticate_user(data)
+            if not pre_login_user.user_movies:
+                db.session.delete(pre_login_user)
+            else:
+                # TODO show option to merge date in /profile
+                pass
+
+            g.current_user = user
+            return make_response(redirect(url_for("html.profile")))
         except Exception as e:
+            _logger.exception("Error authenticating user.")
             flash(str(e), "danger")
             return redirect(url_for("html.login"))
     return render_template("login.html")
@@ -83,12 +142,41 @@ def logout():
     return response
 
 
-@html.route("/profile", methods=["GET"])
+@html.route("/reset_data", methods=["POST"])
+def reset_data():
+    """
+    Similar as logout(), but with a different message, and it will delete the
+    temporary user.
+    :return:
+    """
+    user = initialize_user()
+    if user:
+        db.session.delete(user)
+    flash("All your data was deleted.", "success")
+    response = make_response(redirect(url_for("html.home")))
+    unset_jwt_cookies(response)
+    return response
+
+
+@html.route("/profile", methods=["GET", "POST"])
 def profile():
     user = initialize_user()
+
     if not user:
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
+
+    if request.method == "POST":
+        data = request.form
+        debug_dict = {}
+        debug_dict.update(data)
+        _logger.info("Updating user profile: %s", debug_dict)
+        user.name = data.get("name")
+        user.language = data.get("language")
+        user.region = data.get("region")
+        db.session.add(user)
+        db.session.commit()
+
     return render_template("profile.html", user=user)
 
 
@@ -97,10 +185,32 @@ def confirm_email(token):
     try:
         confirm_user_email(token)
         flash("Email confirmed successfully.", "success")
-        return redirect(url_for("html.login"))
     except Exception as e:
+        _logger.exception("Error confirming email.")
         flash(str(e), "danger")
+
+    return redirect(url_for("html.login"))
+
+
+@html.route("/user/request-confirmation-mail", methods=["POST"])
+def request_confirmation_email():
+    user = initialize_user()
+    if not user or user.is_temporary:
+        flash("User not found.", "danger")
         return redirect(url_for("html.home"))
+
+    if user.email_confirmed:
+        flash("Email already confirmed.", "info")
+        return redirect(url_for("html.profile"))
+
+    try:
+        send_confirmation_email(user)
+        flash("Confirmation email sent.", "success")
+        return redirect(url_for("html.profile"))
+    except Exception as e:
+        _logger.exception("Error sending confirmation email.")
+        flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
 
 
 @html.route("/reset-password-request", methods=["GET", "POST"])

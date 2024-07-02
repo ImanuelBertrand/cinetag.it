@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>500 Internal Server Error</title>
+    {% assets "scss_all" %}
+        <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+    {% endassets %}
 </head>
-<body>
+<body style="padding: 3em;">
+    <div style="font-size: 4em">Shit.</div>
     <h1>500 Internal Server Error</h1>
-    <p>An unexpected error occurred on the server.</p>
+    <p>This is not your fault. If know how to trigger this error, please tell me.</p>
 </body>
 </html>

@@ -34,12 +34,13 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/"
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
+    JWT_CSRF_CHECK_FORM = True
 
     CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
 
     DEFAULT_REGION = "US"
-    DEFAULT_LANGUAGE = "en-US"
+    DEFAULT_LANGUAGE = "en"
 
 
 class DevelopmentConfig(Config):

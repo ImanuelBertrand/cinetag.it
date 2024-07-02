@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>404 Not Found</title>
+    {% assets "scss_all" %}
+        <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+    {% endassets %}
 </head>
-<body>
-    <h1>404 Not Found</h1>
-    <p>The requested resource could not be found.</p>
+<body style="padding: 3em;">
+<h1>404 Not Found</h1>
+<p>The requested resource could not be found.</p>
 </body>
 </html>

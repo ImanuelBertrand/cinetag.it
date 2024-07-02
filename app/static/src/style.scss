@@ -129,13 +129,15 @@ footer {
     position: relative;
     overflow: hidden;
     border-radius: 3px;
+    outline: 2px solid transparent;
+    transition: outline-color 0.25s ease;
 
     &.approved {
-      outline: 2px solid #0f0;
+      outline-color: #0f0;
     }
 
     &.disapproved {
-      outline: 2px solid #f00;
+      outline-color: #f00;
     }
 
     &::after {

@@ -1,3 +1,5 @@
+"use strict";
+
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll('.decide').forEach(function (element) {
         element.addEventListener('click', function () {
@@ -8,13 +10,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     function handleDecision(movieId, decision) {
+        const csrf_token = document.cookie.split('; ').find(row => row.startsWith('csrf_access_token')).split('=')[1];
+
         fetch(`/api/user/movies/review`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': window.cinetagit.csrf_token
+                'X-CSRF-TOKEN': csrf_token
             },
-            body: JSON.stringify({movie_id: movieId, decision: decision, csrf_token: window.cinetagit.csrf_token})
+            body: JSON.stringify({movie_id: movieId, decision: decision, csrf_token: csrf_token})
         })
             .then(response => response.json())
             .then(data => {

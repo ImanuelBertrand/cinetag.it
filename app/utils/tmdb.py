@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import List, Callable, Any
 
@@ -6,6 +7,8 @@ from flask import current_app
 
 from app.exceptions import TMDbAPIError
 from app.extensions import cache
+
+_logger = logging.getLogger(__name__)
 
 
 def get_base_url() -> str:
@@ -41,6 +44,7 @@ def _cached_tmdb_call(
     data = cache.get(cache_key)
 
     if not data:
+        _logger.debug("Cache miss for key %s", cache_key)
         data = fetch_function(*args, **kwargs)
         cache.set(cache_key, data, timeout=ttl)
 
@@ -66,6 +70,9 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     all_movies = {}
     while True:
         response = requests.get(url, params=params)
+        _logger.debug(
+            "Response %s for GET %s with: %s", response.status_code, url, params
+        )
         if response.status_code != 200:
             raise TMDbAPIError(
                 f"TMDb API request failed with status code {response.status_code}",
@@ -105,6 +112,7 @@ def uncached_fetch_movie_details(movie_id: int, language: str) -> dict:
     url = get_tmdb_url(f"movie/{movie_id}")
     params = {"api_key": api_key, "language": language}
     response = requests.get(url, params=params)
+    _logger.debug("Response %s for GET %s", response.status_code, url)
     if response.status_code != 200:
         raise TMDbAPIError(
             f"TMDb API request failed with status code {response.status_code}",

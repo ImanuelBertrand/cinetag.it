@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 
 from app.extensions import db
 
@@ -8,7 +7,7 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=True)
+    name = db.Column(db.String(200), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
     password = db.Column(db.String(128), nullable=True)
     email_confirmed = db.Column(db.Boolean, default=False)
@@ -139,3 +138,57 @@ class UserMovie(db.Model):
 
     user = db.relationship("User", back_populates="user_movies")
     movie = db.relationship("Movie", back_populates="user_movies")
+
+
+class TmdbLanguage(db.Model):
+    __tablename__ = "tmdb_languages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    iso_639_1 = db.Column(db.String(2), nullable=False)
+    english_name = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+
+    @staticmethod
+    def create_from_tmdb(data: dict) -> "TmdbLanguage":
+        return TmdbLanguage(
+            iso_639_1=data["iso_639_1"],
+            english_name=data["english_name"],
+            name=data["name"],
+        )
+
+    def update_from_tmdb(self, data) -> bool:
+        updated = False
+        if self.english_name != data["english_name"]:
+            self.english_name = data["english_name"]
+            updated = True
+        if self.name != data["name"]:
+            self.name = data["name"]
+            updated = True
+        return updated
+
+
+class TmdbRegion(db.Model):
+    __tablename__ = "tmdb_regions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    iso_3166_1 = db.Column(db.String(2), nullable=False)
+    english_name = db.Column(db.String(50), nullable=False)
+    native_name = db.Column(db.String(50), nullable=False)
+
+    @staticmethod
+    def create_from_tmdb(data: dict) -> "TmdbRegion":
+        return TmdbRegion(
+            iso_3166_1=data["iso_3166_1"],
+            english_name=data["english_name"],
+            native_name=data["native_name"],
+        )
+
+    def update_from_tmdb(self, data) -> bool:
+        updated = False
+        if self.english_name != data["english_name"]:
+            self.english_name = data["english_name"]
+            updated = True
+        if self.native_name != data["native_name"]:
+            self.native_name = data["native_name"]
+            updated = True
+        return updated

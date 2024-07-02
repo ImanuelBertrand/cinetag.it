@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>403 Forbidden</title>
+    {% assets "scss_all" %}
+        <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
+    {% endassets %}
 </head>
-<body>
-    <h1>403 Forbidden</h1>
-    <p>You do not have permission to access this resource.</p>
+<body style="padding: 3em;">
+<h1>403 Forbidden</h1>
+<p>You do not have permission to access this resource.</p>
 </body>
 </html>

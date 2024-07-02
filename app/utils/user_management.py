@@ -7,10 +7,11 @@ from babel.dates import format_date
 from flask import current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app.extensions import db
 from app.models import User, UserMovie, Movie, MovieRegionInfo
 from app.services.movie_service import sync_upcoming_movies
 from app.utils.email import send_email
+
+from app.extensions import db, bcrypt
 
 
 def register_user(data):
@@ -31,12 +32,12 @@ def register_user(data):
     return user
 
 
-def authenticate_user(data):
+def authenticate_user(data) -> User:
     email = data.get("email")
     password = data.get("password")
 
     user = User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password, password):
+    if not user or not bcrypt.check_password_hash(user.password, password):
         raise ValueError("Invalid email or password.")
 
     return user
@@ -56,26 +57,16 @@ def confirm_user_email(token):
         data = jwt.decode(
             token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
         )
-        user = User.query.get(data["confirm"])
+        user = User.query.get(data["user_id"])
         if not user:
             raise KeyError("User not found.")
         user.email_confirmed = True
+        user.is_temporary = False
         db.session.commit()
     except jwt.ExpiredSignatureError:
         raise ValueError("The confirmation link has expired.")
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token.")
-
-
-def send_confirmation_email(user):
-    token = generate_confirmation_token(user)
-    confirm_url = url_for("api.confirm_email", token=token, _external=True)
-    subject = "Please confirm your email"
-    body = (
-        f"Hi {user.username}, please click the link "
-        f"to confirm your email: {confirm_url}"
-    )
-    send_email(user.email, subject, body)
 
 
 def generate_password_reset_token(user):
@@ -110,21 +101,6 @@ def reset_user_password(token, new_password):
         db.session.commit()
     except jwt.ExpiredSignatureError:
         raise ValueError("The reset link has expired.")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token.")
-
-
-def get_user_from_token(token):
-    try:
-        data = jwt.decode(
-            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
-        user = User.query.get(data["confirm"])
-        if not user:
-            raise KeyError("User not found.")
-        return user
-    except jwt.ExpiredSignatureError:
-        raise ValueError("The token has expired.")
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token.")
 

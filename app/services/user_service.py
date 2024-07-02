@@ -3,11 +3,9 @@ import logging
 from crawlerdetect import CrawlerDetect
 from flask import g, request
 from flask_jwt_extended import (
-    create_access_token,
     get_jwt_identity,
     verify_jwt_in_request,
 )
-from werkzeug.exceptions import Unauthorized
 
 from app.models import db, User
 from app.utils.email import send_confirmation_email
@@ -29,23 +27,6 @@ def register_user(data):
     db.session.commit()
     send_confirmation_email(user)
     return user
-
-
-def authenticate_user(data):
-    email = data.get("email")
-    password = data.get("password")
-
-    user = User.query.filter_by(email=email).first()
-    if user and user.check_password(password):
-        access_token = create_access_token(identity=user.id)
-        return access_token
-    else:
-        raise Unauthorized("Invalid credentials.")
-
-
-def confirm_user_email(token):
-    # Implement token decoding and user email confirmation
-    pass
 
 
 def reset_user_password(token, new_password):
@@ -73,12 +54,17 @@ def get_current_user(allow_guest: bool = True) -> User | None:
     return None
 
 
-def is_bot(user_agent: str) -> bool:
-    return CrawlerDetect().isCrawler(user_agent)
+def is_bot() -> bool:
+    return CrawlerDetect(request.headers).isCrawler()
 
 
-def initialize_user(allow_guest: bool = True):
-    if is_bot(request.headers.get("User-Agent")):
+def initialize_user(allow_guest: bool = True) -> User | None:
+    if is_bot():
+        _logger.info(
+            "Bot detected, skipping user initialization: '%s', '%s'",
+            request.remote_addr,
+            request.headers.get("User-Agent"),
+        )
         return None
 
     try:

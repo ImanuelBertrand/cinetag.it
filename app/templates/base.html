@@ -7,37 +7,12 @@
     {% assets "scss_all" %}
         <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
     {% endassets %}
-    <script>
-        window.cinetagit = {
-            csrf_token: "{{ csrf_token }}"
-        };
-    </script>
+    <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
     {% block scripts %}{% endblock %}
 </head>
 <body>
 <header>
-    <nav>
-        <h1 id="logo"><a href="/">cinetag.it</a></h1>
-        <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">New Movies</a>
-
-        {% if not current_user or current_user.is_temporary %}
-            <a href="{{ url_for('html.login') }}">Login</a>
-            <a href="{{ url_for('html.register') }}">Register</a>
-        {% endif %}
-
-        {% if current_user %}
-            <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">Good Movies</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">Bad Movies</a>
-            <a href="{{ url_for('html.profile') }}">Profile</a>
-            <form action="{{ url_for('html.logout') }}" method="post"
-                  style="display: inline;" accept-charset="UTF-8"
-                  enctype="application/x-www-form-urlencoded">
-                <input type="hidden" id="csrf_token" name="csrf_token"
-                       value="{{ csrf_token }}">
-                <button name="logout" type="submit" value="logout">Logout</button>
-            </form>
-        {% endif %}
-    </nav>
+ {% include 'navbar.html' %}
 </header>
 <main>
     {% if get_flashed_messages(with_categories=true) %}

@@ -1,17 +1,14 @@
 import logging
+import os
 
-from flask import Flask, g, request
+from flask import Flask, g
 from flask_jwt_extended import (
     create_access_token,
     set_access_cookies,
-    get_csrf_token,
 )
 
 from app.config import config_by_name
-from app.extensions import init_extensions, babel
-from app.models import User
-from app.services.user_service import get_current_user
-import os
+from app.extensions import init_extensions
 
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
 if not os.path.exists(log_dir):
@@ -20,6 +17,7 @@ if not os.path.exists(log_dir):
 logging.basicConfig(
     level=logging.INFO,
     filename=os.path.join(log_dir, "app.log"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
 
@@ -47,12 +45,6 @@ def create_app(config_name):
             result["current_user"] = g.current_user
         else:
             result["current_user"] = None
-
-        # get access token from cookie
-        access_token = request.cookies.get("access_token_cookie")
-        if access_token:
-            csrf_token = get_csrf_token(access_token)
-            result["csrf_token"] = csrf_token
 
         return result
 

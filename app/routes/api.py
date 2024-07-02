@@ -1,13 +1,11 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from werkzeug.exceptions import Unauthorized, BadRequest
 
 from app.extensions import db
 from app.models import User, UserMovie
 from app.services.user_service import (
     register_user,
-    authenticate_user,
-    confirm_user_email,
     reset_user_password,
     initialize_user,
 )
@@ -15,6 +13,9 @@ from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
     fetch_user_calendar_events,
+    confirm_user_email,
+    send_password_reset_email,
+    authenticate_user,
 )
 
 api = Blueprint("api", __name__)
@@ -36,7 +37,8 @@ def register():
 def login():
     data = request.get_json()
     try:
-        access_token = authenticate_user(data)
+        user = authenticate_user(data)
+        access_token = create_access_token(identity=user.id)
         return jsonify({"token": access_token}), 200
     except Unauthorized as e:
         return jsonify({"error": str(e)}), 401
