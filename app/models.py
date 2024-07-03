@@ -68,6 +68,7 @@ class MovieRegionInfo(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
     region = db.Column(db.String(2), nullable=False)
     release_date = db.Column(db.Date, nullable=False)
+    is_fake = db.Column(db.Boolean, default=False)
 
     movie = db.relationship("Movie", back_populates="region_info")
 
@@ -207,3 +208,25 @@ class TmdbRegion(db.Model):
             self.native_name = data["native_name"]
             updated = True
         return updated
+
+
+class MiscData(db.Model):
+    __tablename__ = "misc_data"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), nullable=False)
+    value = db.Column(db.String(255), nullable=False)
+
+    @staticmethod
+    def save(key, value, commit=False):
+        data = MiscData.query.filter_by(key=key).first()
+        if data:
+            data.value = value
+        else:
+            data = MiscData(key=key, value=value)
+        db.session.add(data)
+        if commit:
+            db.session.commit()
+
+    def __repr__(self):
+        return f"<MiscData {self.key}: {self.value}>"

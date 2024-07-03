@@ -7,6 +7,7 @@ from app.extensions import scheduler
 from app.services.tmdb_service import (
     update_regions,
     update_languages,
+    update_all_upcoming_movies,
 )
 
 _logger = logging.getLogger(__name__)
@@ -22,6 +23,10 @@ def setup_cron_jobs():
     job_definitions = {
         "update_regions": {"func": update_regions, "hours": 24},
         "update_languages": {"func": update_languages, "hours": 24},
+        "update_all_upcoming_movies": {
+            "func": update_all_upcoming_movies,
+            "hours": 24,
+        },
     }
     for job_id, job_definition in job_definitions.items():
         scheduler.add_job(
