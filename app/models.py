@@ -145,16 +145,22 @@ class TmdbLanguage(db.Model):
     __tablename__ = "tmdb_languages"
 
     id = db.Column(db.Integer, primary_key=True)
-    iso_639_1 = db.Column(db.String(2), nullable=False)
+    code = db.Column(db.String(2), nullable=False)
     english_name = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    def get_name(self) -> str:
+        return self.name or self.english_name
 
     @staticmethod
     def create_from_tmdb(data: dict) -> "TmdbLanguage":
         return TmdbLanguage(
-            iso_639_1=data["iso_639_1"],
+            code=data["iso_639_1"],
             english_name=data["english_name"],
-            name=data["name"],
+            name=data["name"]
+            if data["name"] and data["name"].replace("?", "")
+            else "",
         )
 
     def update_from_tmdb(self, data) -> bool:
@@ -162,8 +168,11 @@ class TmdbLanguage(db.Model):
         if self.english_name != data["english_name"]:
             self.english_name = data["english_name"]
             updated = True
-        if self.name != data["name"]:
-            self.name = data["name"]
+        name = (
+            data["name"] if data["name"] and data["name"].replace("?", "") else ""
+        )
+        if self.name != name:
+            self.name = name
             updated = True
         return updated
 
@@ -172,14 +181,18 @@ class TmdbRegion(db.Model):
     __tablename__ = "tmdb_regions"
 
     id = db.Column(db.Integer, primary_key=True)
-    iso_3166_1 = db.Column(db.String(2), nullable=False)
+    code = db.Column(db.String(2), nullable=False)
     english_name = db.Column(db.String(50), nullable=False)
     native_name = db.Column(db.String(50), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    def get_name(self) -> str:
+        return self.native_name or self.english_name
 
     @staticmethod
     def create_from_tmdb(data: dict) -> "TmdbRegion":
         return TmdbRegion(
-            iso_3166_1=data["iso_3166_1"],
+            code=data["iso_3166_1"],
             english_name=data["english_name"],
             native_name=data["native_name"],
         )

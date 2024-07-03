@@ -129,3 +129,35 @@ def fetch_movie_details(movie_id: int, language: str) -> dict:
         movie_id,
         language,
     )
+
+
+def fetch_simple_results(url: str) -> list:
+    api_key = get_tmdb_api_key()
+
+    params = {"api_key": api_key}
+    response = requests.get(url, params=params)
+    _logger.debug("Response %s for GET %s", response.status_code, url)
+    if response.status_code != 200:
+        raise TMDbAPIError(
+            f"TMDb API request failed with status code {response.status_code}",
+            status_code=response.status_code,
+        )
+    return response.json()
+
+
+def fetch_languages() -> List[dict]:
+    return _cached_tmdb_call(
+        "languages",
+        86400,
+        fetch_simple_results,
+        get_tmdb_url("configuration/languages"),
+    )
+
+
+def fetch_regions() -> List[dict]:
+    return _cached_tmdb_call(
+        "regions",
+        86400,
+        fetch_simple_results,
+        get_tmdb_url("configuration/countries"),
+    )

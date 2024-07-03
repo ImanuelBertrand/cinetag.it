@@ -1,3 +1,4 @@
+Flask-APScheduler
 Flask-Assets
 Flask-Babel
 Flask-Bcrypt
@@ -12,5 +13,6 @@ PyYAML
 crawlerdetect
 flask
 libsass
+natsort
 requests
 werkzeug

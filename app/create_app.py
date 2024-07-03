@@ -9,6 +9,8 @@ from flask_jwt_extended import (
 
 from app.config import config_by_name
 from app.extensions import init_extensions
+from app.models import *  # noqa F401 (not used, but required to create tables)
+from app.scheduler import setup_cron_jobs
 
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
 if not os.path.exists(log_dir):
@@ -18,6 +20,7 @@ logging.basicConfig(
     level=logging.INFO,
     filename=os.path.join(log_dir, "app.log"),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    encoding="utf-8",
 )
 
 
@@ -37,6 +40,8 @@ def create_app(config_name):
 
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")
+
+    setup_cron_jobs()
 
     @app.context_processor
     def inject_context():

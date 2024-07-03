@@ -7,6 +7,7 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_apscheduler import APScheduler
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -17,6 +18,7 @@ migrate = Migrate()
 cache = Cache()
 babel = Babel()
 assets_env = Environment()
+scheduler = APScheduler()
 
 
 def get_locale():
@@ -37,6 +39,7 @@ def init_extensions(app):
     cache.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
     assets_env.init_app(app)
+    scheduler.init_app(app)
 
     # Configure Flask-Assets
     scss = Bundle("src/style.scss", filters="libsass", output="dist/style.css")

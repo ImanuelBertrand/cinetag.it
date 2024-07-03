@@ -20,7 +20,7 @@ from flask_jwt_extended import (
 )
 
 from app.extensions import db, bcrypt
-from app.models import User
+from app.models import User, TmdbLanguage, TmdbRegion
 from app.services.user_service import (
     reset_user_password,
     initialize_user,
@@ -200,7 +200,30 @@ def profile():
         db.session.commit()
         flash("Profile saved successfully.", "success")
 
-    return render_template("profile.html", user=user, form_data=form_data)
+    def create_select_options(objects):
+        result = {}
+        for obj in objects:
+            if obj.sort_order < 1000:
+                result[obj.code] = obj.get_name()
+            else:
+                break
+        result[""] = "──────────"
+        for obj in objects:
+            if obj.code in result:
+                continue
+            result[obj.code] = obj.get_name()
+        return result
+
+    regions = TmdbRegion.query.order_by(TmdbRegion.sort_order).all()
+    languages = TmdbLanguage.query.order_by(TmdbLanguage.sort_order).all()
+
+    return render_template(
+        "profile.html",
+        user=user,
+        form_data=form_data,
+        regions=create_select_options(regions),
+        languages=create_select_options(languages),
+    )
 
 
 @html.route("/confirm-email/<token>", methods=["GET"])
