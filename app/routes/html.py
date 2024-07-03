@@ -159,6 +159,50 @@ def delete_data():
     return response
 
 
+def profile_post(user, form_data):
+    def confirm_current_pw():
+        current_pw = form_data.get("current_password")
+        if not current_pw:
+            raise ValueError("Current password is required.")
+
+        pw_is_valid = current_pw and bcrypt.check_password_hash(
+            user.password, current_pw
+        )
+        if not pw_is_valid:
+            raise ValueError("Invalid current password.")
+
+    data = request.form
+    form_data.update(data)
+    form_data["new_password"] = ""
+    form_data["new_password_confirmation"] = ""
+    form_data["current_password"] = ""
+
+    if not data.get("email") and user.email:
+        confirm_current_pw()
+        user.email = None
+
+    if data.get("email") and data.get("email") != user.email:
+        confirm_current_pw()
+
+        existing_user = User.query.filter_by(email=data.get("email")).first()
+        if existing_user:
+            flash("Email already in use.", "danger")
+        else:
+            user.new_email = data.get("email")
+            user.email_confirmed = False
+            send_confirmation_email(user)
+            flash("Please check your inbox for a confirmation email.", "info")
+            form_data["email"] = user.email  # reset email field in the UI
+
+    user.name = data.get("name")
+    user.language = data.get("language")
+    user.region = data.get("region")
+
+    db.session.add(user)
+    db.session.commit()
+    flash("Profile saved successfully.", "success")
+
+
 @html.route("/profile", methods=["GET", "POST"])
 def profile():
     user = initialize_user()
@@ -174,31 +218,11 @@ def profile():
     form_data["email"] = user.email or ""
 
     if request.method == "POST":
-        data = request.form
-        form_data.update(data)
-        debug_dict = {}
-        debug_dict.update(data)
-        _logger.info("Updating user profile: %s", debug_dict)
-        user.name = data.get("name")
-        user.language = data.get("language")
-        user.region = data.get("region")
-
-        if not data.get("email") and user.email:
-            user.email = None
-
-        if data.get("email") and data.get("email") != user.email:
-            existing_user = User.query.filter_by(email=data.get("email")).first()
-            if existing_user:
-                flash("Email already in use.", "danger")
-            else:
-                user.email = data.get("email")
-                user.email_confirmed = False
-                send_confirmation_email(user)
-                flash("Please check your inbox for a confirmation email.", "info")
-
-        db.session.add(user)
-        db.session.commit()
-        flash("Profile saved successfully.", "success")
+        try:
+            profile_post(user, form_data)
+        except Exception as e:
+            _logger.exception("Error updating profile.")
+            flash(str(e), "danger")
 
     def create_select_options(objects):
         result = {}
@@ -217,6 +241,10 @@ def profile():
     regions = TmdbRegion.query.order_by(TmdbRegion.sort_order).all()
     languages = TmdbLanguage.query.order_by(TmdbLanguage.sort_order).all()
 
+    # double make sure we never send the password back through the air
+    form_data["new_password"] = ""
+    form_data["new_password_confirmation"] = ""
+    form_data["current_password"] = ""
     return render_template(
         "profile.html",
         user=user,

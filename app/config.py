@@ -39,6 +39,8 @@ class Config:
     CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
 
+    COUNT_TOP_SELECT_OPTION = 5
+
     DEFAULT_REGION = "US"
     DEFAULT_LANGUAGE = "en"
 

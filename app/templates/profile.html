@@ -57,7 +57,23 @@
         <input type="hidden" name="csrf_token">
         <div class="form-row">
             <label for="name">Name:</label>
-            <input type="text" id="name" name="name" value="{{ form_data["name"] }}">
+            <input type="text" id="name" name="name" value="{{ form_data["name"] }}"/>
+        </div>
+        {% if user.new_email %}
+            <div class="form-row">
+                <span>
+                    Changing the email address to <strong>{{ user.new_email }}</strong> is pending.
+                    Please confirm the new email address.
+                </span>
+            </div>
+        {% endif %}
+        <div class="form-row">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="{{ form_data["email"] }}"/>
+        </div>
+        <div class="form-row">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password"/>
         </div>
         <div class="form-row">
             <label for="language">Language:</label>
@@ -81,9 +97,16 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="form-row">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" value="{{ form_data["email"] }}">
+        <div class="password-confirmation">
+            <div class="form-row">
+            <span>
+                To change your email address or your password, you need to enter your current password.
+            </span>
+            </div>
+            <div class="form-row">
+                <label for="current_password">Current password:</label>
+                <input type="password" id="current_password" name="current_password"/>
+            </div>
         </div>
         <div class="form-row">
             <button type="submit">Save</button>
@@ -94,7 +117,7 @@
     {% if user and not user.is_temporary %}
         <form action="{{ url_for('html.logout') }}" method="post" accept-charset="UTF-8"
               enctype="application/x-www-form-urlencoded">
-            <input type="hidden" name="csrf_token">
+            <input type="hidden" name="csrf_token"/>
             <button name="logout" type="submit">Logout</button>
         </form>
     {% endif %}

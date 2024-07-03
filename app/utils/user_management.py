@@ -60,6 +60,8 @@ def confirm_user_email(token):
         user = User.query.get(data["user_id"])
         if not user:
             raise KeyError("User not found.")
+        user.email = user.new_email
+        user.new_email = None
         user.email_confirmed = True
         user.is_temporary = False
         db.session.commit()
