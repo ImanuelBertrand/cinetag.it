@@ -91,11 +91,13 @@
     </form>
 
     <!-- Logout -->
-    <form action="{{ url_for('html.logout') }}" method="post" accept-charset="UTF-8"
-          enctype="application/x-www-form-urlencoded">
-        <input type="hidden" name="csrf_token">
-        <button name="logout" type="submit">Logout</button>
-    </form>
+    {% if user and not user.is_temporary %}
+        <form action="{{ url_for('html.logout') }}" method="post" accept-charset="UTF-8"
+              enctype="application/x-www-form-urlencoded">
+            <input type="hidden" name="csrf_token">
+            <button name="logout" type="submit">Logout</button>
+        </form>
+    {% endif %}
 
     <!-- Delete all data -->
     <form method="POST" action="{{ url_for('html.delete_data') }}" accept-charset="UTF-8"
