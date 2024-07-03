@@ -241,9 +241,13 @@ def confirm_email(token):
 @html.route("/request-confirmation-mail", methods=["POST"])
 def request_confirmation_email():
     user = initialize_user()
-    if not user or user.is_temporary:
+    if not user:
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
+
+    if not user.email:
+        flash("Email is required to send confirmation email.", "danger")
+        return redirect(url_for("html.profile"))
 
     if user.email_confirmed:
         flash("Email already confirmed.", "info")
