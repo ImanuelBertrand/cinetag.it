@@ -14,6 +14,7 @@ class User(db.Model):
     region = db.Column(db.String(2), nullable=True, default="US")
     language = db.Column(db.String(5), nullable=True, default="en-US")
     is_temporary = db.Column(db.Boolean, default=True)
+    temporary_user_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

@@ -142,8 +142,8 @@ def logout():
     return response
 
 
-@html.route("/reset_data", methods=["POST"])
-def reset_data():
+@html.route("/delete_data", methods=["POST"])
+def delete_data():
     """
     Similar as logout(), but with a different message, and it will delete the
     temporary user.
@@ -152,8 +152,9 @@ def reset_data():
     user = initialize_user()
     if user:
         db.session.delete(user)
-    flash("All your data was deleted.", "success")
-    response = make_response(redirect(url_for("html.home")))
+        db.session.commit()
+    flash("All your data is gone with the wind.", "success")
+    response = make_response(redirect(url_for("html.profile")))
     unset_jwt_cookies(response)
     return response
 
@@ -166,18 +167,40 @@ def profile():
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
 
+    form_data = defaultdict(str)
+    form_data["name"] = user.name or ""
+    form_data["language"] = user.language or ""
+    form_data["region"] = user.region or ""
+    form_data["email"] = user.email or ""
+
     if request.method == "POST":
         data = request.form
+        form_data.update(data)
         debug_dict = {}
         debug_dict.update(data)
         _logger.info("Updating user profile: %s", debug_dict)
         user.name = data.get("name")
         user.language = data.get("language")
         user.region = data.get("region")
+
+        if not data.get("email") and user.email:
+            user.email = None
+
+        if data.get("email") and data.get("email") != user.email:
+            existing_user = User.query.filter_by(email=data.get("email")).first()
+            if existing_user:
+                flash("Email already in use.", "danger")
+            else:
+                user.email = data.get("email")
+                user.email_confirmed = False
+                send_confirmation_email(user)
+                flash("Please check your inbox for a confirmation email.", "info")
+
         db.session.add(user)
         db.session.commit()
+        flash("Profile saved successfully.", "success")
 
-    return render_template("profile.html", user=user)
+    return render_template("profile.html", user=user, form_data=form_data)
 
 
 @html.route("/confirm-email/<token>", methods=["GET"])
@@ -192,7 +215,7 @@ def confirm_email(token):
     return redirect(url_for("html.login"))
 
 
-@html.route("/user/request-confirmation-mail", methods=["POST"])
+@html.route("/request-confirmation-mail", methods=["POST"])
 def request_confirmation_email():
     user = initialize_user()
     if not user or user.is_temporary:

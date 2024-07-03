@@ -7,7 +7,7 @@
     {% assets "scss_all" %}
         <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
     {% endassets %}
-    <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     {% block scripts %}{% endblock %}
 </head>
 <body>
@@ -18,7 +18,7 @@
     {% if get_flashed_messages(with_categories=true) %}
         <ul>
             {% for category, message in get_flashed_messages(with_categories=true) %}
-                <li class="alert alert-{{ category }}">{{ message }}</li>
+                <li class="alert {{ category }}">{{ message }}</li>
             {% endfor %}
         </ul>
     {% endif %}

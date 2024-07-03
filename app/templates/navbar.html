@@ -2,29 +2,9 @@
     <h1 id="logo"><a href="/">cinetag.it</a></h1>
     <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">New Movies</a>
 
-    {% if not current_user or current_user.is_temporary %}
-        <a href="{{ url_for('html.login') }}">Login</a>
-        <a href="{{ url_for('html.register') }}">Register</a>
-    {% endif %}
-
-
-
     {% if current_user %}
         <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">Good Movies</a>
         <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">Bad Movies</a>
         <a href="{{ url_for('html.profile') }}">Profile</a>
-        {% if current_user.is_temporary %}
-            <form action="{{ url_for('html.reset_data') }}" method="post" style="display: inline;" accept-charset="UTF-8"
-                  enctype="application/x-www-form-urlencoded">
-                <input type="hidden" name="csrf_token">
-                <button name="reset_data" type="submit" value="reset_data">Delete data</button>
-            </form>
-        {% else %}
-            <form action="{{ url_for('html.logout') }}" method="post" style="display: inline;" accept-charset="UTF-8"
-                  enctype="application/x-www-form-urlencoded">
-                <input type="hidden" name="csrf_token">
-                <button name="logout" type="submit" value="logout">Logout</button>
-            </form>
-        {% endif %}
     {% endif %}
 </nav>
