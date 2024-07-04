@@ -31,6 +31,9 @@ class Movie(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     original_title = db.Column(db.String(255), nullable=False)
+    popularity = db.Column(db.Float, nullable=True)
+    original_language = db.Column(db.String(2), nullable=True)
+    info_update_at = db.Column(db.DateTime, nullable=True)
 
     region_info = db.relationship(
         "MovieRegionInfo", back_populates="movie", cascade="all, delete-orphan"
@@ -43,12 +46,19 @@ class Movie(db.Model):
         "UserMovie", back_populates="movie", cascade="all, delete-orphan"
     )
 
-    popularity = db.Column(db.Float, nullable=True)
+    def __repr__(self):
+        return f"<Movie {self.id} ({self.original_title})>"
 
     def update_from_tmdb(self, data: dict) -> bool:
         updated = False
         if self.original_title != data["original_title"]:
             self.original_title = data["original_title"]
+            updated = True
+        if self.popularity != data["popularity"]:
+            self.popularity = data["popularity"]
+            updated = True
+        if self.original_language != data["original_language"]:
+            self.original_language = data["original_language"]
             updated = True
         return updated
 
@@ -58,6 +68,7 @@ class Movie(db.Model):
             id=data["id"],
             original_title=data["original_title"],
             popularity=data["popularity"],
+            original_language=data["original_language"],
         )
 
 
@@ -72,19 +83,26 @@ class MovieRegionInfo(db.Model):
 
     movie = db.relationship("Movie", back_populates="region_info")
 
+    __table_args__ = (
+        db.Index("movie_region_info_idx", "movie_id", "region"),
+        db.Index("movie_region_info_release_date_idx", "release_date"),
+    )
+
+    def __repr__(self):
+        return f"<MovieRegionInfo {self.movie_id} ({self.region})>"
+
     @staticmethod
-    def create_from_tmdb(data: dict, region: str) -> "MovieRegionInfo":
+    def create_from_tmdb(movie_id: int, region: str, date) -> "MovieRegionInfo":
         return MovieRegionInfo(
-            movie_id=data["id"],
+            movie_id=movie_id,
             region=region,
-            release_date=datetime.strptime(data["release_date"], "%Y-%m-%d"),
+            release_date=date,
         )
 
-    def update_from_tmdb(self, data) -> bool:
+    def update_from_tmdb(self, date: datetime.date) -> bool:
         updated = False
-        release_date = datetime.strptime(data["release_date"], "%Y-%m-%d")
-        if self.release_date != release_date:
-            self.release_date = release_date
+        if self.release_date != date:
+            self.release_date = date
             updated = True
         return updated
 
@@ -98,17 +116,29 @@ class MovieLanguageInfo(db.Model):
     title = db.Column(db.String(255), nullable=False)
     poster_path = db.Column(db.String(255), nullable=True)
     overview = db.Column(db.Text, nullable=True)
+    tagline = db.Column(db.String(255), nullable=True)
+    runtime = db.Column(db.Integer, nullable=True)
 
     movie = db.relationship("Movie", back_populates="language_info")
 
+    __table_args__ = (db.Index("movie_language_info_idx", "movie_id", "language"),)
+
+    def __repr__(self):
+        return f"<MovieLanguageInfo {self.movie_id} ({self.language})>"
+
     @staticmethod
-    def create_from_tmdb(data: dict, language: str) -> "MovieLanguageInfo":
+    def create_from_tmdb(
+        movie_id: int, data: dict, language: str = None
+    ) -> "MovieLanguageInfo":
+        if language is not None:
+            data = {"iso_639_1": language, "data": data}
+
         return MovieLanguageInfo(
-            movie_id=data["id"],
-            language=language,
-            title=data["title"],
-            poster_path=data["poster_path"],
-            overview=data["overview"],
+            movie_id=movie_id,
+            language=data["iso_639_1"],
+            title=data["data"].get("title"),
+            overview=data["data"].get("overview"),
+            tagline=data["data"].get("tagline"),
         )
 
     def update_from_tmdb(self, data) -> bool:
@@ -142,12 +172,14 @@ class UserMovie(db.Model):
     user = db.relationship("User", back_populates="user_movies")
     movie = db.relationship("Movie", back_populates="user_movies")
 
+    __table_args__ = (db.Index("user_movie_idx", "user_id", "movie_id"),)
+
 
 class TmdbLanguage(db.Model):
     __tablename__ = "tmdb_languages"
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(2), nullable=False)
+    code = db.Column(db.String(2), nullable=False, unique=True)
     english_name = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
@@ -183,7 +215,7 @@ class TmdbRegion(db.Model):
     __tablename__ = "tmdb_regions"
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(2), nullable=False)
+    code = db.Column(db.String(2), nullable=False, unique=True)
     english_name = db.Column(db.String(50), nullable=False)
     native_name = db.Column(db.String(50), nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
@@ -214,7 +246,7 @@ class MiscData(db.Model):
     __tablename__ = "misc_data"
 
     id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(50), nullable=False)
+    key = db.Column(db.String(50), nullable=False, unique=True)
     value = db.Column(db.String(255), nullable=False)
 
     @staticmethod
