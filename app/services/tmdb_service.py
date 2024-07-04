@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict
 
 import natsort
 from flask import current_app
@@ -20,7 +20,9 @@ from app.utils.tmdb import (
     fetch_languages,
     fetch_regions,
     fetch_upcoming_movies,
-    fetch_movie_details,
+    fetch_movie_languages,
+    fetch_movie_images,
+    fetch_release_dates,
 )
 
 _logger = logging.getLogger(__name__)
@@ -162,8 +164,18 @@ def update_regions():
 
 
 def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
+    """
+    Save a list of movies to the database.
+    It will create the movie itself, but also the region and language info of the
+    current call. Cron jobs will later update the language and region info for all
+    regions and languages.
+    :param tmdb_movies:
+    :param region:
+    :param language:
+    :return:
+    """
     movie_ids = [movie["id"] for movie in tmdb_movies]
-    existing_movies = {
+    existing_movies: Dict[int, Movie] = {
         movie.id: movie
         for movie in Movie.query.filter(Movie.id.in_(movie_ids)).all()
     }
@@ -188,25 +200,28 @@ def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
     language_info_to_add: list[MovieLanguageInfo] = []
 
     for tmdb_movie in tmdb_movies:
+        movie_id = tmdb_movie["id"]
         movie = existing_movies.get(tmdb_movie["id"])
+        release_date = datetime.strptime(
+            tmdb_movie["release_date"], "%Y-%m-%d"
+        ).date()
         if not movie:
             movies_to_add.append(Movie.create_from_tmdb(tmdb_movie))
-        elif movie.original_title != tmdb_movie["original_title"]:
-            movie.original_title = tmdb_movie["original_title"]
+        elif movie.update_from_tmdb(tmdb_movie):
             db.session.add(movie)
 
-        region_info: MovieRegionInfo = existing_region_info.get(tmdb_movie["id"])
+        region_info: MovieRegionInfo = existing_region_info.get(movie_id)
         if not region_info:
             region_info_to_add.append(
-                MovieRegionInfo.create_from_tmdb(tmdb_movie, region)
+                MovieRegionInfo.create_from_tmdb(movie_id, region, release_date)
             )
-        elif region_info.update_from_tmdb(tmdb_movie):
+        elif region_info.update_from_tmdb(release_date):
             db.session.add(region_info)
 
-        language_info: MovieLanguageInfo = existing_lang_info.get(tmdb_movie["id"])
+        language_info: MovieLanguageInfo = existing_lang_info.get(movie_id)
         if not language_info:
             language_info_to_add.append(
-                MovieLanguageInfo.create_from_tmdb(tmdb_movie, language)
+                MovieLanguageInfo.create_from_tmdb(movie_id, tmdb_movie, language)
             )
         elif language_info.update_from_tmdb(tmdb_movie):
             db.session.add(language_info)
@@ -219,94 +234,181 @@ def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
         db.session.bulk_save_objects(language_info_to_add)
 
 
-def sync_upcoming_movies(region: str, language: str) -> None:
+def sync_upcoming_movies(region: str, language: str = None) -> List[int]:
     """
     Fetch upcoming movies from TMDb and ensure they are stored in the database.
-
-    Args:
-        region (str): The region code to fetch upcoming movies for.
-        language (str): The language code to fetch movies in.
-
-    Returns:
-        List[Movie]: A list of Movie objects.
     """
-    last_update_key = f"upcoming_movies_last_update_{region}_{language}"
-    last_update = MiscData.query.filter_by(key=last_update_key).first()
-    if last_update:
-        last_update_datetime = datetime.strptime(
-            last_update.value, "%Y-%m-%d %H:%M:%S.%f"
-        )
-        if last_update_datetime > datetime.utcnow() - timedelta(hours=1):
-            return
-
-    save_movie_list(
-        fetch_upcoming_movies(region, language),
-        region,
-        language,
+    if language is None:
+        language = "en"
+    _logger.info(
+        "Syncing upcoming movies for region %s and language %s", region, language
     )
 
-    MiscData.save(last_update_key, datetime.utcnow())
+    tmdb_movies = fetch_upcoming_movies(region, language)
+    save_movie_list(tmdb_movies, region, language)
 
     db.session.commit()
 
+    return [movie["id"] for movie in tmdb_movies]
+
+
+def update_movie_languages(movie: Movie):
+    movie_languages = fetch_movie_languages(movie.id)
+    if not movie_languages:
+        return
+
+    MovieLanguageInfo.query.filter_by(movie_id=movie.id).delete()
+
+    new_infos = []
+    for lang_data in movie_languages:
+        if not lang_data["data"]["title"]:
+            lang_data["data"]["title"] = movie.original_title
+        new_infos.append(MovieLanguageInfo.create_from_tmdb(movie.id, lang_data))
+
+    db.session.bulk_save_objects(new_infos)
+
+
+def update_movie_posters(movie: Movie):
+    language_infos = MovieLanguageInfo.query.filter_by(movie_id=movie.id).all()
+    if not language_infos:
+        return
+
+    movie_images = fetch_movie_images(movie.id)
+    if not movie_images:
+        return
+
+    posters = movie_images.get("posters", [])
+    if not posters:
+        return
+
+    def get_lang(data):
+        return data["iso_639_1"] or movie.original_language
+
+    langs = {get_lang(p) for p in posters}
+    lang_posters = {
+        lang: [p for p in posters if get_lang(p) == lang] for lang in langs
+    }
+
+    best_posters = {
+        lang: max(lang_posters[lang], key=lambda p: p["vote_average"])
+        for lang in langs
+    }
+
+    us_poster = best_posters.get("en") or next(iter(best_posters.values()), None)
+
+    for lang_info in language_infos:
+        poster = best_posters.get(lang_info.language) or us_poster
+        if not poster:
+            continue
+        lang_info.poster_path = poster["file_path"]
+        db.session.add(lang_info)
+
+
+def update_movie_regions(movie: Movie):
+    release_data = fetch_release_dates(movie.id)
+    if not release_data:
+        return
+
+    best_release_dates = {}
+    fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
+    for data in release_data:
+        region = data["iso_3166_1"]
+        dates = data["release_dates"]
+        pure_release_dates = [d for d in dates if not d["note"]]
+        if pure_release_dates:
+            date = min([d["release_date"] for d in pure_release_dates])
+        else:
+            date = min([d["release_date"] for d in dates])
+        best_release_dates[region] = datetime.strptime(date, fmt).date()
+
+    existing_region_infos = MovieRegionInfo.query.filter_by(
+        movie_id=movie.id
+    ).all()
+
+    region_ids_to_delete = [
+        info.id
+        for info in existing_region_infos
+        if info.is_fake or info.region not in best_release_dates
+    ]
+    if region_ids_to_delete:
+        MovieRegionInfo.query.filter(
+            MovieRegionInfo.id.in_(region_ids_to_delete)
+        ).delete()
+
+    new_region_infos = [
+        MovieRegionInfo.create_from_tmdb(movie.id, rd, best_release_dates[rd])
+        for rd in best_release_dates
+        if rd
+        not in {info.region for info in existing_region_infos if not info.is_fake}
+    ]
+    db.session.bulk_save_objects(new_region_infos)
+
+    for region_info in existing_region_infos:
+        date = best_release_dates.get(region_info.region)
+        if region_info.update_from_tmdb(date):
+            db.session.add(region_info)
+
+    all_regions = TmdbRegion.query.all()
+    missing_regions = {region.code for region in all_regions} - set(
+        best_release_dates.keys()
+    )
+    original_release_date = min(best_release_dates.values())
+    fake_region_infos = [
+        MovieRegionInfo(
+            movie_id=movie.id,
+            region=region,
+            release_date=original_release_date,
+            is_fake=True,
+        )
+        for region in missing_regions
+    ]
+    if fake_region_infos:
+        db.session.bulk_save_objects(fake_region_infos)
+
+    return release_data
+
+
+def check_movie_information(movie: Movie):
+    if not movie:
+        return
+    threshold = datetime.now() - timedelta(days=7)
+    if not movie.info_update_at or movie.info_update_at < threshold:
+        try:
+            update_movie_languages(movie)
+            update_movie_posters(movie)
+            update_movie_regions(movie)
+            movie.info_update_at = datetime.now()
+            db.session.add(movie)
+        except Exception as e:
+            _logger.error("Error updating movie languages for %s: %s", movie, e)
+
 
 def update_all_upcoming_movies():
+    _logger.info("Updating all upcoming movies")
     MovieRegionInfo.query.filter(MovieRegionInfo.is_fake).delete()
 
-    used_region_language_combinations_by_users = (
-        db.session.query(User.region, User.language)
-        .filter(User.region.isnot(None), User.language.isnot(None))
-        .distinct()
-        .all()
-    )
+    used_regions_by_users = db.session.query(User.region).distinct().all()
+    used_regions_by_users = {region for region, in used_regions_by_users}
+    used_regions_by_users = used_regions_by_users | {"US", "DE", "GB", "FR"}
 
-    if ("US", "en") not in used_region_language_combinations_by_users:
-        used_region_language_combinations_by_users.append(("US", "en"))
+    for region in used_regions_by_users:
+        # Fetch basic data
+        sync_upcoming_movies(region, "en")
 
-    for region, language in used_region_language_combinations_by_users:
-        sync_upcoming_movies(region, language)
-
-    # Fake foreign release dates for all movies
-    # that don't have data in those regions
-    us_movie_releases = MovieRegionInfo.query.filter(
-        MovieRegionInfo.region == "US"
+    # filter by info_update_at, null or older than 1 day
+    threshold = datetime.now() - timedelta(days=1)
+    movies = Movie.query.filter(
+        db.or_(
+            Movie.info_update_at.is_(None),
+            Movie.info_update_at < threshold,
+        )
     ).all()
-
-    for region, language in used_region_language_combinations_by_users:
-        region_move_ids = MovieRegionInfo.query.filter(
-            MovieRegionInfo.region == region
-        ).all()
-        region_move_ids = [movie.movie_id for movie in region_move_ids]
-        movie_list_to_save = []
-        for movie in us_movie_releases:
-            if movie.movie_id in region_move_ids:
-                continue
-            db.session.add(
-                MovieRegionInfo(
-                    movie_id=movie.movie_id,
-                    region=region,
-                    release_date=movie.release_date,
-                    is_fake=True,
-                )
-            )
-            movie_details = fetch_movie_details(movie.movie_id, language)
-            movie_details["release_date"] = movie.release_date.strftime("%Y-%m-%d")
-            movie_list_to_save.append(movie_details)
-        save_movie_list(movie_list_to_save, region, language)
-
-    # Make sure the english language is loaded for all movies
-    english_movie_language_info = MovieLanguageInfo.query.filter(
-        MovieLanguageInfo.language == "en"
-    ).all()
-    english_movie_ids = [movie.movie_id for movie in english_movie_language_info]
-    all_movie_ids = [movie.id for movie in Movie.query.all()]
-    missing_movie_ids = set(all_movie_ids) - set(english_movie_ids)
-    movie_list_to_save = []
-    for movie_id in missing_movie_ids:
-        movie_details = fetch_movie_details(movie_id, "en")
-        movie_details["release_date"] = datetime.now().strftime("%Y-%m-%d")
-
-    if movie_list_to_save:
-        save_movie_list(movie_list_to_save, "US", "en")
+    _logger.info("Checking %s movies for updated information", len(movies))
+    c = 0
+    for movie in movies:
+        c += 1
+        check_movie_information(movie)
+        if c % 10 == 0:
+            db.session.commit()
 
     db.session.commit()
