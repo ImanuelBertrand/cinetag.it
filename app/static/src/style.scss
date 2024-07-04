@@ -154,6 +154,7 @@ footer {
     border-radius: 3px;
     outline: 2px solid transparent;
     transition: outline-color 0.25s ease;
+    aspect-ratio: 500 / 741;
 
     &.approved {
       outline-color: #0f0;
