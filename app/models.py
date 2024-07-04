@@ -13,7 +13,7 @@ class User(db.Model):
     password = db.Column(db.String(128), nullable=True)
     email_confirmed = db.Column(db.Boolean, default=False)
     region = db.Column(db.String(2), nullable=True, default="US")
-    language = db.Column(db.String(5), nullable=True, default="en-US")
+    language = db.Column(db.String(5), nullable=True, default="en")
     is_temporary = db.Column(db.Boolean, default=True)
     temporary_user_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
