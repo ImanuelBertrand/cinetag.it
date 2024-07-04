@@ -8,7 +8,14 @@ from flask import current_app, url_for
 from werkzeug.security import generate_password_hash
 
 from app.extensions import db, bcrypt
-from app.models import User, UserMovie, Movie, MovieRegionInfo, MovieLanguageInfo
+from app.models import (
+    User,
+    UserMovie,
+    Movie,
+    MovieRegionInfo,
+    MovieLanguageInfo,
+    MiscData,
+)
 from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import send_email
 
@@ -118,7 +125,11 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
     # Sync upcoming movies from TMDb with the local database
     # will exit early if the last sync is recent enough
-    sync_upcoming_movies(region, lang)
+    last_query = MiscData.get("last_sync_upcoming_movies_%s" % region)
+    if last_query:
+        last_query = datetime.fromisoformat(last_query)
+    if not last_query or (datetime.now() - last_query).total_seconds() > 86400:
+        sync_upcoming_movies(region, lang)
 
     upcoming_movie_ids = {
         m.movie_id

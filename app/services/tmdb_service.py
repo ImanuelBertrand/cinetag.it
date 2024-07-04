@@ -247,8 +247,12 @@ def sync_upcoming_movies(region: str, language: str = None) -> List[int]:
     tmdb_movies = fetch_upcoming_movies(region, language)
     save_movie_list(tmdb_movies, region, language)
 
+    MiscData.save(
+        "last_sync_upcoming_movies_%s" % region, datetime.now().isoformat()
+    )
     db.session.commit()
 
+    _logger.info("Synced %s upcoming movies", len(tmdb_movies))
     return [movie["id"] for movie in tmdb_movies]
 
 
