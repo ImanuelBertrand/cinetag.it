@@ -5,13 +5,12 @@ from typing import Dict, List
 import jwt
 from babel.dates import format_date
 from flask import current_app, url_for
-from werkzeug.security import generate_password_hash, check_password_hash
-
-from app.models import User, UserMovie, Movie, MovieRegionInfo
-from app.services.tmdb_service import sync_upcoming_movies
-from app.utils.email import send_email
+from werkzeug.security import generate_password_hash
 
 from app.extensions import db, bcrypt
+from app.models import User, UserMovie, Movie, MovieRegionInfo, MovieLanguageInfo
+from app.services.tmdb_service import sync_upcoming_movies
+from app.utils.email import send_email
 
 
 def register_user(data):
@@ -148,13 +147,34 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
     result = []
     now = datetime.now().date()
+
+    def get_region_info(mv):
+        items = [ri for ri in mv.region_info if ri.region == region]
+        if not items:
+            items = [ri for ri in mv.region_info if ri.region == "US"]
+        return items[0] if items else None
+
+    def get_language_info(mv):
+        items = [li for li in mv.language_info if li.language == lang]
+        if not items or not items[0].overview:
+            items = [li for li in mv.language_info if li.language == "en"]
+        return items[0] if items else None
+
     for movie in filtered_movies:
-        region_info: MovieRegionInfo = next(
-            r for r in movie.region_info if r.region == region
-        )
-        if not region_info.release_date or region_info.release_date < now:
+        region_info: MovieRegionInfo | None = get_region_info(movie)
+
+        if (
+            not region_info
+            or not region_info.release_date
+            or region_info.release_date < now
+        ):
             continue
-        lang_info = next(li for li in movie.language_info if li.language == lang)
+
+        lang_info: MovieLanguageInfo | None = get_language_info(movie)
+        if not lang_info:
+            # no data, not even English, to display
+            continue
+
         wait_days = (region_info.release_date - now).total_seconds() / 86400
         result.append(
             {

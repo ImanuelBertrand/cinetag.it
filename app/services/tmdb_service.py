@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List
 
+import natsort
 from flask import current_app
 from natsort import natsorted
 
@@ -21,7 +22,6 @@ from app.utils.tmdb import (
     fetch_upcoming_movies,
     fetch_movie_details,
 )
-import natsort
 
 _logger = logging.getLogger(__name__)
 
@@ -266,14 +266,13 @@ def update_all_upcoming_movies():
     for region, language in used_region_language_combinations_by_users:
         sync_upcoming_movies(region, language)
 
+    # Fake foreign release dates for all movies
+    # that don't have data in those regions
     us_movie_releases = MovieRegionInfo.query.filter(
         MovieRegionInfo.region == "US"
     ).all()
 
     for region, language in used_region_language_combinations_by_users:
-        MovieRegionInfo.query.filter(
-            MovieRegionInfo.region == region, MovieRegionInfo.is_fake == True
-        ).delete()
         region_move_ids = MovieRegionInfo.query.filter(
             MovieRegionInfo.region == region
         ).all()
@@ -294,5 +293,20 @@ def update_all_upcoming_movies():
             movie_details["release_date"] = movie.release_date.strftime("%Y-%m-%d")
             movie_list_to_save.append(movie_details)
         save_movie_list(movie_list_to_save, region, language)
+
+    # Make sure the english language is loaded for all movies
+    english_movie_language_info = MovieLanguageInfo.query.filter(
+        MovieLanguageInfo.language == "en"
+    ).all()
+    english_movie_ids = [movie.movie_id for movie in english_movie_language_info]
+    all_movie_ids = [movie.id for movie in Movie.query.all()]
+    missing_movie_ids = set(all_movie_ids) - set(english_movie_ids)
+    movie_list_to_save = []
+    for movie_id in missing_movie_ids:
+        movie_details = fetch_movie_details(movie_id, "en")
+        movie_details["release_date"] = datetime.now().strftime("%Y-%m-%d")
+
+    if movie_list_to_save:
+        save_movie_list(movie_list_to_save, "US", "en")
 
     db.session.commit()
