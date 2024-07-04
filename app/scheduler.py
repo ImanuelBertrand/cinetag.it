@@ -25,7 +25,7 @@ def setup_cron_jobs():
         "update_languages": {"func": update_languages, "hours": 24},
         "update_all_upcoming_movies": {
             "func": update_all_upcoming_movies,
-            "hours": 24,
+            "hours": 1,
         },
     }
     for job_id, job_definition in job_definitions.items():
