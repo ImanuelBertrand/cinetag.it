@@ -112,19 +112,20 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
     region = user.region or current_app.config.DEFAULT_REGION
     lang = user.language or current_app.config.DEFAULT_LANGUAGE
-    lang_short = lang.split("-")[0]
 
     def fmt_date(date):
-        return format_date(date, locale=lang_short) if date else None
+        return format_date(date, locale=lang) if date else None
 
     # Sync upcoming movies from TMDb with the local database
     # will exit early if the last sync is recent enough
     sync_upcoming_movies(region, lang)
 
-    upcoming_movies = MovieRegionInfo.query.filter_by(region=region).filter(
-        MovieRegionInfo.release_date > datetime.now().date()
-    )
-    upcoming_movie_ids = {m.movie_id for m in upcoming_movies}
+    upcoming_movie_ids = {
+        m.movie_id
+        for m in MovieRegionInfo.query.filter_by(region=region).filter(
+            MovieRegionInfo.release_date > datetime.now().date()
+        )
+    }
 
     if mode == "pending":
         movie_ids = upcoming_movie_ids - reviewed_movie_ids
@@ -156,8 +157,14 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
     def get_language_info(mv):
         items = [li for li in mv.language_info if li.language == lang]
-        if not items or not items[0].overview:
+        if not items or not items[0].overview or not items[0].poster_path:
             items = [li for li in mv.language_info if li.language == "en"]
+        if not items or not items[0].overview or not items[0].poster_path:
+            items = [
+                li
+                for li in mv.language_info
+                if li.language == mv.original_language
+            ]
         return items[0] if items else None
 
     for movie in filtered_movies:
@@ -172,7 +179,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
         lang_info: MovieLanguageInfo | None = get_language_info(movie)
         if not lang_info:
-            # no data, not even English, to display
+            # no data to display
             continue
 
         wait_days = (region_info.release_date - now).total_seconds() / 86400
