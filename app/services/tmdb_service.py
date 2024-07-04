@@ -389,23 +389,18 @@ def check_movie_information(movie: Movie):
 
 def update_all_upcoming_movies():
     _logger.info("Updating all upcoming movies")
-    MovieRegionInfo.query.filter(MovieRegionInfo.is_fake).delete()
 
     used_regions_by_users = db.session.query(User.region).distinct().all()
     used_regions_by_users = {region for region, in used_regions_by_users}
     used_regions_by_users = used_regions_by_users | {"US", "DE", "GB", "FR"}
 
     for region in used_regions_by_users:
-        # Fetch basic data
         sync_upcoming_movies(region, "en")
 
     # filter by info_update_at, null or older than 1 day
     threshold = datetime.now() - timedelta(days=1)
     movies = Movie.query.filter(
-        db.or_(
-            Movie.info_update_at.is_(None),
-            Movie.info_update_at < threshold,
-        )
+        db.or_(Movie.info_update_at.is_(None), Movie.info_update_at < threshold)
     ).all()
     _logger.info("Checking %s movies for updated information", len(movies))
     c = 0
