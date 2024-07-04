@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, timedelta
-from typing import List, Callable, Any
+from datetime import datetime
+from typing import List, Callable, Any, Dict
 
 import requests
 from flask import current_app
@@ -15,19 +15,43 @@ def get_base_url() -> str:
     return "https://api.themoviedb.org/3"
 
 
+def get_tmdb_api_token() -> str:
+    """
+    Retrieve the TMDb API token from the application configuration.
+    :return: The TMDb API token
+    """
+    token = current_app.config.get("TMDB_API_TOKEN")
+    if not token:
+        raise TMDbAPIError("TMDb API Token is not configured.")
+    return token
+
+
 def get_tmdb_url(path: str) -> str:
     return f"{get_base_url()}/{path.lstrip('/')}"
 
 
-def get_tmdb_api_key() -> str:
-    """
-    Retrieve the TMDb API key from the application configuration.
-    :return: The TMDb API key
-    """
-    key = current_app.config.get("TMDB_API_KEY")
-    if not key:
-        raise TMDbAPIError("TMDb API key is not configured.")
-    return key
+def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None):
+    if not params:
+        params = {}
+    if not headers:
+        headers = {}
+
+    headers["Authorization"] = f"Bearer {get_tmdb_api_token()}"
+
+    response = requests.get(get_tmdb_url(url), params=params, headers=headers)
+    _logger.debug("Response %s for GET %s", response.status_code, url)
+
+    if response.status_code != 200:
+        raise TMDbAPIError(
+            f"TMDb API request failed with status code {response.status_code}",
+            status_code=response.status_code,
+        )
+
+    return response
+
+
+def _get_json(url: str, params: Dict[str, str] = None):
+    return _get(url, params=params).json()
 
 
 def _cached_tmdb_call(
@@ -52,33 +76,17 @@ def _cached_tmdb_call(
 
 
 def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
-    api_key = get_tmdb_api_key()
-
-    now = datetime.now()
-    cutoff_date = now + timedelta(days=90)
     params = {
-        "api_key": api_key,
         "region": region,
         "language": language,
-        "release_date.gte": now.strftime("%Y-%m-%d"),
-        "release_date.lte": cutoff_date.strftime("%Y-%m-%d"),
+        "release_date.gte": datetime.now().strftime("%Y-%m-%d"),
         "with_release_type": "3",  # Theatrical
         "page": 1,
     }
 
-    url = get_tmdb_url("discover/movie")
     all_movies = {}
     while True:
-        response = requests.get(url, params=params)
-        _logger.debug(
-            "Response %s for GET %s with: %s", response.status_code, url, params
-        )
-        if response.status_code != 200:
-            raise TMDbAPIError(
-                f"TMDb API request failed with status code {response.status_code}",
-                status_code=response.status_code,
-            )
-        data = response.json()
+        data = _get_json("discover/movie", params=params)
         for movie in data["results"]:
             all_movies[movie["id"]] = movie
         if data["page"] >= data["total_pages"]:
@@ -106,51 +114,22 @@ def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     )
 
 
-def uncached_fetch_movie_details(movie_id: int, language: str) -> dict:
-    api_key = get_tmdb_api_key()
-
-    url = get_tmdb_url(f"movie/{movie_id}")
-    params = {"api_key": api_key, "language": language}
-    response = requests.get(url, params=params)
-    _logger.debug("Response %s for GET %s", response.status_code, url)
-    if response.status_code != 200:
-        raise TMDbAPIError(
-            f"TMDb API request failed with status code {response.status_code}",
-            status_code=response.status_code,
-        )
-    return response.json()
-
-
 def fetch_movie_details(movie_id: int, language: str) -> dict:
     return _cached_tmdb_call(
         f"movie_{movie_id}_{language}",
         86400,
-        uncached_fetch_movie_details,
-        movie_id,
-        language,
+        _get_json,
+        f"movie/{movie_id}",
+        params={"language": language},
     )
-
-
-def fetch_simple_results(url: str) -> list:
-    api_key = get_tmdb_api_key()
-
-    params = {"api_key": api_key}
-    response = requests.get(url, params=params)
-    _logger.debug("Response %s for GET %s", response.status_code, url)
-    if response.status_code != 200:
-        raise TMDbAPIError(
-            f"TMDb API request failed with status code {response.status_code}",
-            status_code=response.status_code,
-        )
-    return response.json()
 
 
 def fetch_languages() -> List[dict]:
     return _cached_tmdb_call(
         "languages",
         86400,
-        fetch_simple_results,
-        get_tmdb_url("configuration/languages"),
+        _get_json,
+        "configuration/languages",
     )
 
 
@@ -158,6 +137,33 @@ def fetch_regions() -> List[dict]:
     return _cached_tmdb_call(
         "regions",
         86400,
-        fetch_simple_results,
-        get_tmdb_url("configuration/countries"),
+        _get_json,
+        "configuration/countries",
     )
+
+
+def fetch_movie_languages(movie_id: int) -> List[dict]:
+    return _cached_tmdb_call(
+        f"movie_languages_{movie_id}",
+        86400,
+        _get_json,
+        f"movie/{movie_id}/translations",
+    )["translations"]
+
+
+def fetch_movie_images(movie_id: int) -> Dict[str, Any]:
+    return _cached_tmdb_call(
+        f"movie_images_{movie_id}",
+        86400,
+        _get_json,
+        f"movie/{movie_id}/images",
+    )
+
+
+def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
+    return _cached_tmdb_call(
+        f"movie_release_dates_{movie_id}",
+        86400,
+        _get_json,
+        f"movie/{movie_id}/release_dates",
+    )["results"]
