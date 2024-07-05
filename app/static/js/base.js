@@ -28,8 +28,6 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!element.classList.contains(hover_class)) {
                 e.preventDefault(); // Prevent the click event
                 element.classList.add(hover_class);
-            } else if (element.classList.contains("hover-toggle")) {
-                element.classList.remove(hover_class);
             }
         });
         document.addEventListener('touchstart', evt => {
