@@ -82,6 +82,32 @@ header {
         background-color: $gunmetal-gray;
         z-index: 1;
         padding-top: 0.5em;
+
+        .separator {
+          position: relative;
+          width: 100%;
+          margin: 0.5em 0;
+          color: $cool-gray;
+
+          &::before, &::after {
+            position: absolute;
+            top: 50%;
+            content: "";
+            display: block;
+            height: 1px;
+            background-color: $cool-gray;
+            width: 2em;
+          }
+
+          &::before {
+            left: 0;
+          }
+
+          &::after {
+            right: 0;
+          }
+        }
+
       }
 
       &:hover {

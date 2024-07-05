@@ -4,6 +4,7 @@
         <a href="#" class="dropbtn">Movies</a>
         <div class="dropdown-content">
             <a href="{{ url_for('html.get_movies', filter_mode="all") }}">All movies</a>
+            <div class="separator">Your movies</div>
             <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Untagged moves</a>
             <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Yeah movies</a>
             <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe movies</a>

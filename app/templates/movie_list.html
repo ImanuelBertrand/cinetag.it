@@ -4,10 +4,10 @@
     {% set title = 'Interesting movies' %}
 {% elif filter_mode == 'disapproved' %}
     {% set title = 'Boring movies' %}
-{% elif filter_mode == 'pending' %}
-    {% set title = 'Movies to tag' %}
 {% elif filter_mode == 'maybe' %}
     {% set title = "Movies you don't really know about" %}
+{% elif filter_mode == 'pending' %}
+    {% set title = 'Movies to tag' %}
 {% elif filter_mode == 'all' %}
     {% set title = 'All upcoming movies' %}
 {% else %}

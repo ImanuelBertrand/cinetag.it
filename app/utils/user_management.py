@@ -202,14 +202,13 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
             # no data to display
             continue
 
-        wait_days = (region_info.release_date - now).total_seconds() / 86400
         result.append(
             {
                 "id": movie.id,
                 "title": lang_info.title,
                 "original_title": movie.original_title,
                 "release_date": fmt_date(region_info.release_date),
-                "wait_days": wait_days,
+                "release_date_raw": region_info.release_date,
                 "overview": lang_info.overview,
                 "poster_path": lang_info.poster_path,
                 "popularity": movie.popularity,
@@ -217,12 +216,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
             }
         )
 
-    def sort_func(item):
-        weeks_till_release = item["wait_days"] / 7
-        popularity = item["popularity"]
-        return popularity * math.exp(-weeks_till_release)
-
-    return sorted(result, key=sort_func, reverse=True)
+    return sorted(result, key=lambda x: x["release_date_raw"])
 
 
 def fetch_user_calendar_events(user_id):
