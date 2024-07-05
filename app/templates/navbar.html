@@ -1,10 +1,14 @@
 <nav>
     <h1 id="logo"><a href="/">cinetag.it</a></h1>
-    <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">New Movies</a>
-
-    {% if current_user %}
-        <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">Good Movies</a>
-        <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">Bad Movies</a>
-        <a href="{{ url_for('html.profile') }}">Profile</a>
-    {% endif %}
+    <div class="dropdown">
+        <a href="#" class="dropbtn">Movies</a>
+        <div class="dropdown-content">
+            <a href="{{ url_for('html.get_movies', filter_mode="all") }}">All movies</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Untagged moves</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Yeah movies</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe movies</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Nope Movies</a>
+        </div>
+    </div>
+    <a href="{{ url_for('html.profile') }}">Profile</a>
 </nav>

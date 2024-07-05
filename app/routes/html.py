@@ -328,7 +328,14 @@ def reset_password(token):
 @html.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies(filter_mode):
     user = initialize_user()
-    if filter_mode not in {"pending", "reviewed", "approved", "disapproved"}:
+    if filter_mode not in {
+        "all",
+        "maybe",
+        "pending",
+        "reviewed",
+        "approved",
+        "disapproved",
+    }:
         flash("Invalid filter mode.", "danger")
         return redirect(url_for("html.profile"))
 

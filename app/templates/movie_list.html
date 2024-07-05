@@ -10,20 +10,31 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% set always_show_decisions = filter_mode == 'all' %}
+
 {% block content %}
     <h2>{{ title }}</h2>
     <div class="movie-grid movie-grid-{{ filter_mode }}">
         {% for movie in movies %}
             {% set movie_link = url_for('html.get_movie_details', movie_id=movie.id) %}
-            <div class="movie-item" id="movie-{{ movie.id }}">
-                <img src="https://image.tmdb.org/t/p/w500/{{ movie.poster_path }}"
-                     alt="Poster for {{ movie.title }}"
-                     class="movie-poster"
-                     loading="lazy"/>
+            {% set decision_class = "decided decided-" + movie.decision if always_show_decisions and movie.decision else '' %}
+            {% set poster_class = "has-no-poster" if not movie.poster_path else '' %}
+            <div class="movie-item {{ decision_class }} {{ poster_class }}" id="movie-{{ movie.id }}">
+                {% if movie.poster_path %}
+                    <img src="https://image.tmdb.org/t/p/w500/{{ movie.poster_path }}"
+                         alt="{{ movie.title }}"
+                         class="movie-poster"
+                         loading="lazy"/>
+                {% else %}
+                    <span class="no-poster">{{ movie.title }}</span>
+                {% endif %}
                 <div class="overlay">
                     <a class="details-link" href="{{ movie_link }}">{{ movie.title }}</a>
-                    <span class="decide approve" data-movie-id="{{ movie.id }}">✔</span>
-                    <span class="decide disapprove" data-movie-id="{{ movie.id }}">✘</span>
+                    <div class="decide">
+                        <div data-decision="approve" data-movie-id="{{ movie.id }}">👍️</div>
+                        <div data-decision="maybe" data-movie-id="{{ movie.id }}">🤷</div>
+                        <div data-decision="disapprove" data-movie-id="{{ movie.id }}">👎</div>
+                    </div>
                     <a class="details-link" href="{{ movie_link }}">{{ movie.release_date }}</a>
                 </div>
             </div>

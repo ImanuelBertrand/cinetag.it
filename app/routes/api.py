@@ -16,16 +16,39 @@ def review_movie():
     movie_id = data.get("movie_id")
     decision = data.get("decision")
 
-    if decision not in ["approve", "disapprove"]:
+    if decision not in ["approve", "disapprove", "maybe", "remove"]:
         return jsonify({"error": "Invalid decision value."}), 400
 
-    UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).delete()
-    user_movie = UserMovie(user_id=user.id, movie_id=movie_id, decision=decision)
+    user_movie = UserMovie.query.filter_by(
+        user_id=user.id, movie_id=movie_id
+    ).first()
 
-    db.session.add(user_movie)
+    if decision == "remove":
+        if user_movie:
+            db.session.delete(user_movie)
+            db.session.commit()
+        result_decision = None
+    else:
+        if not user_movie:
+            user_movie = UserMovie(
+                user_id=user.id, movie_id=movie_id, decision=decision
+            )
+        else:
+            user_movie.decision = decision
+        db.session.add(user_movie)
+        result_decision = user_movie.decision
+
     try:
         db.session.commit()
-        return jsonify({"message": "Movie reviewed successfully."}), 201
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "decision_status": result_decision,
+                }
+            ),
+            201,
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 409

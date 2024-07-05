@@ -123,6 +123,24 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     def fmt_date(date):
         return format_date(date, locale=lang) if date else None
 
+    def get_region_info(mv):
+        items = [ri for ri in mv.region_info if ri.region == region]
+        if not items:
+            items = [ri for ri in mv.region_info if ri.region == "US"]
+        return items[0] if items else None
+
+    def get_language_info(mv):
+        items = [li for li in mv.language_info if li.language == lang]
+        if not items or not items[0].overview or not items[0].poster_path:
+            items = [li for li in mv.language_info if li.language == "en"]
+        if not items or not items[0].overview or not items[0].poster_path:
+            items = [
+                li
+                for li in mv.language_info
+                if li.language == mv.original_language
+            ]
+        return items[0] if items else None
+
     # Sync upcoming movies from TMDb with the local database
     # will exit early if the last sync is recent enough
     last_query = MiscData.get("last_sync_upcoming_movies_%s" % region)
@@ -138,10 +156,17 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
         )
     }
 
-    if mode == "pending":
+    if mode == "all":
+        movie_ids = upcoming_movie_ids
+    elif mode == "pending":
         movie_ids = upcoming_movie_ids - reviewed_movie_ids
     elif mode == "reviewed":
         movie_ids = reviewed_movie_ids & upcoming_movie_ids
+    elif mode == "maybe":
+        movie_ids = {
+            um.movie_id for um in user_movies_query if um.decision == "maybe"
+        }
+        movie_ids &= upcoming_movie_ids
     elif mode == "approved":
         movie_ids = {
             um.movie_id for um in user_movies_query if um.decision == "approve"
@@ -160,23 +185,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     result = []
     now = datetime.now().date()
 
-    def get_region_info(mv):
-        items = [ri for ri in mv.region_info if ri.region == region]
-        if not items:
-            items = [ri for ri in mv.region_info if ri.region == "US"]
-        return items[0] if items else None
-
-    def get_language_info(mv):
-        items = [li for li in mv.language_info if li.language == lang]
-        if not items or not items[0].overview or not items[0].poster_path:
-            items = [li for li in mv.language_info if li.language == "en"]
-        if not items or not items[0].overview or not items[0].poster_path:
-            items = [
-                li
-                for li in mv.language_info
-                if li.language == mv.original_language
-            ]
-        return items[0] if items else None
+    movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
 
     for movie in filtered_movies:
         region_info: MovieRegionInfo | None = get_region_info(movie)
@@ -204,6 +213,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
                 "overview": lang_info.overview,
                 "poster_path": lang_info.poster_path,
                 "popularity": movie.popularity,
+                "decision": movie_decisions.get(movie.id),
             }
         )
 

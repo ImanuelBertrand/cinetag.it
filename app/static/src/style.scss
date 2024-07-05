@@ -5,10 +5,7 @@ $steel-gray: #c5c6c7;
 $cool-gray: #4b5358;
 $neon-blue: #66b6fc;
 $electric-pink: #fc466b;
-$bright-cyan: #45a29e;
 $emerald-green: #3ddc84;
-$navbar-bg: #252930;
-$navbar-border: #3a3f44;
 
 /* Base Styles */
 body {
@@ -29,6 +26,7 @@ header {
   color: $steel-gray;
   display: flex;
   justify-content: stretch;
+  border-bottom: 15px solid $dark-gray;
 
   #logo {
     color: $steel-gray;
@@ -40,6 +38,60 @@ header {
     padding: 0;
     margin: 0;
   }
+
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+
+    a {
+      color: $steel-gray;
+      text-decoration: none;
+      margin: 0 1em;
+      transition: color 0.1s;
+      display: block;
+      text-align: center;
+      white-space: nowrap;
+      padding: 0.5em 1em;
+
+      &.dropbtn {
+        cursor: default;
+      }
+
+      &:not(.dropbtn):hover {
+        color: $neon-blue;
+      }
+
+      &.active {
+        color: $cool-gray;
+        border-bottom: 2px solid $neon-blue;
+      }
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+
+      .dropdown-content {
+        top: 100%;
+        left: calc(50% - 6.5em);
+        width: 13em;
+        display: none;
+        position: absolute;
+        background-color: $gunmetal-gray;
+        z-index: 1;
+        padding-top: 0.5em;
+      }
+
+      &:hover {
+        .dropdown-content {
+          display: block;
+        }
+      }
+    }
+  }
+
 }
 
 main {
@@ -61,46 +113,6 @@ li {
   padding: 10px;
   background-color: $cool-gray;
   border-radius: 5px;
-}
-
-/* Navigation Bar */
-nav {
-  color: $steel-gray;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  flex: 1;
-
-  a {
-    color: $steel-gray;
-    text-decoration: none;
-    margin: 0 10px;
-    transition: color 0.1s;
-
-    &:hover {
-      color: $neon-blue;
-    }
-
-    &.active {
-      color: $cool-gray;
-      border-bottom: 2px solid $neon-blue;
-    }
-  }
-
-  button[name="logout"] {
-    background-color: $cool-gray;
-    color: $dark-gray;
-    border: none;
-    border-radius: 4px;
-    padding: 5px 10px;
-    cursor: pointer;
-
-    &:hover {
-      background-color: $neon-blue;
-      color: $dark-gray;
-    }
-  }
 }
 
 /* Additional Elements */
@@ -156,12 +168,36 @@ footer {
     transition: outline-color 0.25s ease;
     aspect-ratio: 500 / 741;
 
-    &.approved {
-      outline-color: #0f0;
+    &.has-no-poster {
+      background-color: $gunmetal-gray;
+      border: 1px solid $cool-gray;
+      color: $steel-gray;
     }
 
-    &.disapproved {
-      outline-color: #f00;
+    .no-poster {
+      display: block;
+      text-align: center;
+      position: relative;
+      top: 30%;
+      padding: 1em;
+    }
+
+    &.decided {
+      &::after {
+        opacity: 0.75;
+      }
+
+      &.decided-approve {
+        outline-color: #0f0;
+      }
+
+      &.decided-disapprove {
+        outline-color: #f00;
+      }
+
+      &.decided-maybe {
+        outline-color: #00f;
+      }
     }
 
     &::after {
@@ -177,10 +213,6 @@ footer {
       transition: opacity 0.25s ease;
     }
 
-    &.disapproved::after,
-    &.approved::after {
-      opacity: 0.75;
-    }
 
     .movie-poster {
       width: 100%;
@@ -199,41 +231,47 @@ footer {
       right: 0;
       bottom: 0;
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       justify-content: space-around;
       align-items: stretch;
       background: rgba(0, 0, 0, 0.6);
       opacity: 0;
       transition: opacity 0.3s ease;
 
-      > * {
+      > a,
+      > .decide > * {
         display: flex;
         justify-content: center;
         align-items: center;
       }
 
       > a {
-        flex: 1 1 100%;
         color: white;
         text-decoration: none;
         text-shadow: 1px 1px 1px black;
         text-align: center;
+        flex: 1 1 auto;
       }
 
       .decide {
-        flex: 1 1 49%;
         cursor: pointer;
         font-size: 2em;
+        display: flex;
+        flex-direction: row;
+        justify-content: stretch;
+        align-items: stretch;
+        border-top-style: solid;
+        border-right-style: none;
+        border-bottom-style: solid;
+        border-left-style: none;
+        border-color: rgba(255, 255, 255, 0.2);
+        border-width: 1px;
+        flex: 0 0 20%;
 
-        &.approve {
-          color: #0f0;
-          background-color: rgba(0, 255, 0, 0.2);
+        > * {
+          flex: 1 1 33%;
         }
 
-        &.disapprove {
-          color: red;
-          background-color: rgba(255, 0, 0, 0.3);
-        }
       }
     }
   }
