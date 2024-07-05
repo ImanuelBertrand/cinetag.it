@@ -10,6 +10,7 @@
                 <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
                 <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
                 <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
+                <a href="{{ url_for('html.get_user_release_dates') }}">Release dates</a>
             {% endif %}
         </div>
     </div>

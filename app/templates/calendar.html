@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Calendar{% endblock %}
+{% block title %}Release dates{% endblock %}
 
 {% block content %}
-<h2>Calendar</h2>
+<h2>Release dates</h2>
 <ul>
-    {% for event in events %}
-        <li>{{ event.title }} - {{ event.start_date }}</li>
+    {% for release in releases %}
+        <li>{{ release.date }}: {{ release.title }}</li>
     {% endfor %}
 </ul>
 {% endblock %}

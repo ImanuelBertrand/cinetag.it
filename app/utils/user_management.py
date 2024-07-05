@@ -218,21 +218,47 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     return sorted(result, key=lambda x: x["release_date_raw"])
 
 
-def fetch_user_calendar_events(user_id):
+def fetch_user_release_dates(user):
+    if not user:
+        raise ValueError("User not found.")
+    lang = user.language or current_app.config.DEFAULT_LANGUAGE
+    region = user.region or current_app.config.DEFAULT_REGION
+
+    def fmt_date(date):
+        return format_date(date, locale=lang) if date else None
+
+    def create_dict(objects):
+        return {obj.movie_id: obj for obj in objects}
+
     approved_movies = UserMovie.query.filter_by(
-        user_id=user_id, decision="approve"
+        user_id=user.id, decision="approve"
     ).all()
     events = []
+    lang_infos = create_dict(
+        MovieLanguageInfo.query.filter(
+            MovieLanguageInfo.movie_id.in_(
+                [um.movie_id for um in approved_movies]
+            ),
+            MovieLanguageInfo.language == lang,
+        ).all()
+    )
+    region_infos = create_dict(
+        MovieRegionInfo.query.filter(
+            MovieRegionInfo.movie_id.in_([um.movie_id for um in approved_movies]),
+            MovieRegionInfo.region == region,
+        ).all()
+    )
     for user_movie in approved_movies:
-        movie = Movie.query.get(user_movie.movie_id)
-        if movie:
-            events.append(
-                {
-                    "title": movie.title,
-                    "start": movie.release_date.strftime("%Y-%m-%d")
-                    if movie.release_date
-                    else None,
-                    "description": movie.overview,
-                }
-            )
-    return events
+        lang_info = lang_infos.get(user_movie.movie_id)
+        region_info = region_infos.get(user_movie.movie_id)
+        if not lang_info or not region_info:
+            continue
+
+        events.append(
+            {
+                "title": lang_info.title,
+                "date": fmt_date(region_info.release_date),
+                "raw_date": region_info.release_date,
+            }
+        )
+    return sorted(events, key=lambda x: x["raw_date"])

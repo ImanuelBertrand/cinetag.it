@@ -14,8 +14,6 @@ from flask import (
     g,
 )
 from flask_jwt_extended import (
-    jwt_required,
-    get_jwt_identity,
     unset_jwt_cookies,
 )
 
@@ -30,7 +28,7 @@ from app.utils.email import send_confirmation_email
 from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
-    fetch_user_calendar_events,
+    fetch_user_release_dates,
     send_password_reset_email,
     confirm_user_email,
     authenticate_user,
@@ -365,13 +363,12 @@ def get_movie_details(movie_id):
         return redirect(url_for("html.profile"))
 
 
-@html.route("/calendar", methods=["GET"])
-@jwt_required()
-def get_user_calendar():
-    user_id = get_jwt_identity()
+@html.route("/release-dates", methods=["GET"])
+def get_user_release_dates():
+    user = initialize_user()
     try:
-        calendar_events = fetch_user_calendar_events(user_id)
-        return render_template("calendar.html", events=calendar_events)
+        releases = fetch_user_release_dates(user)
+        return render_template("calendar.html", releases=releases)
     except Exception as e:
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
