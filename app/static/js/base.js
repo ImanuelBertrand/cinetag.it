@@ -20,17 +20,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Hover with touch support
     const hover_class = 'hovered';
+    const scroll_threshold = 10;
     document.querySelectorAll('.hoverable').forEach(function (element) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
         element.addEventListener('mouseover', () => element.classList.add(hover_class));
         element.addEventListener('mouseout', () => element.classList.remove(hover_class));
 
         element.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        element.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const diffX = Math.abs(touchEndX - touchStartX);
+            const diffY = Math.abs(touchEndY - touchStartY);
+
+            const is_scroll = diffX > scroll_threshold || diffY > scroll_threshold;
+            if (is_scroll) {
+                return;
+            }
+
             if (!element.classList.contains(hover_class)) {
                 e.preventDefault(); // Prevent the click event
                 element.classList.add(hover_class);
             }
         });
-        document.addEventListener('touchstart', evt => {
+        document.addEventListener('touchend', evt => {
             if (!element.contains(evt.target)) {
                 element.classList.remove(hover_class);
             }
