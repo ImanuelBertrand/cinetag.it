@@ -6,7 +6,7 @@
             <a href="{{ url_for('html.get_movies', filter_mode="all") }}">All movies</a>
             {% if current_user %}
                 <div class="separator">Your movies</div>
-                <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Untagged movies</a>
+                <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Not yet tagged</a>
                 <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
                 <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
                 <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
