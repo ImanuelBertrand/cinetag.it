@@ -167,6 +167,7 @@ footer {
     outline: 2px solid transparent;
     transition: outline-color 0.25s ease;
     aspect-ratio: 500 / 741;
+    max-width: 300px;
 
     &.has-no-poster {
       background-color: $gunmetal-gray;
