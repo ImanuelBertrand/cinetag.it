@@ -77,6 +77,9 @@ header {
     letter-spacing: 0.13em;
     padding: 0;
     margin: 0;
+    span {
+      color: $neon-blue;
+    }
   }
 
   nav {
