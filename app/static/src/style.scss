@@ -7,6 +7,10 @@ $neon-blue: #66b6fc;
 $electric-pink: #fc466b;
 $emerald-green: #3ddc84;
 
+$header-height: 5em;
+
+$mobile-screen: 600px;
+
 /* Base Styles */
 body {
   background-color: $dark-gray;
@@ -26,7 +30,43 @@ header {
   color: $steel-gray;
   display: flex;
   justify-content: stretch;
+  align-content: stretch;
   border-bottom: 15px solid $dark-gray;
+  height: 5em;
+  padding: 0 3em;
+
+  .mobile-menu-toggle {
+    display: none;
+    font-size: 2.5em;
+    margin-left: auto;
+
+    @media screen and (max-width: $mobile-screen) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  a {
+    color: $steel-gray;
+    text-decoration: none;
+    transition: color 0.1s;
+
+    &.active {
+      color: $cool-gray;
+      border-bottom: 2px solid $neon-blue;
+    }
+
+    &:not(.dropbtn):hover {
+      color: $neon-blue;
+    }
+  }
 
   #logo {
     color: $steel-gray;
@@ -41,31 +81,44 @@ header {
 
   nav {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
     flex: 1;
+    margin-left: 3em;
+
+    @media screen and (max-width: $mobile-screen) {
+      position: fixed;
+      top: 5em;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: $gunmetal-gray;
+      flex-direction: column;
+      padding: 1em;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+
+      &.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
 
     a {
-      color: $steel-gray;
-      text-decoration: none;
       margin: 0 1em;
-      transition: color 0.1s;
-      display: block;
+      display: flex;
+      align-items: center;
       text-align: center;
       white-space: nowrap;
-      padding: 0.5em 1em;
 
       &.dropbtn {
         cursor: default;
-      }
-
-      &:not(.dropbtn):hover {
-        color: $neon-blue;
-      }
-
-      &.active {
-        color: $cool-gray;
-        border-bottom: 2px solid $neon-blue;
+        @media screen and (min-width: $mobile-screen) {
+          height: $header-height;
+        }
+        box-sizing: border-box;
       }
     }
 
@@ -73,34 +126,67 @@ header {
       position: relative;
       display: inline-block;
 
+      &.hovered {
+        .dropdown-content {
+          pointer-events: auto;
+          opacity: 1;
+          max-height: 100vh;
+        }
+      }
+
       .dropdown-content {
-        top: 100%;
-        left: calc(50% - 6.5em);
-        width: 13em;
-        display: none;
-        position: absolute;
+        display: block;
+        opacity: 0;
+        pointer-events: none;
         background-color: $gunmetal-gray;
         z-index: 1;
-        padding-top: 0.5em;
+        transition: opacity 0.2s, height 0.2s;
+
+
+        @media screen and (min-width: $mobile-screen) {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 13em;
+          border-radius: 0 0 1em 1em;
+          border: 1px solid $dark-gray;
+          border-top: 0;
+          transition: opacity 0.2s;
+          padding-bottom: 0.5em;
+        }
+
+        @media screen and (max-width: $mobile-screen) {
+          max-height: 0;
+          margin: 1em 0 0 2em;
+          border-left: 1px solid $steel-gray;
+        }
+
+        //noinspection CssReplaceWithShorthandSafely
+        a {
+          margin: 0.7em;
+          margin-left: 1em;
+        }
+
+        > a:first-child {
+          margin-top: 0;
+        }
 
         .separator {
           position: relative;
           width: 100%;
-          margin: 0.5em 0;
+          padding: 0.5em 0 0.5em 1em;
           color: $cool-gray;
+          box-sizing: border-box;
+          text-align: left;
 
-          &::before, &::after {
+          &::after {
             position: absolute;
             top: 50%;
             content: "";
             display: block;
             height: 1px;
             background-color: $cool-gray;
-            width: 2em;
-          }
-
-          &::before {
-            left: 0;
+            width: 5em;
           }
 
           &::after {
@@ -110,11 +196,7 @@ header {
 
       }
 
-      &:hover {
-        .dropdown-content {
-          display: block;
-        }
-      }
+
     }
   }
 
@@ -195,6 +277,12 @@ footer {
     aspect-ratio: 500 / 741;
     max-width: 300px;
 
+    @media screen and (max-width: $mobile-screen) {
+      aspect-ratio: 2 / 3;
+      max-width: 100%;
+      width: 100%;
+    }
+
     &.has-no-poster {
       background-color: $gunmetal-gray;
       border: 1px solid $cool-gray;
@@ -247,7 +335,7 @@ footer {
       transition: opacity 0.5s ease;
     }
 
-    &:hover .overlay {
+    &.hovered .overlay {
       opacity: 1;
     }
 

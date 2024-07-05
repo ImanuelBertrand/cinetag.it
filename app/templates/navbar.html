@@ -1,14 +1,16 @@
+<a class="mobile-menu-toggle">☰</a>
 <nav>
-    <h1 id="logo"><a href="/">cinetag.it</a></h1>
-    <div class="dropdown">
+    <div class="dropdown hoverable hover-toggle">
         <a href="#" class="dropbtn">Movies</a>
         <div class="dropdown-content">
             <a href="{{ url_for('html.get_movies', filter_mode="all") }}">All movies</a>
-            <div class="separator">Your movies</div>
-            <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Untagged moves</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Yeah movies</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe movies</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Nope Movies</a>
+            {% if current_user %}
+                <div class="separator">Your movies</div>
+                <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Untagged movies</a>
+                <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
+                <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
+                <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
+            {% endif %}
         </div>
     </div>
     <a href="{{ url_for('html.profile') }}">Profile</a>

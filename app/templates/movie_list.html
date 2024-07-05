@@ -25,7 +25,7 @@
             {% set movie_link = url_for('html.get_movie_details', movie_id=movie.id) %}
             {% set decision_class = "decided decided-" + movie.decision if always_show_decisions and movie.decision else '' %}
             {% set poster_class = "has-no-poster" if not movie.poster_path else '' %}
-            <div class="movie-item {{ decision_class }} {{ poster_class }}" id="movie-{{ movie.id }}">
+            <div class="movie-item hoverable {{ decision_class }} {{ poster_class }}" id="movie-{{ movie.id }}">
                 {% if movie.poster_path %}
                     <img src="https://image.tmdb.org/t/p/w500/{{ movie.poster_path }}"
                          alt="{{ movie.title }}"

@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                         movieElement.classList.remove("decided");
                     }
+                    movieElement.classList.remove('hovered');
                 } else if (data.error) {
                     alert(data.error);
                 } else if (data.message) {
