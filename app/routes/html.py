@@ -184,7 +184,7 @@ def profile_post(user, form_data):
         return None
 
     # password sanity check
-    if has_new_pw and len(data.get("password")) < 8:
+    if has_new_pw and len(data.get("new_password")) < 8:
         flash("Password must be at least 8 characters.", "danger")
         return None
 
