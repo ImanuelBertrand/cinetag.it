@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Releases{% endblock %}
+
+{% block content %}
+<h2>Releases</h2>
+<ul class="link-list">
+    {% for release in releases %}
+        <li><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

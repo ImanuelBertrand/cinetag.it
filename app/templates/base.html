@@ -8,6 +8,10 @@
         <link rel=stylesheet type=text/css href="{{ ASSET_URL }}">
     {% endassets %}
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    <script>
+        window.cinetag = window.cinetag || {};
+        window.cinetag.language = '{{ current_user.language if current_user and current_user.language else 'en' }}';
+    </script>
     {% block scripts %}{% endblock %}
 </head>
 <body>

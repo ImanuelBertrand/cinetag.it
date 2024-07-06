@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Release dates{% endblock %}
+{% block title %}Calendar{% endblock %}
 
 {% block content %}
-<h2>Release dates</h2>
-<ul>
-    {% for release in releases %}
-        <li>{{ release.date }}: {{ release.title }}</li>
-    {% endfor %}
-</ul>
+    <h2>Calendar</h2>
+    <div id="calendar"></div>
+{% endblock %}
+
+{% block scripts %}
+    {% set lang = current_user.language or 'en' %}
+    <script defer src="{{ url_for('static', filename='js/fullcalendar/index.global.min.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/fullcalendar/locales/' + lang + '.global.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 {% endblock %}

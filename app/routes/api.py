@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, request, jsonify
 
 from app.extensions import db
@@ -5,6 +7,7 @@ from app.models import UserMovie
 from app.services.user_service import (
     initialize_user,
 )
+from app.utils.user_management import fetch_user_events
 
 api = Blueprint("api", __name__)
 
@@ -52,6 +55,21 @@ def review_movie():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 409
+
+
+@api.route("/user/events", methods=["GET"])
+def get_user_events():
+    user = initialize_user()
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+    start = request.args.get("start")
+    end = request.args.get("end")
+    if not start or not end:
+        return jsonify({"error": "Invalid date range."}), 400
+    start = datetime.fromisoformat(start)
+    end = datetime.fromisoformat(end)
+    events = fetch_user_events(user, start, end)
+    return jsonify(events)
 
 
 @api.errorhandler(400)

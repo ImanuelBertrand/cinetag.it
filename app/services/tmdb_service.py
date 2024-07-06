@@ -16,6 +16,7 @@ from app.models import (
     MovieRegionInfo,
     MiscData,
 )
+from app.services.movie_service import get_lang_infos, get_region_infos
 from app.utils.tmdb import (
     fetch_languages,
     fetch_regions,
@@ -179,21 +180,8 @@ def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
         movie.id: movie
         for movie in Movie.query.filter(Movie.id.in_(movie_ids)).all()
     }
-    existing_lang_info = {
-        info.movie_id: info
-        for info in MovieLanguageInfo.query.filter(
-            MovieLanguageInfo.movie_id.in_(movie_ids),
-            MovieLanguageInfo.language == language,
-        ).all()
-    }
-
-    existing_region_info = {
-        info.movie_id: info
-        for info in MovieRegionInfo.query.filter(
-            MovieRegionInfo.movie_id.in_(movie_ids),
-            MovieRegionInfo.region == region,
-        ).all()
-    }
+    existing_lang_info = get_lang_infos(movie_ids, language)
+    existing_region_info = get_region_infos(movie_ids, region)
 
     movies_to_add: list[Movie] = []
     region_info_to_add: list[MovieRegionInfo] = []

@@ -15,6 +15,7 @@ from app.models import (
     MovieLanguageInfo,
     MiscData,
 )
+from app.services.movie_service import get_region_infos, get_lang_infos
 from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import send_email
 
@@ -218,7 +219,31 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     return sorted(result, key=lambda x: x["release_date_raw"])
 
 
-def fetch_user_release_dates(user):
+def _get_user_movies(user, start: datetime = None, end: datetime = None):
+    if not start or not end:
+        return UserMovie.query.filter_by(user_id=user.id, decision="approve").all()
+    if not start:
+        start = datetime.min
+    if not end:
+        end = datetime.max
+
+    joined_query = (
+        db.session.query(UserMovie)
+        .join(MovieRegionInfo, UserMovie.movie_id == MovieRegionInfo.movie_id)
+        .filter(
+            UserMovie.user_id == user.id,
+            UserMovie.decision == "approve",
+            MovieRegionInfo.region == user.region,
+            MovieRegionInfo.release_date >= start,
+            MovieRegionInfo.release_date <= end,
+        )
+    )
+    return joined_query.all()
+
+
+def fetch_user_events(
+    user, start: datetime = None, end: datetime = None
+) -> List[Dict[str, str]]:
     if not user:
         raise ValueError("User not found.")
     lang = user.language or current_app.config.DEFAULT_LANGUAGE
@@ -227,38 +252,32 @@ def fetch_user_release_dates(user):
     def fmt_date(date):
         return format_date(date, locale=lang) if date else None
 
-    def create_dict(objects):
-        return {obj.movie_id: obj for obj in objects}
+    approved_movies = _get_user_movies(user, start, end)
+    movie_ids = [um.movie_id for um in approved_movies]
+    lang_infos = get_lang_infos(movie_ids, lang)
+    region_infos = get_region_infos(movie_ids, region)
 
-    approved_movies = UserMovie.query.filter_by(
-        user_id=user.id, decision="approve"
-    ).all()
     events = []
-    lang_infos = create_dict(
-        MovieLanguageInfo.query.filter(
-            MovieLanguageInfo.movie_id.in_(
-                [um.movie_id for um in approved_movies]
-            ),
-            MovieLanguageInfo.language == lang,
-        ).all()
-    )
-    region_infos = create_dict(
-        MovieRegionInfo.query.filter(
-            MovieRegionInfo.movie_id.in_([um.movie_id for um in approved_movies]),
-            MovieRegionInfo.region == region,
-        ).all()
-    )
     for user_movie in approved_movies:
         lang_info = lang_infos.get(user_movie.movie_id)
         region_info = region_infos.get(user_movie.movie_id)
         if not lang_info or not region_info:
             continue
 
+        start_datetime = datetime.combine(
+            region_info.release_date, datetime.min.time()
+        )
+
         events.append(
             {
                 "title": lang_info.title,
-                "date": fmt_date(region_info.release_date),
-                "raw_date": region_info.release_date,
+                "start": start_datetime.isoformat(),
+                "start_pretty": fmt_date(region_info.release_date),
+                "sort_order": region_info.release_date,
+                "url": url_for(
+                    "html.get_movie_details", movie_id=user_movie.movie_id
+                ),
+                "allDay": True,
             }
         )
-    return sorted(events, key=lambda x: x["raw_date"])
+    return sorted(events, key=lambda x: x["sort_order"])

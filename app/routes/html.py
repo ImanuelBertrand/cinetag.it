@@ -28,7 +28,7 @@ from app.utils.email import send_confirmation_email
 from app.utils.tmdb import fetch_movie_details
 from app.utils.user_management import (
     get_movies_based_on_filter,
-    fetch_user_release_dates,
+    fetch_user_events,
     send_password_reset_email,
     confirm_user_email,
     authenticate_user,
@@ -367,7 +367,18 @@ def get_movie_details(movie_id):
 def get_user_release_dates():
     user = initialize_user()
     try:
-        releases = fetch_user_release_dates(user)
+        releases = fetch_user_events(user)
+        return render_template("release_dates.html", releases=releases)
+    except Exception as e:
+        flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+
+
+@html.route("/calendar", methods=["GET"])
+def get_user_calendar():
+    user = initialize_user()
+    try:
+        releases = fetch_user_events(user)
         return render_template("calendar.html", releases=releases)
     except Exception as e:
         flash(str(e), "danger")
