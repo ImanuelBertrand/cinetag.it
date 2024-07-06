@@ -1,7 +1,9 @@
-import jwt
-from flask_mail import Message
-from flask import current_app, url_for
 from datetime import datetime, timedelta
+
+import jwt
+from flask import current_app, url_for
+from flask_mail import Message
+
 from app.extensions import mail
 
 
@@ -17,7 +19,11 @@ def send_email(to, subject, body):
 
 def generate_confirmation_token(user):
     token = jwt.encode(
-        {"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
+        {
+            "user_id": user.id,
+            "new_mail": user.new_email,
+            "exp": datetime.utcnow() + timedelta(hours=24),
+        },
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
     )
@@ -41,7 +47,7 @@ def send_confirmation_email(user):
         f"Hi {user.name},\n\nPlease click the link below to "
         f"confirm your email address:\n\n{confirm_url}\n\nThank you!"
     )
-    send_email(user.email, subject, body)
+    send_email(user.new_email, subject, body)
 
 
 def send_password_reset_email(user):

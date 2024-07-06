@@ -11,10 +11,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=True)
     new_email = db.Column(db.String(120), unique=True, nullable=True)
     password = db.Column(db.String(128), nullable=True)
-    email_confirmed = db.Column(db.Boolean, default=False)
     region = db.Column(db.String(2), nullable=True, default="US")
     language = db.Column(db.String(5), nullable=True, default="en")
-    is_temporary = db.Column(db.Boolean, default=True)
     temporary_user_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(

@@ -74,7 +74,6 @@ def register_post(user: User):
         user = create_temporary_user()
 
     user.email = email
-    user.email_confirmed = False
     user.name = data.get("name")
     user.password = bcrypt.generate_password_hash(password).decode("utf-8")
 
@@ -110,26 +109,24 @@ def register():
     return render_template("register.html", form_data=form_data)
 
 
-@html.route("/login", methods=["GET", "POST"])
+@html.route("/login", methods=["POST"])
 def login():
     pre_login_user = initialize_user()
-    if request.method == "POST":
-        data = request.form
-        try:
-            user = authenticate_user(data)
-            if not pre_login_user.user_movies:
-                db.session.delete(pre_login_user)
-            else:
-                # TODO show option to merge date in /profile
-                pass
+    data = request.form
+    try:
+        user = authenticate_user(data)
+        if not pre_login_user.user_movies:
+            db.session.delete(pre_login_user)
+        else:
+            # TODO show option to merge date in /profile
+            pass
 
-            g.current_user = user
-            return make_response(redirect(url_for("html.profile")))
-        except Exception as e:
-            _logger.exception("Error authenticating user.")
-            flash(str(e), "danger")
-            return redirect(url_for("html.login"))
-    return render_template("login.html")
+        g.current_user = user
+        return make_response(redirect(url_for("html.profile")))
+    except Exception as e:
+        _logger.exception("Error authenticating user.")
+        flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
 
 
 @html.route("/logout", methods=["POST"])
@@ -167,24 +164,56 @@ def profile_post(user, form_data):
             raise ValueError("Invalid current password.")
 
     data = request.form
+
     form_data.update(data)
     form_data["new_password"] = ""
     form_data["new_password_confirmation"] = ""
     form_data["current_password"] = ""
 
-    if (
-        not user.email
-        and not user.password
-        and data.get("email")
-        and not data.get("new_password")
-    ):
-        raise ValueError("You can't set an email without setting a password.")
+    # Make sure new credentials (without old ones) are complete, i.e. mail + pw
+    has_new_mail = bool(data.get("email"))
+    has_new_pw = bool(data.get("new_password"))
+    has_old_pw = bool(user.password)
+    has_old_email = bool(user.email)
+    if not has_old_email and not has_old_pw and (has_new_pw != has_new_mail):
+        raise ValueError("You can't set a password or mail without the other one.")
 
-    if not data.get("email") and user.email:
+    # e-mail sanity check
+    if has_new_mail and not re.match(r"[^@]+@[^@]+\.[^@]+", data.get("email")):
+        flash("Invalid email.", "danger")
+        return None
+
+    # password sanity check
+    if has_new_pw and len(data.get("password")) < 8:
+        flash("Password must be at least 8 characters.", "danger")
+        return None
+
+    # Set new credentials
+    if has_new_pw and has_new_mail:
+        # No old password, so no confirmation possible
+        user.password = bcrypt.generate_password_hash(
+            data.get("new_password")
+        ).decode("utf-8")
+        user.new_email = data.get("email")
+        send_confirmation_email(user)
+        flash("Please check your inbox for a confirmation email.", "info")
+
+    # Removing the credentials (triggered by empty email field)
+    if not has_new_mail and has_old_email:
         confirm_current_pw()
+        user.password = None
         user.email = None
 
-    if data.get("email") and user.email and data.get("email") != user.email:
+    # Changing the password
+    if has_new_pw and has_old_pw:
+        confirm_current_pw()
+        user.password = bcrypt.generate_password_hash(
+            data.get("new_password")
+        ).decode("utf-8")
+        flash("Password changed successfully.", "success")
+
+    # Changing the email address
+    if has_new_mail and has_old_email and data.get("email") != user.email:
         confirm_current_pw()
 
         existing_user = User.query.filter_by(email=data.get("email")).first()
@@ -192,7 +221,6 @@ def profile_post(user, form_data):
             flash("Email address already in use.", "danger")
         else:
             user.new_email = data.get("email")
-            user.email_confirmed = False
             send_confirmation_email(user)
             flash("Please check your inbox for a confirmation email.", "info")
             form_data["email"] = user.email  # reset email field in the UI
@@ -266,7 +294,7 @@ def confirm_email(token):
         _logger.exception("Error confirming email.")
         flash(str(e), "danger")
 
-    return redirect(url_for("html.login"))
+    return redirect(url_for("html.profile"))
 
 
 @html.route("/request-confirmation-mail", methods=["POST"])
@@ -276,12 +304,8 @@ def request_confirmation_email():
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
 
-    if not user.email:
-        flash("Email is required to send confirmation email.", "danger")
-        return redirect(url_for("html.profile"))
-
-    if user.email_confirmed:
-        flash("Email already confirmed.", "info")
+    if not user.new_email:
+        flash("No email confirmation is pending", "danger")
         return redirect(url_for("html.profile"))
 
     try:
@@ -299,13 +323,19 @@ def reset_password_request():
     if request.method == "POST":
         data = request.form
         email = data.get("email")
+
+        if not email:
+            flash("Email is required.", "danger")
+            return redirect(url_for("html.reset_password_request"))
+
         try:
             user = User.query.filter_by(email=email).first()
-            if not user:
-                flash("Email not found.", "danger")
-                return redirect(url_for("html.reset_password_request"))
-            send_password_reset_email(user)
-            flash("Password reset email sent.", "success")
+            if user:
+                send_password_reset_email(user)
+            flash(
+                "If the email is registered, a password reset email will be sent.",
+                "info",
+            )
             return redirect(url_for("html.login"))
         except Exception as e:
             flash(str(e), "danger")

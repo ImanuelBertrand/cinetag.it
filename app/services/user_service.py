@@ -21,7 +21,7 @@ def register_user(data):
     if User.query.filter_by(email=email).first():
         raise ValueError("Email already exists.")
 
-    user = User(username=username, email=email, is_temporary=False)
+    user = User(username=username, email=email)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -35,7 +35,7 @@ def reset_user_password(token, new_password):
 
 
 def create_temporary_user() -> User:
-    user = User(is_temporary=True)
+    user = User()
     db.session.add(user)
     db.session.commit()
     return user
