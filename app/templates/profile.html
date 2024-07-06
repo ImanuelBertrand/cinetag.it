@@ -19,7 +19,7 @@
         </div>
     {% endif %}
 
-    {% if user.email and not user.email_confirmed %}
+    {% if user.new_email and not user.email_confirmed %}
         <div class="profile-message">
             Your Email address is not confirmed yet, please check your inbox.
             You won't be able to login until you confirm your email address.

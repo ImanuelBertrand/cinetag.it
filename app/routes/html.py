@@ -162,10 +162,7 @@ def profile_post(user, form_data):
         current_pw = form_data.get("current_password")
         if not current_pw:
             raise ValueError("Current password is required.")
-
-        pw_is_valid = current_pw and bcrypt.check_password_hash(
-            user.password, current_pw
-        )
+        pw_is_valid = bcrypt.check_password_hash(user.password, current_pw)
         if not pw_is_valid:
             raise ValueError("Invalid current password.")
 
@@ -175,16 +172,24 @@ def profile_post(user, form_data):
     form_data["new_password_confirmation"] = ""
     form_data["current_password"] = ""
 
+    if (
+        not user.email
+        and not user.password
+        and data.get("email")
+        and not data.get("new_password")
+    ):
+        raise ValueError("You can't set an email without setting a password.")
+
     if not data.get("email") and user.email:
         confirm_current_pw()
         user.email = None
 
-    if data.get("email") and data.get("email") != user.email:
+    if data.get("email") and user.email and data.get("email") != user.email:
         confirm_current_pw()
 
         existing_user = User.query.filter_by(email=data.get("email")).first()
         if existing_user:
-            flash("Email already in use.", "danger")
+            flash("Email address already in use.", "danger")
         else:
             user.new_email = data.get("email")
             user.email_confirmed = False
