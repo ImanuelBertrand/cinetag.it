@@ -14,12 +14,11 @@ _logger = logging.getLogger(__name__)
 
 
 def send_email(to, subject, body):
-    msg = Message(
-        subject,
-        recipients=[to],
-        body=body,
-        sender=current_app.config["MAIL_DEFAULT_SENDER"],
-    )
+    sender = current_app.config["MAIL_DEFAULT_SENDER"]
+    sender_name = current_app.config.get("MAIL_DEFAULT_SENDER_NAME")
+    if sender_name:
+        sender = (sender_name, sender)
+    msg = Message(subject, recipients=[to], body=body, sender=sender)
     mail.send(msg)
 
 
@@ -37,6 +36,11 @@ def generate_confirmation_token(user):
 
 
 def send_confirmation_email(user):
+    if not user.new_email:
+        _logger.error(
+            f"Can't send confirmation email for user {user.id}: no new email"
+        )
+        return
     token = generate_confirmation_token(user)
     confirm_url = url_for("html.confirm_email", token=token, _external=True)
     subject = "Please confirm your email"
