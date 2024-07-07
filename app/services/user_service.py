@@ -81,6 +81,10 @@ def confirm_user_email(token):
         raise ValueError("Invalid token.")
 
 
+def hash_password(password: str) -> str:
+    return bcrypt.generate_password_hash(password).decode("utf-8")
+
+
 def reset_user_password(token, new_password):
     try:
         data = jwt.decode(
@@ -96,7 +100,7 @@ def reset_user_password(token, new_password):
         ).first()
         if not user:
             raise ValueError("Invalid reset token.")
-        user.password = generate_password_hash(new_password)
+        user.password = hash_password(new_password)
         user.password_reset_token = None
         db.session.add(user)
         db.session.commit()

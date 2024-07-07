@@ -25,6 +25,7 @@ from app.services.user_service import (
     confirm_user_email,
     authenticate_user,
     reset_user_password,
+    hash_password,
 )
 from app.services.user_service import initialize_user
 from app.utils.email import queue_email
@@ -76,7 +77,7 @@ def register_post(user: User):
 
     user.new_email = email
     user.name = data.get("name")
-    user.password = bcrypt.generate_password_hash(password).decode("utf-8")
+    user.password = hash_password(password)
     queue_email(user, "confirm")
 
     db.session.add(user)
@@ -196,9 +197,7 @@ def profile_post(user, form_data):
     # Set new credentials
     if has_new_pw and has_new_mail:
         # No old password, so no confirmation possible
-        user.password = bcrypt.generate_password_hash(
-            data.get("new_password")
-        ).decode("utf-8")
+        user.password = hash_password(data.get("new_password"))
         user.new_email = data.get("email")
         queue_email(user, "confirm")
         flash("Please check your inbox for a confirmation email.", "info")
@@ -212,9 +211,7 @@ def profile_post(user, form_data):
     # Changing the password
     if has_new_pw and has_old_pw:
         confirm_current_pw()
-        user.password = bcrypt.generate_password_hash(
-            data.get("new_password")
-        ).decode("utf-8")
+        user.password = hash_password(data.get("new_password"))
         flash("Password changed successfully.", "success")
 
     # Changing the email address
