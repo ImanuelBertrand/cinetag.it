@@ -26,9 +26,9 @@ from app.services.user_service import (
     authenticate_user,
     reset_user_password,
     hash_password,
+    queue_confirmation_mail,
 )
 from app.services.user_service import initialize_user
-from app.utils.email import queue_email
 from app.utils.tmdb import fetch_movie_details
 
 html = Blueprint("html", __name__)
@@ -78,7 +78,7 @@ def register_post(user: User):
     user.new_email = email
     user.name = data.get("name")
     user.password = hash_password(password)
-    queue_email(user, "confirm")
+    queue_confirmation_mail(user)
 
     db.session.add(user)
     db.session.commit()
@@ -199,7 +199,7 @@ def profile_post(user, form_data):
         # No old password, so no confirmation possible
         user.password = hash_password(data.get("new_password"))
         user.new_email = data.get("email")
-        queue_email(user, "confirm")
+        queue_confirmation_mail(user)
         flash("Please check your inbox for a confirmation email.", "info")
 
     # Removing the credentials (triggered by empty email field)
@@ -223,7 +223,7 @@ def profile_post(user, form_data):
             flash("Email address already in use.", "danger")
         else:
             user.new_email = data.get("email")
-            queue_email(user, "confirm")
+            queue_confirmation_mail(user)
             flash("Please check your inbox for a confirmation email.", "info")
             form_data["email"] = user.email  # reset email field in the UI
 
@@ -311,7 +311,7 @@ def request_confirmation_email():
         return redirect(url_for("html.profile"))
 
     try:
-        queue_email(user, "confirm")
+        queue_confirmation_mail(user)
         flash("Confirmation email sent.", "success")
         return redirect(url_for("html.profile"))
     except Exception as e:
@@ -333,7 +333,7 @@ def reset_password_request():
         try:
             user = User.query.filter_by(email=email).first()
             if user:
-                queue_email(user, "reset")
+                queue_confirmation_mail(user)
             flash(
                 "If the email is registered, a password reset email will be sent.",
                 "info",

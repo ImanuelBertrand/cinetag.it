@@ -37,10 +37,6 @@
     <form method="POST" action="{{ url_for('html.profile') }}" accept-charset="UTF-8"
           enctype="application/x-www-form-urlencoded">
         <input type="hidden" name="csrf_token">
-        <div class="form-row">
-            <label for="name">Name:</label>
-            <input type="text" id="name" name="name" value="{{ form_data["name"] }}"/>
-        </div>
         {% if user.email %}
             {% if  user.new_email %}
                 <div class="form-row">

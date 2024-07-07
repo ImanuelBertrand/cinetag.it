@@ -8,7 +8,7 @@ from flask import current_app, url_for
 from flask_mail import Message
 
 from app.extensions import mail, db
-from app.models import UserEmailQueue
+from app.models import UserEmailQueue, SentConfirmationMails
 
 _logger = logging.getLogger(__name__)
 
@@ -41,10 +41,13 @@ def send_confirmation_email(user):
     confirm_url = url_for("html.confirm_email", token=token, _external=True)
     subject = "Please confirm your email"
     body = (
-        f"Hi {user.name},\n\nPlease click the link below to "
+        f"Hi,\n\nPlease click the link below to "
         f"confirm your email address:\n\n{confirm_url}\n\nThank you!"
     )
+    mail_sent_log = SentConfirmationMails(email=user.new_email)
+    db.session.add(mail_sent_log)
     send_email(user.new_email, subject, body)
+    db.session.commit()
 
 
 def generate_password_reset_token(user):
@@ -67,7 +70,7 @@ def send_password_reset_email(user):
     reset_url = url_for("html.reset_password", token=token, _external=True)
     subject = "Password Reset Requested"
     body = (
-        f"Hi {user.name},\n\nPlease click the link below "
+        f"Hi,\n\nPlease click the link below "
         f"to reset your password:\n\n{reset_url}\n\nThank you!"
     )
     send_email(user.email, subject, body)

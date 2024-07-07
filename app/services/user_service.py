@@ -17,9 +17,11 @@ from app.models import (
     MovieRegionInfo,
     MovieLanguageInfo,
     MiscData,
+    SentConfirmationMails as SentConfMails,
 )
 from app.services.movie_service import get_region_infos, get_lang_infos
 from app.services.tmdb_service import sync_upcoming_movies
+from app.utils.email import queue_email
 
 _logger = logging.getLogger(__name__)
 
@@ -321,3 +323,30 @@ def initialize_user(allow_guest: bool = True) -> User | None:
     g.current_user = get_current_user(allow_guest)
 
     return g.current_user
+
+
+def queue_confirmation_mail(user: User):
+    rate_limits = {
+        60: 1,
+        300: 5,
+        86400: 10,
+    }
+    now = datetime.utcnow()
+
+    # Delete historic entries
+    longest_duration = max(rate_limits.keys())
+    threshold = now - timedelta(seconds=longest_duration)
+    SentConfMails.query.filter(SentConfMails.sent_at < threshold).delete()
+
+    # Check if we sent mails to this address before
+    already_sent_mails = SentConfMails.query.filter_by(email=user.new_email).all()
+    mails_sent_in_seconds = [
+        (now - mail.sent_at).total_seconds() for mail in already_sent_mails
+    ]
+
+    # If so, check how often to avoid abuse
+    for seconds, limit in rate_limits.items():
+        if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
+            raise ValueError("Too many confirmation mails sent to this address.")
+
+    queue_email(user, "confirm")
