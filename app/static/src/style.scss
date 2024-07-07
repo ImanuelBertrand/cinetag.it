@@ -6,9 +6,7 @@ $cool-gray: #4b5358;
 $neon-blue: #66b6fc;
 $electric-pink: #fc466b;
 $emerald-green: #3ddc84;
-
 $header-height: 5em;
-
 $mobile-screen: 600px;
 
 /* Base Styles */
@@ -111,16 +109,18 @@ header {
     }
 
     a {
-      @media screen and (min-width: $mobile-screen) {
-        margin: 0 1em;
-      }
-      @media screen and (max-width: $mobile-screen) {
-        margin: 1em;
-      }
       display: flex;
       align-items: center;
       text-align: center;
       white-space: nowrap;
+
+      @media screen and (min-width: $mobile-screen) {
+        margin: 0 1em;
+      }
+
+      @media screen and (max-width: $mobile-screen) {
+        margin: 1em;
+      }
 
       &.dropbtn {
         cursor: default;
@@ -150,7 +150,6 @@ header {
         background-color: $gunmetal-gray;
         z-index: 1;
         transition: opacity 0.2s, height 0.2s;
-
 
         @media screen and (min-width: $mobile-screen) {
           position: absolute;
@@ -183,7 +182,6 @@ header {
           }
         }
 
-
         .separator {
           position: relative;
           width: 100%;
@@ -206,13 +204,9 @@ header {
             right: 0;
           }
         }
-
       }
-
-
     }
   }
-
 }
 
 main {
@@ -333,7 +327,6 @@ footer {
       transition: opacity 0.25s ease;
     }
 
-
     .movie-poster {
       width: 100%;
       display: block;
@@ -391,7 +384,6 @@ footer {
         > * {
           flex: 1 1 33%;
         }
-
       }
     }
   }
