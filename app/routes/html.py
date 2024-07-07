@@ -20,19 +20,15 @@ from flask_jwt_extended import (
 from app.extensions import db, bcrypt
 from app.models import User, TmdbLanguage, TmdbRegion
 from app.services.user_service import (
-    reset_user_password,
-    initialize_user,
-    create_temporary_user,
-)
-from app.utils.email import send_confirmation_email
-from app.utils.tmdb import fetch_movie_details
-from app.utils.user_management import (
     get_movies_based_on_filter,
     fetch_user_events,
-    send_password_reset_email,
     confirm_user_email,
     authenticate_user,
+    reset_user_password,
 )
+from app.services.user_service import initialize_user
+from app.utils.email import queue_email
+from app.utils.tmdb import fetch_movie_details
 
 html = Blueprint("html", __name__)
 _logger = logging.getLogger(__name__)
@@ -42,6 +38,14 @@ _logger = logging.getLogger(__name__)
 def home():
     initialize_user()
     return render_template("home.html")
+
+
+def _validate_email(email):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+
+
+def _validate_password(password):
+    return len(password) >= 8
 
 
 def register_post(user: User):
@@ -57,7 +61,7 @@ def register_post(user: User):
     if not email:
         flash("Email is required.", "danger")
         return None
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+    if not _validate_email(email):
         flash("Invalid email.", "danger")
         return None
 
@@ -66,18 +70,14 @@ def register_post(user: User):
     if not password:
         flash("Password is required.", "danger")
         return None
-    if len(password) < 8:
+    if not _validate_password(password):
         flash("Password must be at least 8 characters.", "danger")
         return None
 
-    if not user:
-        user = create_temporary_user()
-
-    user.email = email
+    user.new_email = email
     user.name = data.get("name")
     user.password = bcrypt.generate_password_hash(password).decode("utf-8")
-
-    send_confirmation_email(user)
+    queue_email(user, "confirm")
 
     db.session.add(user)
     db.session.commit()
@@ -109,9 +109,13 @@ def register():
     return render_template("register.html", form_data=form_data)
 
 
-@html.route("/login", methods=["POST"])
+@html.route("/login", methods=["GET", "POST"])
 def login():
     pre_login_user = initialize_user()
+
+    if request.method == "GET":
+        return render_template("login.html")
+
     data = request.form
     try:
         user = authenticate_user(data)
@@ -126,7 +130,7 @@ def login():
     except Exception as e:
         _logger.exception("Error authenticating user.")
         flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
+        return redirect(url_for("html.login"))
 
 
 @html.route("/logout", methods=["POST"])
@@ -170,21 +174,22 @@ def profile_post(user, form_data):
     form_data["new_password_confirmation"] = ""
     form_data["current_password"] = ""
 
-    # Make sure new credentials (without old ones) are complete, i.e. mail + pw
+    # Make initial registration available only on the registration page
+    # to avoid edge cases here
     has_new_mail = bool(data.get("email"))
     has_new_pw = bool(data.get("new_password"))
     has_old_pw = bool(user.password)
     has_old_email = bool(user.email)
-    if not has_old_email and not has_old_pw and (has_new_pw != has_new_mail):
-        raise ValueError("You can't set a password or mail without the other one.")
+    if (not has_old_email or not has_old_pw) and (has_new_pw or has_new_mail):
+        raise ValueError("Registration is only possible on the registration page.")
 
     # e-mail sanity check
-    if has_new_mail and not re.match(r"[^@]+@[^@]+\.[^@]+", data.get("email")):
+    if has_new_mail and not _validate_email(data.get("email")):
         flash("Invalid email.", "danger")
         return None
 
     # password sanity check
-    if has_new_pw and len(data.get("new_password")) < 8:
+    if has_new_pw and not _validate_password(data.get("new_password")):
         flash("Password must be at least 8 characters.", "danger")
         return None
 
@@ -195,7 +200,7 @@ def profile_post(user, form_data):
             data.get("new_password")
         ).decode("utf-8")
         user.new_email = data.get("email")
-        send_confirmation_email(user)
+        queue_email(user, "confirm")
         flash("Please check your inbox for a confirmation email.", "info")
 
     # Removing the credentials (triggered by empty email field)
@@ -221,7 +226,7 @@ def profile_post(user, form_data):
             flash("Email address already in use.", "danger")
         else:
             user.new_email = data.get("email")
-            send_confirmation_email(user)
+            queue_email(user, "confirm")
             flash("Please check your inbox for a confirmation email.", "info")
             form_data["email"] = user.email  # reset email field in the UI
 
@@ -309,7 +314,7 @@ def request_confirmation_email():
         return redirect(url_for("html.profile"))
 
     try:
-        send_confirmation_email(user)
+        queue_email(user, "confirm")
         flash("Confirmation email sent.", "success")
         return redirect(url_for("html.profile"))
     except Exception as e:
@@ -318,7 +323,7 @@ def request_confirmation_email():
         return redirect(url_for("html.profile"))
 
 
-@html.route("/reset-password-request", methods=["GET", "POST"])
+@html.route("/forgot-password", methods=["GET", "POST"])
 def reset_password_request():
     if request.method == "POST":
         data = request.form
@@ -331,7 +336,7 @@ def reset_password_request():
         try:
             user = User.query.filter_by(email=email).first()
             if user:
-                send_password_reset_email(user)
+                queue_email(user, "reset")
             flash(
                 "If the email is registered, a password reset email will be sent.",
                 "info",
@@ -353,6 +358,7 @@ def reset_password(token):
             flash("Password reset successfully.", "success")
             return redirect(url_for("html.login"))
         except Exception as e:
+            _logger.exception("Error resetting password.")
             flash(str(e), "danger")
             return redirect(url_for("html.reset_password", token=token))
     return render_template("reset_password.html", token=token)

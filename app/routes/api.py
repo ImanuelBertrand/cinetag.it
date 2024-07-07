@@ -4,10 +4,10 @@ from flask import Blueprint, request, jsonify
 
 from app.extensions import db
 from app.models import UserMovie
+from app.services.user_service import fetch_user_events
 from app.services.user_service import (
     initialize_user,
 )
-from app.utils.user_management import fetch_user_events
 
 api = Blueprint("api", __name__)
 

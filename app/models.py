@@ -14,6 +14,7 @@ class User(db.Model):
     region = db.Column(db.String(2), nullable=True, default="US")
     language = db.Column(db.String(5), nullable=True, default="en")
     temporary_user_id = db.Column(db.Integer, nullable=True)
+    password_reset_token = db.Column(db.String(32), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -22,6 +23,15 @@ class User(db.Model):
     user_movies = db.relationship(
         "UserMovie", back_populates="user", cascade="all, delete-orphan"
     )
+
+
+class UserEmailQueue(db.Model):
+    # Table to store pending emails for async email confirmation / PW reset
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    mail_type = db.Column(db.String(10), nullable=False)
+
+    user = db.relationship("User", backref="pending_emails")
 
 
 class Movie(db.Model):

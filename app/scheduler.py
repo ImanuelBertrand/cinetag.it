@@ -9,6 +9,7 @@ from app.services.tmdb_service import (
     update_languages,
     update_all_upcoming_movies,
 )
+from app.utils.email import send_queued_emails
 
 _logger = logging.getLogger(__name__)
 atexit.register(scheduler.shutdown)
@@ -21,11 +22,21 @@ def run_with_context(func):
 
 def setup_cron_jobs():
     job_definitions = {
-        "update_regions": {"func": update_regions, "hours": 24},
-        "update_languages": {"func": update_languages, "hours": 24},
+        "update_regions": {
+            "func": update_regions,
+            "options": {"hours": 24},
+        },
+        "update_languages": {
+            "func": update_languages,
+            "options": {"hours": 24},
+        },
         "update_all_upcoming_movies": {
             "func": update_all_upcoming_movies,
-            "hours": 1,
+            "options": {"hours": 1},
+        },
+        "send_email_queue": {
+            "func": send_queued_emails,
+            "options": {"minutes": 1},
         },
     }
     for job_id, job_definition in job_definitions.items():
@@ -34,9 +45,10 @@ def setup_cron_jobs():
             trigger="interval",
             next_run_time=datetime.now(),
             misfire_grace_time=60,
+            max_instances=1,
             coalesce=True,
             func=partial(run_with_context, job_definition["func"]),
-            hours=job_definition["hours"],
+            **job_definition["options"],
         )
 
     scheduler.start()
