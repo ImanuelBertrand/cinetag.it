@@ -217,6 +217,15 @@ header {
 main {
   flex: 1;
   padding: 20px;
+
+  a, a:visited, a:active, a:link {
+    color: $neon-blue;
+    text-decoration: none;
+
+    &:hover {
+      color: lighten($neon-blue, 10%);
+    }
+  }
 }
 
 h2 {
@@ -447,8 +456,12 @@ button {
   }
 
   &.danger {
-    background-color: red;
+    background-color: #f00;
     color: white;
+  }
+
+  &#delete-all-data {
+    margin-top: 7em;
   }
 }
 
