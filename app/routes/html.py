@@ -111,9 +111,56 @@ def register():
     return render_template("register.html", form_data=form_data)
 
 
+@html.route("/merge-temporary-user", methods=["POST"])
+def merge_temporary_user():
+    user = initialize_user()
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("html.profile"))
+
+    data = request.form
+    merge = data.get("merge")
+    delete = data.get("delete")
+
+    if bool(merge) == bool(delete):
+        flash("Invalid request.", "danger")
+        return redirect(url_for("html.profile"))
+
+    temp_user = user.temporary_user_id
+    if not temp_user:
+        flash("No temporary data found.", "danger")
+        return redirect(url_for("html.profile"))
+
+    temp_user = User.query.get(temp_user)
+
+    if merge:
+        user_movies = {movie.id: movie for movie in user.user_movies}
+        for temp_movie in temp_user.user_movies:
+            if temp_movie.id not in user_movies:
+                temp_movie.user_id = user.id
+                db.session.add(temp_movie)
+            elif temp_movie.updated_at > user_movies[temp_movie.id].updated_at:
+                user_movies[temp_movie.id].delete()
+                temp_movie.user_id = user.id
+            else:
+                temp_movie.delete()
+            db.session.commit()
+        flash("Movie tags were successfully imported.", "success")
+
+    db.session.delete(temp_user)
+    user.temporary_user_id = None
+    db.session.commit()
+
+    if delete:
+        flash("Temporary data deleted.", "success")
+
+    return redirect(url_for("html.profile"))
+
+
 @html.route("/login", methods=["GET", "POST"])
 def login():
     pre_login_user = initialize_user()
+    _logger.info("pre_login_user: %s", pre_login_user)
 
     if request.method == "GET":
         return render_template("login.html")
@@ -121,11 +168,14 @@ def login():
     data = request.form
     try:
         user = authenticate_user(data)
+        _logger.info("user: %s", user)
+        _logger.info("pre_login_user movies: %s", pre_login_user.user_movies)
         if not pre_login_user.user_movies:
             db.session.delete(pre_login_user)
         else:
-            # TODO show option to merge date in /profile
-            pass
+            user.temporary_user_id = pre_login_user.id
+            db.session.add(user)
+            db.session.commit()
 
         g.current_user = user
         return make_response(redirect(url_for("html.profile")))
