@@ -29,6 +29,7 @@ from app.services.user_service import (
     queue_confirmation_mail,
 )
 from app.services.user_service import initialize_user
+from app.utils.email import queue_email
 from app.utils.tmdb import fetch_movie_details
 
 html = Blueprint("html", __name__)
@@ -333,7 +334,7 @@ def reset_password_request():
         try:
             user = User.query.filter_by(email=email).first()
             if user:
-                queue_confirmation_mail(user)
+                queue_email(user, "reset")
             flash(
                 "If the email is registered, a password reset email will be sent.",
                 "info",
