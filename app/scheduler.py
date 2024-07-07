@@ -36,7 +36,7 @@ def setup_cron_jobs():
         },
         "send_email_queue": {
             "func": send_queued_emails,
-            "options": {"minutes": 1},
+            "options": {"seconds": 15},
         },
     }
     for job_id, job_definition in job_definitions.items():
