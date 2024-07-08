@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Dict
 
 from app.extensions import db
 
@@ -60,6 +61,42 @@ class Movie(db.Model):
 
     def __repr__(self):
         return f"<Movie {self.id} ({self.original_title})>"
+
+    def get_localized_data(
+        self, lang: str, lookup_dict: dict = None
+    ) -> Dict[str, str]:
+        if lookup_dict is None:
+            lookup_dict = {}
+        for lang_info in self.language_info:
+            lookup_dict[lang_info.language] = lang_info
+
+        l1 = lookup_dict.get(lang)
+        l2 = lookup_dict.get("en")
+        l3 = lookup_dict.get(self.original_language)
+
+        keys = [
+            "title",
+            "overview",
+            "tagline",
+            "runtime",
+            "poster_path",
+        ]
+
+        data = {}
+        for key in keys:
+            if l1 and getattr(l1, key):
+                data[key] = getattr(l1, key)
+            elif l2 and getattr(l2, key):
+                data[key] = getattr(l2, key)
+            elif l3 and getattr(l3, key):
+                data[key] = getattr(l3, key)
+            else:
+                data[key] = None
+
+        if not data.get("runtime") and self.runtime:
+            data["runtime"] = self.runtime
+
+        return data
 
     def update_from_tmdb(self, data: dict) -> bool:
         updated = False
@@ -179,6 +216,7 @@ class MovieLanguageInfo(db.Model):
             title=data["data"].get("title"),
             overview=data["data"].get("overview"),
             tagline=data["data"].get("tagline"),
+            runtime=data["data"].get("runtime"),
         )
 
     def update_from_tmdb(self, data) -> bool:
@@ -186,11 +224,22 @@ class MovieLanguageInfo(db.Model):
         if self.title != data["title"]:
             self.title = data["title"]
             updated = True
+
         if "poster_path" in data and self.poster_path != data["poster_path"]:
             self.poster_path = data["poster_path"]
             updated = True
+
         if self.overview != data["overview"]:
             self.overview = data["overview"]
+            updated = True
+
+        if "tagline" in data and self.tagline != data["tagline"]:
+            self.tagline = data["tagline"]
+            updated = True
+
+        runtime = data.get("runtime", None) or None
+        if self.runtime != runtime:
+            self.runtime = runtime
             updated = True
         return updated
 

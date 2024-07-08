@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List
 
@@ -19,7 +20,7 @@ from app.models import (
     MiscData,
     SentConfirmationMails as SentConfMails,
 )
-from app.services.movie_service import get_region_infos, get_lang_infos
+from app.services.movie_service import get_region_infos
 from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import queue_email
 
@@ -253,12 +254,20 @@ def fetch_user_events(
 
     approved_movies = _get_user_movies(user, start, end)
     movie_ids = [um.movie_id for um in approved_movies]
-    lang_infos = get_lang_infos(movie_ids, lang)
     region_infos = get_region_infos(movie_ids, region)
+
+    # prepare language infos to reduce queries
+    all_lang_infos = MovieLanguageInfo.query.filter(
+        MovieLanguageInfo.movie_id.in_(movie_ids)
+    ).all()
+
+    lang_info_dict = defaultdict(dict)
+    for lang_info in all_lang_infos:
+        lang_info_dict[lang_info.movie_id][lang_info.language] = lang_info
 
     events = []
     for user_movie in approved_movies:
-        lang_info = lang_infos.get(user_movie.movie_id)
+        lang_info = user_movie.movie.get_localized_data(lang, lang_info_dict)
         region_info = region_infos.get(user_movie.movie_id)
         if not lang_info or not region_info:
             continue
@@ -269,7 +278,7 @@ def fetch_user_events(
 
         events.append(
             {
-                "title": lang_info.title,
+                "title": lang_info["title"],
                 "start": start_datetime.isoformat(),
                 "start_pretty": fmt_date(region_info.release_date),
                 "sort_order": region_info.release_date,
