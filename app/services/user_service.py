@@ -278,9 +278,11 @@ def fetch_user_events(
             region_info.release_date, datetime.min.time()
         )
 
+        movie = Movie.query.get(user_movie.movie_id)
+
         events.append(
             {
-                "title": lang_info["title"],
+                "title": lang_info["title"] or movie.original_title,
                 "start": start_datetime.isoformat(),
                 "start_pretty": fmt_date(region_info.release_date),
                 "sort_order": region_info.release_date,

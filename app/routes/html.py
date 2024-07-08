@@ -455,6 +455,7 @@ def get_movie_details(movie_id):
             "release_date": format_date(region_info.release_date, locale=language)
             if region_info.release_date
             else None,
+            "imdb_id": movie.imdb_id,
         }
         if not movie:
             flash("Movie not found.", "danger")
