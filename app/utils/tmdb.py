@@ -10,6 +10,8 @@ from app.extensions import cache
 
 _logger = logging.getLogger(__name__)
 
+DEFAULT_TTL = 72000  # 20 hours to allow for irregularities in daily cron jobs
+
 
 def get_base_url() -> str:
     return "https://api.themoviedb.org/3"
@@ -136,7 +138,7 @@ def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
 def fetch_movie_details(movie_id: int, language: str) -> dict:
     return _cached_tmdb_call(
         f"movie_{movie_id}_{language}",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         f"movie/{movie_id}",
         params={"language": language},
@@ -146,7 +148,7 @@ def fetch_movie_details(movie_id: int, language: str) -> dict:
 def fetch_languages() -> List[dict]:
     return _cached_tmdb_call(
         "languages",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         "configuration/languages",
     )
@@ -155,7 +157,7 @@ def fetch_languages() -> List[dict]:
 def fetch_regions() -> List[dict]:
     return _cached_tmdb_call(
         "regions",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         "configuration/countries",
     )
@@ -164,7 +166,7 @@ def fetch_regions() -> List[dict]:
 def fetch_movie_languages(movie_id: int) -> List[dict]:
     return _cached_tmdb_call(
         f"movie_languages_{movie_id}",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         f"movie/{movie_id}/translations",
     )["translations"]
@@ -173,7 +175,7 @@ def fetch_movie_languages(movie_id: int) -> List[dict]:
 def fetch_movie_images(movie_id: int) -> Dict[str, Any]:
     return _cached_tmdb_call(
         f"movie_images_{movie_id}",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         f"movie/{movie_id}/images",
     )
@@ -182,7 +184,7 @@ def fetch_movie_images(movie_id: int) -> Dict[str, Any]:
 def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
     return _cached_tmdb_call(
         f"movie_release_dates_{movie_id}",
-        86400,
+        DEFAULT_TTL,
         _get_json,
         f"movie/{movie_id}/release_dates",
     )["results"]
@@ -197,7 +199,7 @@ def fetch_changes_movies(
         end_date = end_date.strftime("%Y-%m-%d")
     return _cached_tmdb_call(
         f"changes_movies_{start_date}_{end_date}",
-        86400,
+        3600,
         uncached_fetch_movie_changes,
         start_date,
         end_date,
