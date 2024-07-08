@@ -6,6 +6,7 @@ import natsort
 from flask import current_app
 from natsort import natsorted
 
+from app.exceptions import TMDbAPIError
 from app.extensions import db
 from app.models import (
     TmdbLanguage,
@@ -419,6 +420,10 @@ def check_movie_information(movie: Movie):
             update_movie_regions(movie)
             movie.info_update_at = datetime.now()
             db.session.add(movie)
+        except TMDbAPIError as e:
+            if e.status_code == 404:
+                _logger.error("Movie %s not found on TMDb", movie)
+                db.session.delete(movie)
         except Exception as e:
             _logger.error("Error updating movie information for %s: %s", movie, e)
 
@@ -443,6 +448,7 @@ def refresh_changed_movies():
         db.session.query(Movie).update(
             {Movie.info_update_at: None}, synchronize_session=False
         )
+        db.session.commit()
         return
 
     start_date = datetime.fromisoformat(last_refresh_date).date()
