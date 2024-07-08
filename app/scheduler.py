@@ -54,7 +54,7 @@ def setup_cron_jobs():
             id=job_id,
             trigger="interval",
             next_run_time=datetime.now(),
-            misfire_grace_time=60,
+            misfire_grace_time=7200,
             max_instances=1,
             coalesce=True,
             func=partial(run_with_context, job_definition["func"]),
