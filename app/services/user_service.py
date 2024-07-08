@@ -267,7 +267,9 @@ def fetch_user_events(
 
     events = []
     for user_movie in approved_movies:
-        lang_info = user_movie.movie.get_localized_data(lang, lang_info_dict)
+        lang_info = user_movie.movie.get_localized_data(
+            lang, lang_info_dict[user_movie.movie_id]
+        )
         region_info = region_infos.get(user_movie.movie_id)
         if not lang_info or not region_info:
             continue
