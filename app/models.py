@@ -109,10 +109,10 @@ class Movie(db.Model):
         if self.original_language != data["original_language"]:
             self.original_language = data["original_language"]
             updated = True
-        if self.runtime != data.get("runtime"):
+        if "runtime" in data and self.runtime != data.get("runtime"):
             self.runtime = data.get("runtime")
             updated = True
-        if self.imdb_id != data.get("imdb_id"):
+        if "imdb_id" in data and self.imdb_id != data.get("imdb_id"):
             self.imdb_id = data.get("imdb_id")
             updated = True
 
