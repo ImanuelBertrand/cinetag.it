@@ -2,6 +2,7 @@ import logging
 import re
 from collections import defaultdict
 
+from babel.dates import format_date
 from flask import (
     Blueprint,
     render_template,
@@ -18,7 +19,7 @@ from flask_jwt_extended import (
 )
 
 from app.extensions import db, bcrypt
-from app.models import User, TmdbLanguage, TmdbRegion
+from app.models import User, TmdbLanguage, TmdbRegion, Movie, MovieRegionInfo
 from app.services.user_service import (
     get_movies_based_on_filter,
     fetch_user_events,
@@ -30,7 +31,6 @@ from app.services.user_service import (
 )
 from app.services.user_service import initialize_user
 from app.utils.email import queue_email
-from app.utils.tmdb import fetch_movie_details
 
 html = Blueprint("html", __name__)
 _logger = logging.getLogger(__name__)
@@ -442,11 +442,24 @@ def get_movie_details(movie_id):
     try:
         user = initialize_user()
         language = user.language or current_app.config.DEFAULT_LANGUAGE
-        movie = fetch_movie_details(movie_id, language)
+        movie = Movie.query.get(movie_id)
+        lang_info = movie.get_localized_data(language)
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=movie_id, region=user.region
+        ).first()
+        movie_data = {
+            "id": movie.id,
+            "title": lang_info["title"],
+            "overview": lang_info["overview"],
+            "poster_path": lang_info["poster_path"],
+            "release_date": format_date(region_info.release_date, locale=language)
+            if region_info.release_date
+            else None,
+        }
         if not movie:
             flash("Movie not found.", "danger")
             return redirect(url_for("html.profile"))
-        return render_template("movie_details.html", movie=movie)
+        return render_template("movie_details.html", movie=movie_data)
     except Exception as e:
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
