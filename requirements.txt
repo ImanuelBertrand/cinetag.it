@@ -1,3 +1,4 @@
+APScheduler
 Flask-APScheduler
 Flask-Assets
 Flask-Babel

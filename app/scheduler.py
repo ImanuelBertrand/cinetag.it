@@ -8,6 +8,8 @@ from app.services.tmdb_service import (
     update_regions,
     update_languages,
     update_all_upcoming_movies,
+    refresh_outdated_movies,
+    refresh_changed_movies,
 )
 from app.utils.email import send_queued_emails
 
@@ -36,7 +38,15 @@ def setup_cron_jobs():
         },
         "send_email_queue": {
             "func": send_queued_emails,
-            "options": {"seconds": 15},
+            "options": {"seconds": 15, "executor": "concurrent"},
+        },
+        "refresh_outdated_movies": {
+            "func": refresh_outdated_movies,
+            "options": {"minutes": 15},
+        },
+        "refresh_changed_movies": {
+            "func": refresh_changed_movies,
+            "options": {"hours": 1},
         },
     }
     for job_id, job_definition in job_definitions.items():

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Callable, Any, Dict
 
 import requests
@@ -96,6 +96,25 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     return list(all_movies.values())
 
 
+def uncached_fetch_movie_changes(start_date: str, end_date: str) -> List[int]:
+    params = {
+        "start_date": start_date,
+        "end_date": end_date,
+        "page": 1,
+    }
+
+    all_movies = set()
+    while True:
+        data = _get_json("movie/changes", params=params)
+        for item in data["results"]:
+            all_movies.add(item["id"])
+        if data["page"] >= data["total_pages"]:
+            break
+        params["page"] += 1
+
+    return list(all_movies)
+
+
 def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     """
     Fetch a list of upcoming movies from TMDb for a specific region
@@ -167,3 +186,19 @@ def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
         _get_json,
         f"movie/{movie_id}/release_dates",
     )["results"]
+
+
+def fetch_changes_movies(
+    start_date: datetime | date | str, end_date: datetime | date | str
+) -> List[Dict[str, Any]]:
+    if isinstance(start_date, (datetime, date)):
+        start_date = start_date.strftime("%Y-%m-%d")
+    if isinstance(end_date, (datetime, date)):
+        end_date = end_date.strftime("%Y-%m-%d")
+    return _cached_tmdb_call(
+        f"changes_movies_{start_date}_{end_date}",
+        86400,
+        uncached_fetch_movie_changes,
+        start_date,
+        end_date,
+    )

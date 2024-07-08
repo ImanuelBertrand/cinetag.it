@@ -1,4 +1,7 @@
+import pymysql
+from apscheduler.executors.pool import ThreadPoolExecutor
 from flask import request
+from flask_apscheduler import APScheduler
 from flask_assets import Environment, Bundle
 from flask_babel import Babel
 from flask_bcrypt import Bcrypt
@@ -7,8 +10,6 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_apscheduler import APScheduler
-import pymysql
 
 pymysql.install_as_MySQLdb()
 
@@ -42,6 +43,14 @@ def init_extensions(app):
     cache.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
     assets_env.init_app(app)
+
+    app.config.update(
+        # rest of the config
+        SCHEDULER_EXECUTORS={
+            "default": ThreadPoolExecutor(1),
+            "concurrent": ThreadPoolExecutor(5),
+        },
+    )
     scheduler.init_app(app)
 
     # Configure Flask-Assets

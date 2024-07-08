@@ -42,6 +42,10 @@ class Movie(db.Model):
     popularity = db.Column(db.Float, nullable=True)
     original_language = db.Column(db.String(2), nullable=True)
     info_update_at = db.Column(db.DateTime, nullable=True)
+    imdb_id = db.Column(db.String(20), nullable=True)
+    origin_country = db.Column(db.String(2), nullable=True)
+    runtime = db.Column(db.Integer, nullable=True)
+    spoken_languages = db.Column(db.String(255), nullable=True)
 
     region_info = db.relationship(
         "MovieRegionInfo", back_populates="movie", cascade="all, delete-orphan"
@@ -68,6 +72,25 @@ class Movie(db.Model):
         if self.original_language != data["original_language"]:
             self.original_language = data["original_language"]
             updated = True
+        if self.runtime != data.get("runtime"):
+            self.runtime = data.get("runtime")
+            updated = True
+        if self.imdb_id != data.get("imdb_id"):
+            self.imdb_id = data.get("imdb_id")
+            updated = True
+
+        origin_country = ",".join(data.get("origin_country", []))
+        if self.origin_country != origin_country:
+            self.origin_country = origin_country
+            updated = True
+
+        spoken_languages = ",".join(
+            [lang["iso_639_1"] for lang in data.get("spoken_languages", [])]
+        )
+        if self.spoken_languages != spoken_languages:
+            self.spoken_languages = spoken_languages
+            updated = True
+
         return updated
 
     @staticmethod
@@ -77,6 +100,12 @@ class Movie(db.Model):
             original_title=data["original_title"],
             popularity=data["popularity"],
             original_language=data["original_language"],
+            runtime=data.get("runtime"),
+            imdb_id=data.get("imdb_id"),
+            origin_country=",".join(data.get("origin_country", [])),
+            spoken_languages=",".join(
+                [lang["iso_639_1"] for lang in data.get("spoken_languages", [])]
+            ),
         )
 
 
@@ -111,6 +140,9 @@ class MovieRegionInfo(db.Model):
         updated = False
         if self.release_date != date:
             self.release_date = date
+            updated = True
+        if self.is_fake:
+            self.is_fake = False
             updated = True
         return updated
 
@@ -154,7 +186,7 @@ class MovieLanguageInfo(db.Model):
         if self.title != data["title"]:
             self.title = data["title"]
             updated = True
-        if self.poster_path != data["poster_path"]:
+        if "poster_path" in data and self.poster_path != data["poster_path"]:
             self.poster_path = data["poster_path"]
             updated = True
         if self.overview != data["overview"]:

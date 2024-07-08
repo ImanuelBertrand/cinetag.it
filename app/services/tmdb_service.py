@@ -24,6 +24,8 @@ from app.utils.tmdb import (
     fetch_movie_languages,
     fetch_movie_images,
     fetch_release_dates,
+    fetch_changes_movies,
+    fetch_movie_details,
 )
 
 _logger = logging.getLogger(__name__)
@@ -244,18 +246,51 @@ def sync_upcoming_movies(region: str, language: str = None) -> List[int]:
     return [movie["id"] for movie in tmdb_movies]
 
 
+def update_movie_details(movie: Movie):
+    movie_data = fetch_movie_details(movie.id, "en")
+    if not movie_data:
+        return
+
+    movie.update_from_tmdb(movie_data)
+    db.session.add(movie)
+
+
 def update_movie_languages(movie: Movie):
     movie_languages = fetch_movie_languages(movie.id)
     if not movie_languages:
         return
 
-    MovieLanguageInfo.query.filter_by(movie_id=movie.id).delete()
+    lang_dict = {lang["iso_639_1"]: lang for lang in movie_languages}
 
-    new_infos = []
-    for lang_data in movie_languages:
-        if not lang_data["data"]["title"]:
-            lang_data["data"]["title"] = movie.original_title
-        new_infos.append(MovieLanguageInfo.create_from_tmdb(movie.id, lang_data))
+    existing_lang_infos = MovieLanguageInfo.query.filter_by(
+        movie_id=movie.id
+    ).all()
+
+    lang_ids_to_delete = [
+        info.id for info in existing_lang_infos if info.language not in lang_dict
+    ]
+    if lang_ids_to_delete:
+        MovieLanguageInfo.query.filter(
+            MovieLanguageInfo.id.in_(lang_ids_to_delete)
+        ).delete()
+
+    lang_infos_to_update = [
+        info
+        for info in existing_lang_infos
+        if info.language in lang_dict
+        and info.update_from_tmdb(lang_dict[info.language]["data"])
+    ]
+    db.session.add_all(lang_infos_to_update)
+
+    new_languages = [
+        lang["iso_639_1"]
+        for lang in movie_languages
+        if lang["iso_639_1"] not in {info.language for info in existing_lang_infos}
+    ]
+    new_infos = [
+        MovieLanguageInfo.create_from_tmdb(movie.id, lang_dict[lang])
+        for lang in new_languages
+    ]
 
     db.session.bulk_save_objects(new_infos)
 
@@ -299,6 +334,7 @@ def update_movie_posters(movie: Movie):
 def update_movie_regions(movie: Movie):
     release_data = fetch_release_dates(movie.id)
     if not release_data:
+        MovieRegionInfo.query.filter_by(movie_id=movie.id).delete()
         return
 
     best_release_dates = {}
@@ -317,34 +353,29 @@ def update_movie_regions(movie: Movie):
         movie_id=movie.id
     ).all()
 
-    region_ids_to_delete = [
-        info.id
-        for info in existing_region_infos
-        if info.is_fake or info.region not in best_release_dates
-    ]
-    if region_ids_to_delete:
-        MovieRegionInfo.query.filter(
-            MovieRegionInfo.id.in_(region_ids_to_delete)
-        ).delete()
-
+    # Create new objects that are missing in the db (not fake ones)
     new_region_infos = [
         MovieRegionInfo.create_from_tmdb(movie.id, rd, best_release_dates[rd])
         for rd in best_release_dates
-        if rd
-        not in {info.region for info in existing_region_infos if not info.is_fake}
+        if rd not in {info.region for info in existing_region_infos}
     ]
     db.session.bulk_save_objects(new_region_infos)
 
-    for region_info in existing_region_infos:
+    # Update existing objects (remove fake flag if set previously)
+    region_infos_to_update = [
+        info for info in existing_region_infos if info.region in best_release_dates
+    ]
+    for region_info in region_infos_to_update:
         date = best_release_dates.get(region_info.region)
         if region_info.update_from_tmdb(date):
             db.session.add(region_info)
 
+    # Create fake objects for regions that are missing in the DB
+    original_release_date = min(best_release_dates.values())
     all_regions = TmdbRegion.query.all()
     missing_regions = {region.code for region in all_regions} - set(
-        best_release_dates.keys()
+        [info.region for info in existing_region_infos]
     )
-    original_release_date = min(best_release_dates.values())
     fake_region_infos = [
         MovieRegionInfo(
             movie_id=movie.id,
@@ -357,22 +388,39 @@ def update_movie_regions(movie: Movie):
     if fake_region_infos:
         db.session.bulk_save_objects(fake_region_infos)
 
+    # Update outdated fake objects
+    fake_region_infos = MovieRegionInfo.query.filter(
+        MovieRegionInfo.movie_id == movie.id,
+        MovieRegionInfo.is_fake == True,  # noqa E712
+        MovieRegionInfo.release_date != original_release_date,
+    ).all()
+    fake_ids_to_update = [info.id for info in fake_region_infos]
+    if fake_ids_to_update:
+        MovieRegionInfo.query.filter(
+            MovieRegionInfo.id.in_(fake_ids_to_update)
+        ).update({MovieRegionInfo.release_date: original_release_date})
+
     return release_data
+
+
+def _get_movie_info_update_threshold():
+    return datetime.now() - timedelta(days=14)
 
 
 def check_movie_information(movie: Movie):
     if not movie:
         return
-    threshold = datetime.now() - timedelta(days=7)
+    threshold = _get_movie_info_update_threshold()
     if not movie.info_update_at or movie.info_update_at < threshold:
         try:
+            update_movie_details(movie)
             update_movie_languages(movie)
             update_movie_posters(movie)
             update_movie_regions(movie)
             movie.info_update_at = datetime.now()
             db.session.add(movie)
         except Exception as e:
-            _logger.error("Error updating movie languages for %s: %s", movie, e)
+            _logger.error("Error updating movie information for %s: %s", movie, e)
 
 
 def update_all_upcoming_movies():
@@ -385,17 +433,49 @@ def update_all_upcoming_movies():
     for region in used_regions_by_users:
         sync_upcoming_movies(region, "en")
 
-    # filter by info_update_at, null or older than 1 day
-    threshold = datetime.now() - timedelta(days=1)
-    movies = Movie.query.filter(
-        db.or_(Movie.info_update_at.is_(None), Movie.info_update_at < threshold)
+    refresh_outdated_movies()
+
+
+def refresh_changed_movies():
+    last_refresh_date = MiscData.get("last_refresh_changes_movies")
+    if not last_refresh_date:
+        MiscData.save("last_refresh_changes_movies", datetime.now().isoformat())
+        db.session.query(Movie).update(
+            {Movie.info_update_at: None}, synchronize_session=False
+        )
+        return
+
+    start_date = datetime.fromisoformat(last_refresh_date).date()
+    end_date = datetime.now().date()
+    if start_date >= end_date:
+        # Would be nice to fetch intraday updates, but TMDB only supports dates
+        # so this would lead to a lot of redundant updates.
+        return
+    changed_movie_ids = fetch_changes_movies(start_date, end_date)
+
+    db.session.query(Movie).filter(Movie.id.in_(changed_movie_ids)).update(
+        {Movie.info_update_at: None}, synchronize_session=False
+    )
+
+    MiscData.save("last_refresh_changes_movies", datetime.now().isoformat())
+
+
+def refresh_outdated_movies():
+    outdated_movies = Movie.query.filter(
+        db.or_(
+            Movie.info_update_at.is_(None),
+            Movie.info_update_at < _get_movie_info_update_threshold(),
+        )
     ).all()
+    refresh_movie_information(outdated_movies)
+
+
+def refresh_movie_information(movies: List[Movie]):
     _logger.info("Checking %s movies for updated information", len(movies))
     c = 0
     for movie in movies:
-        c += 1
         check_movie_information(movie)
+        c += 1
         if c % 10 == 0:
             db.session.commit()
-
     db.session.commit()
