@@ -16,7 +16,7 @@ from app.models import (
     UserMovie,
     Movie,
     MovieRegionInfo,
-    MovieLanguageInfo,
+    MovieLanguageInfo as MovieLangInfo,
     MiscData,
     SentConfirmationMails as SentConfMails,
 )
@@ -123,26 +123,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     def fmt_date(date):
         return format_date(date, locale=lang) if date else None
 
-    def get_region_info(mv):
-        items = [ri for ri in mv.region_info if ri.region == region]
-        if not items:
-            items = [ri for ri in mv.region_info if ri.region == "US"]
-        return items[0] if items else None
-
-    def get_language_info(mv):
-        items = [li for li in mv.language_info if li.language == lang]
-        if not items or not items[0].overview or not items[0].poster_path:
-            items = [li for li in mv.language_info if li.language == "en"]
-        if not items or not items[0].overview or not items[0].poster_path:
-            items = [
-                li
-                for li in mv.language_info
-                if li.language == mv.original_language
-            ]
-        return items[0] if items else None
-
-    # Sync upcoming movies from TMDb with the local database
-    # will exit early if the last sync is recent enough
+    # Sync upcoming movies from TMDb with the local database if necessary
     last_query = MiscData.get("last_sync_upcoming_movies_%s" % region)
     if last_query:
         last_query = datetime.fromisoformat(last_query)
@@ -161,34 +142,43 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     elif mode == "pending":
         movie_ids = upcoming_movie_ids - reviewed_movie_ids
     elif mode == "reviewed":
-        movie_ids = reviewed_movie_ids & upcoming_movie_ids
+        movie_ids = upcoming_movie_ids & reviewed_movie_ids
     elif mode == "maybe":
-        movie_ids = {
+        movie_ids = upcoming_movie_ids & {
             um.movie_id for um in user_movies_query if um.decision == "maybe"
         }
-        movie_ids &= upcoming_movie_ids
     elif mode == "approved":
-        movie_ids = {
+        movie_ids = upcoming_movie_ids & {
             um.movie_id for um in user_movies_query if um.decision == "approve"
         }
-        movie_ids &= upcoming_movie_ids
     elif mode == "disapproved":
-        movie_ids = {
+        movie_ids = upcoming_movie_ids & {
             um.movie_id for um in user_movies_query if um.decision == "disapprove"
         }
-        movie_ids &= upcoming_movie_ids
     else:
         raise ValueError("Invalid filter mode.")
 
     filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
 
-    result = []
-    now = datetime.now().date()
-
     movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
 
+    lngs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
+    language_dict = defaultdict(dict)
+    for lang_info in lngs:
+        language_dict[lang_info.movie_id][lang_info.language] = lang_info
+
+    region_infos = MovieRegionInfo.query.filter(
+        MovieRegionInfo.movie_id.in_(movie_ids)
+    ).all()
+    region_info_dict = defaultdict(dict)
+    for region_info in region_infos:
+        region_info_dict[region_info.movie_id][region_info.region] = region_info
+
+    now = datetime.now().date()
+    result = []
     for movie in filtered_movies:
-        region_info: MovieRegionInfo | None = get_region_info(movie)
+        rg_infos = region_info_dict.get(movie.id, {})
+        region_info = rg_infos.get(region) or rg_infos.get("US")
 
         if (
             not region_info
@@ -197,20 +187,19 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
         ):
             continue
 
-        lang_info: MovieLanguageInfo | None = get_language_info(movie)
+        lang_info = movie.get_localized_data(lang, language_dict[movie.id])
         if not lang_info:
-            # no data to display
             continue
 
         result.append(
             {
                 "id": movie.id,
-                "title": lang_info.title,
+                "title": lang_info["title"],
                 "original_title": movie.original_title,
                 "release_date": fmt_date(region_info.release_date),
                 "release_date_raw": region_info.release_date,
-                "overview": lang_info.overview,
-                "poster_path": lang_info.poster_path,
+                "overview": lang_info["overview"],
+                "poster_path": lang_info["poster_path"],
                 "popularity": movie.popularity,
                 "decision": movie_decisions.get(movie.id),
             }
@@ -257,8 +246,8 @@ def fetch_user_events(
     region_infos = get_region_infos(movie_ids, region)
 
     # prepare language infos to reduce queries
-    all_lang_infos = MovieLanguageInfo.query.filter(
-        MovieLanguageInfo.movie_id.in_(movie_ids)
+    all_lang_infos = MovieLangInfo.query.filter(
+        MovieLangInfo.movie_id.in_(movie_ids)
     ).all()
 
     lang_info_dict = defaultdict(dict)

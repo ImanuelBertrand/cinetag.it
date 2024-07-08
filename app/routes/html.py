@@ -412,6 +412,11 @@ def reset_password(token):
     return render_template("reset_password.html", token=token)
 
 
+@html.route("/movies", methods=["GET"])
+def get_all_movies():
+    return get_movies("all")
+
+
 @html.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies(filter_mode):
     user = initialize_user()

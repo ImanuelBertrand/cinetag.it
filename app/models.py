@@ -63,38 +63,29 @@ class Movie(db.Model):
         return f"<Movie {self.id} ({self.original_title})>"
 
     def get_localized_data(
-        self, lang: str, lookup_dict: dict = None
+        self, lang: str, language_infos: "Dict[str, MovieLanguageInfo]" = None
     ) -> Dict[str, str]:
-        if lookup_dict is None:
-            lookup_dict = {}
-        for lang_info in self.language_info:
-            lookup_dict[lang_info.language] = lang_info
+        if language_infos is None:
+            language_infos = {
+                lang_info.language: lang_info for lang_info in self.language_info
+            }
 
-        l1 = lookup_dict.get(lang)
-        l2 = lookup_dict.get("en")
-        l3 = lookup_dict.get(self.original_language)
+        langs = [lang, "en", self.original_language]
+        info_sources = [language_infos.get(key) for key in langs]
+        fields = ["title", "overview", "tagline", "runtime", "poster_path"]
+        fallbacks = {"title": self.original_title, "runtime": self.runtime}
 
-        keys = [
-            "title",
-            "overview",
-            "tagline",
-            "runtime",
-            "poster_path",
-        ]
-
-        data = {}
-        for key in keys:
-            if l1 and getattr(l1, key):
-                data[key] = getattr(l1, key)
-            elif l2 and getattr(l2, key):
-                data[key] = getattr(l2, key)
-            elif l3 and getattr(l3, key):
-                data[key] = getattr(l3, key)
-            else:
-                data[key] = None
-
-        if not data.get("runtime") and self.runtime:
-            data["runtime"] = self.runtime
+        data = {
+            field: next(
+                (
+                    getattr(info_source, field)
+                    for info_source in info_sources
+                    if info_source and getattr(info_source, field)
+                ),
+                fallbacks.get(field, ""),
+            )
+            for field in fields
+        }
 
         return data
 
