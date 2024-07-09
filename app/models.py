@@ -107,17 +107,19 @@ class Movie(db.Model):
             self.imdb_id = data.get("imdb_id")
             updated = True
 
-        origin_country = ",".join(data.get("origin_country", []))
-        if self.origin_country != origin_country:
-            self.origin_country = origin_country
-            updated = True
+        if "origin_country" in data:
+            origin_country = ",".join(data.get("origin_country", []))
+            if self.origin_country != origin_country:
+                self.origin_country = origin_country
+                updated = True
 
-        spoken_languages = ",".join(
-            [lang["iso_639_1"] for lang in data.get("spoken_languages", [])]
-        )
-        if self.spoken_languages != spoken_languages:
-            self.spoken_languages = spoken_languages
-            updated = True
+        if "spoken_languages" in data:
+            spoken_languages = ",".join(
+                [lang["iso_639_1"] for lang in data.get("spoken_languages", [])]
+            )
+            if self.spoken_languages != spoken_languages:
+                self.spoken_languages = spoken_languages
+                updated = True
 
         return updated
 
