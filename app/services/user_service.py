@@ -130,12 +130,12 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     if not last_query or (datetime.now() - last_query).total_seconds() > 86400:
         sync_upcoming_movies(region, lang)
 
-    upcoming_movie_ids = {
-        m.movie_id
-        for m in MovieRegionInfo.query.filter_by(region=region).filter(
-            MovieRegionInfo.release_date > datetime.now().date()
-        )
-    }
+    upcoming_movies = (
+        MovieRegionInfo.query.filter_by(region=region)
+        .filter(MovieRegionInfo.release_date >= datetime.now().date())
+        .all()
+    )
+    upcoming_movie_ids = {m.movie_id for m in upcoming_movies}
 
     if mode == "all":
         movie_ids = upcoming_movie_ids
@@ -158,27 +158,33 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     else:
         raise ValueError("Invalid filter mode.")
 
-    filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
+    filtered_movies = [m for m in upcoming_movies if m.movie_id in movie_ids]
 
     movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
 
-    lngs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
+    langs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
     language_dict = defaultdict(dict)
-    for lang_info in lngs:
-        language_dict[lang_info.movie_id][lang_info.language] = lang_info
+    for lang in langs:
+        language_dict[lang.movie_id][lang.language] = lang
 
     region_infos = MovieRegionInfo.query.filter(
         MovieRegionInfo.movie_id.in_(movie_ids)
     ).all()
     region_info_dict = defaultdict(dict)
-    for region_info in region_infos:
-        region_info_dict[region_info.movie_id][region_info.region] = region_info
+    for reg_info in region_infos:
+        region_info_dict[reg_info.movie_id][reg_info.region] = reg_info
 
     now = datetime.now().date()
     result = []
     for movie in filtered_movies:
         rg_infos = region_info_dict.get(movie.id, {})
+        origin_countries = movie.origin_country.split(",")
         region_info = rg_infos.get(region) or rg_infos.get("US")
+        if not region_info:
+            region_info = next(
+                (rg_infos.get(c) for c in origin_countries if rg_infos.get(c)),
+                None,
+            )
 
         if (
             not region_info
