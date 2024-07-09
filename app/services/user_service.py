@@ -118,17 +118,17 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     reviewed_movie_ids = {um.movie_id for um in user_movies_query}
 
     region = user.region or current_app.config.DEFAULT_REGION
-    lang = user.language or current_app.config.DEFAULT_LANGUAGE
+    language = user.language or current_app.config.DEFAULT_LANGUAGE
 
     def fmt_date(date):
-        return format_date(date, locale=lang) if date else None
+        return format_date(date, locale=language) if date else None
 
     # Sync upcoming movies from TMDb with the local database if necessary
     last_query = MiscData.get("last_sync_upcoming_movies_%s" % region)
     if last_query:
         last_query = datetime.fromisoformat(last_query)
     if not last_query or (datetime.now() - last_query).total_seconds() > 86400:
-        sync_upcoming_movies(region, lang)
+        sync_upcoming_movies(region, language)
 
     upcoming_movie_ids = {
         m.movie_id
@@ -164,8 +164,8 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
     langs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
     language_dict = defaultdict(dict)
-    for lang in langs:
-        language_dict[lang.movie_id][lang.language] = lang
+    for movie_lang in langs:
+        language_dict[movie_lang.movie_id][movie_lang.language] = movie_lang
 
     region_infos = MovieRegionInfo.query.filter(
         MovieRegionInfo.movie_id.in_(movie_ids)
@@ -193,7 +193,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
         ):
             continue
 
-        lang_info = movie.get_localized_data(lang, language_dict[movie.id])
+        lang_info = movie.get_localized_data(language, language_dict[movie.id])
         if not lang_info:
             continue
 
