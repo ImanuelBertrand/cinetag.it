@@ -130,12 +130,12 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     if not last_query or (datetime.now() - last_query).total_seconds() > 86400:
         sync_upcoming_movies(region, lang)
 
-    upcoming_movies = (
-        MovieRegionInfo.query.filter_by(region=region)
-        .filter(MovieRegionInfo.release_date >= datetime.now().date())
-        .all()
-    )
-    upcoming_movie_ids = {m.movie_id for m in upcoming_movies}
+    upcoming_movie_ids = {
+        m.movie_id
+        for m in MovieRegionInfo.query.filter_by(region=region).filter(
+            MovieRegionInfo.release_date > datetime.now().date()
+        )
+    }
 
     if mode == "all":
         movie_ids = upcoming_movie_ids
@@ -158,7 +158,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     else:
         raise ValueError("Invalid filter mode.")
 
-    filtered_movies = [m for m in upcoming_movies if m.movie_id in movie_ids]
+    filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
 
     movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
 
