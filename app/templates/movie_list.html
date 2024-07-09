@@ -41,7 +41,24 @@
                         <div data-decision="maybe" data-movie-id="{{ movie.id }}">🤷</div>
                         <div data-decision="disapprove" data-movie-id="{{ movie.id }}">👎</div>
                     </div>
-                    <a class="details-link" href="{{ movie_link }}">{{ movie.release_date }}</a>
+                    <a class="details-link" href="{{ movie_link }}">
+                        {% if movie.all_release_dates %}
+                            <div class="release-dates">
+                                {% for release_date in movie.all_release_dates %}
+                                    <div title="{{ release_date.region_info.english_name }}">
+                                        {% if release_date.flag %}
+                                            <span class="flag-icon">{{ release_date.flag }}</span>
+                                        {% else %}
+                                            <span>release_date.region</span>
+                                        {% endif %}
+                                        <span>{{ release_date.date }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ movie.release_date }}
+                        {% endif %}
+                    </a>
                 </div>
             </div>
         {% endfor %}

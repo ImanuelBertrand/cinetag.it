@@ -19,6 +19,7 @@ from app.models import (
     MovieLanguageInfo as MovieLangInfo,
     MiscData,
     SentConfirmationMails as SentConfMails,
+    TmdbRegion,
 )
 from app.services.movie_service import get_region_infos
 from app.services.tmdb_service import sync_upcoming_movies
@@ -113,6 +114,15 @@ def reset_user_password(token, new_password):
         raise ValueError("Invalid token.")
 
 
+def get_region_flag(region: str) -> str | None:
+    if len(region) != 2 or not region.isalpha():
+        return None
+    a_ord = ord("A")
+    first_flag_char = chr(ord(region[0].upper()) - a_ord + 0x1F1E6)
+    second_flag_char = chr(ord(region[1].upper()) - a_ord + 0x1F1E6)
+    return first_flag_char + second_flag_char
+
+
 def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
     reviewed_movie_ids = {um.movie_id for um in user_movies_query}
@@ -174,24 +184,39 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     for reg_info in region_infos:
         region_info_dict[reg_info.movie_id][reg_info.region] = reg_info
 
+    tmdb_regions = TmdbRegion.query.all()
+    tmdb_regions_dict = {r.code: r for r in tmdb_regions}
+
     now = datetime.now().date()
     result = []
     for movie in filtered_movies:
         rg_infos = region_info_dict.get(movie.id, {})
         origin_countries = movie.origin_country.split(",")
-        region_info = rg_infos.get(region) or rg_infos.get("US")
-        if not region_info:
-            region_info = next(
+        main_region_info = rg_infos.get(region) or rg_infos.get("US")
+        if not main_region_info:
+            main_region_info = next(
                 (rg_infos.get(c) for c in origin_countries if rg_infos.get(c)),
                 None,
             )
 
         if (
-            not region_info
-            or not region_info.release_date
-            or region_info.release_date < now
+            not main_region_info
+            or not main_region_info.release_date
+            or main_region_info.release_date < now
         ):
             continue
+
+        relevant_regions = list({region} | set(origin_countries))
+        all_release_dates = [
+            {
+                "region": r,
+                "region_info": tmdb_regions_dict.get(r),
+                "date": rg_infos.get(r).release_date,
+                "flag": get_region_flag(r),
+            }
+            for r in relevant_regions
+            if rg_infos.get(r) and not rg_infos.get(r).is_fake
+        ]
 
         lang_info = movie.get_localized_data(language, language_dict[movie.id])
         if not lang_info:
@@ -202,12 +227,13 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
                 "id": movie.id,
                 "title": lang_info["title"],
                 "original_title": movie.original_title,
-                "release_date": fmt_date(region_info.release_date),
-                "release_date_raw": region_info.release_date,
+                "release_date": fmt_date(main_region_info.release_date),
+                "release_date_raw": main_region_info.release_date,
                 "overview": lang_info["overview"],
                 "poster_path": lang_info["poster_path"],
                 "popularity": movie.popularity,
                 "decision": movie_decisions.get(movie.id),
+                "all_release_dates": all_release_dates,
             }
         )
 
