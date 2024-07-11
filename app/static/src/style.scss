@@ -474,7 +474,7 @@ button {
   }
 }
 
-ul.link-list li {
+ul.release-list li {
   position: relative;
   padding: 0;
 
@@ -483,6 +483,14 @@ ul.link-list li {
     display: block;
     color: $steel-gray;
     text-decoration: none;
+  }
+
+  &.maybe {
+    background-color: darken($cool-gray, 10%);
+
+    a {
+      color: darken($steel-gray, 10%);
+    }
   }
 }
 

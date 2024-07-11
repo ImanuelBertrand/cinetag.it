@@ -240,9 +240,16 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
     return sorted(result, key=lambda x: x["release_date_raw"])
 
 
-def _get_user_movies(user, start: datetime = None, end: datetime = None):
+def _get_user_movies(
+    user, start: datetime = None, end: datetime = None, decisions: List[str] = None
+):
+    if decisions is None:
+        decisions = ["approve"]
+
     if not start or not end:
-        return UserMovie.query.filter_by(user_id=user.id, decision="approve").all()
+        return UserMovie.query.filter(
+            UserMovie.user_id == user.id, UserMovie.decision.in_(decisions)
+        ).all()
     if not start:
         start = datetime.min
     if not end:
@@ -253,7 +260,7 @@ def _get_user_movies(user, start: datetime = None, end: datetime = None):
         .join(MovieRegionInfo, UserMovie.movie_id == MovieRegionInfo.movie_id)
         .filter(
             UserMovie.user_id == user.id,
-            UserMovie.decision == "approve",
+            UserMovie.decision.in_(decisions),
             MovieRegionInfo.region == user.region,
             MovieRegionInfo.release_date >= start,
             MovieRegionInfo.release_date <= end,
@@ -273,7 +280,7 @@ def fetch_user_events(
     def fmt_date(date):
         return format_date(date, locale=lang) if date else None
 
-    approved_movies = _get_user_movies(user, start, end)
+    approved_movies = _get_user_movies(user, start, end, ["approve", "maybe"])
     movie_ids = [um.movie_id for um in approved_movies]
     region_infos = get_region_infos(movie_ids, region)
 
@@ -311,6 +318,7 @@ def fetch_user_events(
                     "html.get_movie_details", movie_id=user_movie.movie_id
                 ),
                 "allDay": True,
+                "decision": user_movie.decision,
             }
         )
     return sorted(events, key=lambda x: x["sort_order"])

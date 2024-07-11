@@ -4,9 +4,9 @@
 
 {% block content %}
 <h2>Releases</h2>
-<ul class="link-list">
+<ul class="release-list">
     {% for release in releases %}
-        <li><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
+        <li class="{{ release.decision }}"><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
     {% endfor %}
 </ul>
 {% endblock %}
