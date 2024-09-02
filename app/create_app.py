@@ -9,7 +9,16 @@ from flask_jwt_extended import (
 
 from app.config import config_by_name
 from app.extensions import init_extensions
-from app.models import *  # noqa F401 (not used, but required to create tables)
+from app.models.misc_data import MiscData  # noqa F401
+from app.models.movie import Movie  # noqa F401
+from app.models.movie_language_info import MovieLanguageInfo  # noqa F401
+from app.models.movie_region_info import MovieRegionInfo  # noqa F401
+from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F401
+from app.models.tmdb_language import TmdbLanguage  # noqa F401
+from app.models.tmdb_region import TmdbRegion  # noqa F401
+from app.models.user import User  # noqa F401
+from app.models.user_email import UserEmailQueue  # noqa F401
+from app.models.user_movie import UserMovie  # noqa F401
 from app.scheduler import setup_cron_jobs
 
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
