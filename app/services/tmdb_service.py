@@ -8,15 +8,13 @@ from natsort import natsorted
 
 from app.exceptions import TMDbAPIError
 from app.extensions import db
-from app.models import (
-    TmdbLanguage,
-    TmdbRegion,
-    User,
-    MovieLanguageInfo,
-    Movie,
-    MovieRegionInfo,
-    MiscData,
-)
+from app.models.misc_data import MiscData
+from app.models.movie import Movie
+from app.models.movie_language_info import MovieLanguageInfo
+from app.models.movie_region_info import MovieRegionInfo
+from app.models.tmdb_language import TmdbLanguage
+from app.models.tmdb_region import TmdbRegion
+from app.models.user import User
 from app.services.movie_service import get_lang_infos, get_region_infos
 from app.utils.tmdb import (
     fetch_languages,

@@ -11,16 +11,16 @@ from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from werkzeug.security import generate_password_hash
 
 from app.extensions import db, bcrypt
-from app.models import (
-    User,
-    UserMovie,
-    Movie,
-    MovieRegionInfo,
-    MovieLanguageInfo as MovieLangInfo,
-    MiscData,
+from app.models.misc_data import MiscData
+from app.models.movie import Movie
+from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
+from app.models.movie_region_info import MovieRegionInfo
+from app.models.send_confirmation_mails import (
     SentConfirmationMails as SentConfMails,
-    TmdbRegion,
 )
+from app.models.tmdb_region import TmdbRegion
+from app.models.user import User
+from app.models.user_movie import UserMovie
 from app.services.movie_service import get_region_infos
 from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import queue_email

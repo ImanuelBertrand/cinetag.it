@@ -8,7 +8,8 @@ from flask import current_app, url_for
 from flask_mail import Message
 
 from app.extensions import mail, db
-from app.models import UserEmailQueue, SentConfirmationMails
+from app.models.send_confirmation_mails import SentConfirmationMails
+from app.models.user_email import UserEmailQueue
 
 _logger = logging.getLogger(__name__)
 

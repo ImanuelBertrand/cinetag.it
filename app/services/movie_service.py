@@ -1,6 +1,7 @@
 from typing import List, Dict
 
-from app.models import MovieRegionInfo, MovieLanguageInfo
+from app.models.movie_language_info import MovieLanguageInfo
+from app.models.movie_region_info import MovieRegionInfo
 
 
 def get_region_infos(

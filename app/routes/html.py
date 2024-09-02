@@ -19,7 +19,11 @@ from flask_jwt_extended import (
 )
 
 from app.extensions import db, bcrypt
-from app.models import User, TmdbLanguage, TmdbRegion, Movie, MovieRegionInfo
+from app.models.movie import Movie
+from app.models.movie_region_info import MovieRegionInfo
+from app.models.tmdb_language import TmdbLanguage
+from app.models.tmdb_region import TmdbRegion
+from app.models.user import User
 from app.services.user_service import (
     get_movies_based_on_filter,
     fetch_user_events,

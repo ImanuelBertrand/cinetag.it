@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 
 from app.extensions import db
-from app.models import UserMovie
+from app.models.user_movie import UserMovie
 from app.services.user_service import fetch_user_events
 from app.services.user_service import (
     initialize_user,
