@@ -44,6 +44,10 @@ def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None
     _logger.debug("Response %s for GET %s", response.status_code, url)
 
     if response.status_code != 200:
+        _logger.error(
+            "TMDb API request failed with status code %s", response.status_code
+        )
+        _logger.error("Response: %s", response.text)
         raise TMDbAPIError(
             f"TMDb API request failed with status code {response.status_code}",
             status_code=response.status_code,

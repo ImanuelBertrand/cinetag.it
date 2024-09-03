@@ -450,6 +450,8 @@ def refresh_changed_movies():
         return
 
     start_date = datetime.fromisoformat(last_refresh_date).date()
+    if start_date < datetime.now().date() - timedelta(days=14):
+        start_date = datetime.now().date() - timedelta(days=14)
     end_date = datetime.now().date()
     if start_date >= end_date:
         # Would be nice to fetch intraday updates, but TMDB only supports dates
