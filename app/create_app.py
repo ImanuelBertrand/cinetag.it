@@ -13,6 +13,8 @@ from app.models.misc_data import MiscData  # noqa F401
 from app.models.movie import Movie  # noqa F401
 from app.models.movie_language_info import MovieLanguageInfo  # noqa F401
 from app.models.movie_region_info import MovieRegionInfo  # noqa F401
+from app.models.notification import Notification  # noqa F401
+from app.models.notification_request import NotificationRequest  # noqa F401
 from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F401
 from app.models.tmdb_language import TmdbLanguage  # noqa F401
 from app.models.tmdb_region import TmdbRegion  # noqa F401

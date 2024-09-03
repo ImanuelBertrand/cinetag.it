@@ -14,13 +14,20 @@ from app.models.user_email import UserEmailQueue
 _logger = logging.getLogger(__name__)
 
 
-def send_email(to, subject, body):
+def send_email(to: str, subject: str | list, body: str) -> bool:
     sender = current_app.config["MAIL_DEFAULT_SENDER"]
     sender_name = current_app.config.get("MAIL_DEFAULT_SENDER_NAME")
     if sender_name:
         sender = (sender_name, sender)
-    msg = Message(subject, recipients=[to], body=body, sender=sender)
-    mail.send(msg)
+    try:
+        if isinstance(to, str):
+            to = [to]
+        msg = Message(subject, recipients=to, body=body, sender=sender)
+        mail.send(msg)
+        return True
+    except Exception as e:
+        _logger.error(f"Error sending email: {e}")
+        return False
 
 
 def generate_confirmation_token(user):

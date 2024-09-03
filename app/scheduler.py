@@ -12,6 +12,7 @@ from app.services.tmdb_service import (
     refresh_changed_movies,
 )
 from app.utils.email import send_queued_emails
+from app.utils.notifications import cron_send_notifications
 
 _logger = logging.getLogger(__name__)
 atexit.register(scheduler.shutdown)
@@ -46,6 +47,10 @@ def setup_cron_jobs():
         },
         "refresh_changed_movies": {
             "func": refresh_changed_movies,
+            "options": {"hours": 1},
+        },
+        "send_notifications": {
+            "func": cron_send_notifications,
             "options": {"hours": 1},
         },
     }

@@ -1,0 +1,49 @@
+{% extends "_base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+    <h2>Notifications</h2>
+
+    {% if user.temporary_user_id %}
+        <div class="profile-message">
+            To be able to set up notifications, please log in or register.
+        </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('html.profile_notifications') }}" accept-charset="UTF-8"
+          enctype="application/x-www-form-urlencoded">
+        <input type="hidden" name="csrf_token">
+        <table id="notification-setup">
+            <thead>
+            <tr>
+                <th>Days</th>
+                <th>Type</th>
+                <th>Include 'maybe' movies</th>
+            </tr>
+            </thead>
+            {% for request_row in request_rows %}
+                <tr>
+                    <td><input type="number" name="days[{{ loop.index }}]" value="{{ request_row.days }}" min="0" max="365" required></td>
+                    <td>
+                        <select name="type[{{ loop.index }}]" required id="type">
+                            {% for type in types %}
+                                <option value="{{ type }}"
+                                        {% if request_row.type == type %}selected{% endif %}>{{ types[type] }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="include_maybe[{{ loop.index }}]" id="include_maybe"
+                               {% if request_row.include_maybe %}checked{% endif %}>
+                        <label for="include_maybe">Include 'maybe' movies</label>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <div class="form-row">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+{% endblock %}

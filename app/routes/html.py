@@ -21,6 +21,7 @@ from flask_jwt_extended import (
 from app.extensions import db, bcrypt
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo
+from app.models.notification_request import NotificationRequest
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
@@ -339,6 +340,51 @@ def profile():
         form_data=form_data,
         regions=create_select_options(regions),
         languages=create_select_options(languages),
+    )
+
+
+def profile_notifications_post(user):
+    data = request.form
+    print(data)
+
+
+@html.route("/profile/notifications", methods=["GET", "POST"])
+def profile_notifications():
+    user = initialize_user()
+
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("html.profile"))
+
+    if request.method == "POST":
+        try:
+            profile_notifications_post(user)
+        except Exception as e:
+            _logger.exception("Error updating profile.")
+            flash(str(e), "danger")
+
+    requests = NotificationRequest.query.filter_by(user_id=user.id).all()
+    request_rows = []
+    for req in requests:
+        data = {
+            "type": req.notification_type,
+            "include_maybe": req.include_maybe_movies,
+        }
+        for day in req.days_in_advance:
+            row_data = data.copy()
+            row_data["days_in_advance"] = day
+            request_rows.append(row_data)
+
+    # add one empty row
+    request_rows.append({"type": "", "include_maybe": False, "days": "1"})
+
+    types = {"email": "Email"}
+
+    return render_template(
+        "profile_notifications.html",
+        request_rows=request_rows,
+        user=user,
+        types=types,
     )
 
 
