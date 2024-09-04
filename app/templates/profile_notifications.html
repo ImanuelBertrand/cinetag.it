@@ -14,18 +14,28 @@
     <form method="POST" action="{{ url_for('html.profile_notifications') }}" accept-charset="UTF-8"
           enctype="application/x-www-form-urlencoded">
         <input type="hidden" name="csrf_token">
+
         <div class="form-row checkbox">
             <label>How?</label>
-            {% for type in all_types %}
-                <input id="type_{{ type }}" type="checkbox" name="type_{{ type }}" value="{{ type }}"
-                       {% if type in user_types %}checked{% endif %}>
-                <label for="type_{{ type }}">{{ all_types[type] }}</label>
+            {% for mode in all_modes %}
+                <input id="mode_{{ mode }}" type="checkbox" name="mode_{{ mode }}" value="{{ mode }}"
+                       {% if mode in user_modes %}checked{% endif %}>
+                <label for="mode_{{ mode }}">{{ all_modes[mode] }}</label>
             {% endfor %}
         </div>
+
         <div class="form-row">
             <label for="days">When?</label>
             <input type="text" id="days" name="days" value="{{ days }}" required>
             <div>Days in advance of the release date<br>Multiple values separated by comma</div>
+        </div>
+
+        <div class="form-row">
+            <label>Which?</label>
+            <input type="checkbox" id="include_maybe_movies" name="include_maybe_movies"
+                    {% if include_maybe_movies %}checked{% endif %}
+                   value="1">
+            <label for="include_maybe_movies">Include 'Maybe' movies</label>
         </div>
 
         <div class="form-row">

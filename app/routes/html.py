@@ -345,15 +345,18 @@ def profile():
 
 def profile_notifications_post(user):
     data = dict(request.form)
+    _logger.info("data: %s", data)
     if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("days")):
         raise ValueError("Invalid days.")
 
     modes = set()
     for key in data:
-        if key.startswith("type_"):
+        if key.startswith("mode_"):
             modes.add(key[5:])
 
-    days = map(int, re.split(r"\s*,\s*", data.get("days").strip()))
+    include_maybe_movies = bool(data.get("include_maybe_movies", False))
+
+    days = list(map(int, re.split(r"\s*,\s*", data.get("days").strip())))
 
     requests = NotificationChannel.query.filter_by(user_id=user.id).all()
     for req in requests:
@@ -362,11 +365,13 @@ def profile_notifications_post(user):
         else:
             modes.remove(req.mode)
             req.days_in_advance = days
+            req.include_maybe_movies = include_maybe_movies
             db.session.add(req)
 
     for mode in modes:
         req = NotificationChannel(user_id=user.id, mode=mode, notification_data={})
         req.days_in_advance = days
+        req.include_maybe_movies = include_maybe_movies
         db.session.add(req)
 
     db.session.commit()
@@ -387,19 +392,21 @@ def profile_notifications():
             _logger.exception("Error updating profile.")
             flash(str(e), "danger")
 
-    requests = NotificationChannel.query.filter_by(user_id=user.id).all()
-    days = sorted({day for req in requests for day in req.days_in_advance})
+    channels = NotificationChannel.query.filter_by(user_id=user.id).all()
+    days = sorted({day for ch in channels for day in ch.days_in_advance})
     days = ", ".join(map(str, days))
-    user_types = {req.type for req in requests}
+    user_modes = {ch.mode for ch in channels}
+    include_maybe_movies = any(ch.include_maybe_movies for ch in channels)
 
-    all_types = {"email": "Email", "push": "Push"}
+    all_modes = {"email": "Email", "push": "Push"}
 
     return render_template(
         "profile_notifications.html",
         user=user,
-        user_types=user_types,
-        all_types=all_types,
+        user_modes=user_modes,
+        all_modes=all_modes,
         days=days,
+        include_maybe_movies=include_maybe_movies,
     )
 
 
