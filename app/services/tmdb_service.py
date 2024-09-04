@@ -23,7 +23,7 @@ from app.utils.tmdb import (
     fetch_movie_languages,
     fetch_movie_images,
     fetch_release_dates,
-    fetch_changes_movies,
+    fetch_changed_movies,
     fetch_movie_details,
 )
 
@@ -457,7 +457,7 @@ def refresh_changed_movies():
         # Would be nice to fetch intraday updates, but TMDB only supports dates
         # so this would lead to a lot of redundant updates.
         return
-    changed_movie_ids = fetch_changes_movies(start_date, end_date)
+    changed_movie_ids = fetch_changed_movies(start_date, end_date)
 
     db.session.query(Movie).filter(Movie.id.in_(changed_movie_ids)).update(
         {Movie.info_update_at: None}, synchronize_session=False

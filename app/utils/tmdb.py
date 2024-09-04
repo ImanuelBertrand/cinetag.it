@@ -203,7 +203,7 @@ def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
     )["results"]
 
 
-def fetch_changes_movies(
+def fetch_changed_movies(
     start_date: datetime | date | str, end_date: datetime | date | str
 ) -> List[Dict[str, Any]]:
     if isinstance(start_date, (datetime, date)):
