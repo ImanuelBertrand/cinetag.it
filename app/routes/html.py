@@ -18,6 +18,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
 )
 
+from app.exceptions import UserFeedbackError
 from app.extensions import db, bcrypt
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo
@@ -97,8 +98,11 @@ def register_post(user: User):
         )
         flash(msg, "success")
         return redirect(url_for("html.profile"))
-    except Exception as e:
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return None
+    except Exception:
+        _logger.exception("Error registering user.")
         return None
 
 
@@ -184,9 +188,13 @@ def login():
 
         g.current_user = user
         return make_response(redirect(url_for("html.profile")))
-    except Exception as e:
+    except UserFeedbackError as e:
         _logger.exception("Error authenticating user.")
         flash(str(e), "danger")
+        return redirect(url_for("html.login"))
+    except Exception:
+        _logger.exception("Error authenticating user.")
+        flash("Error logging in.", "danger")
         return redirect(url_for("html.login"))
 
 
@@ -219,10 +227,10 @@ def profile_post(user, form_data):
     def confirm_current_pw():
         current_pw = form_data.get("current_password")
         if not current_pw:
-            raise ValueError("Current password is required.")
+            raise UserFeedbackError("Current password is required.")
         pw_is_valid = bcrypt.check_password_hash(user.password, current_pw)
         if not pw_is_valid:
-            raise ValueError("Invalid current password.")
+            raise UserFeedbackError("Invalid current password.")
 
     data = request.form
 
@@ -238,7 +246,9 @@ def profile_post(user, form_data):
     has_old_pw = bool(user.password)
     has_old_email = bool(user.email)
     if (not has_old_email or not has_old_pw) and (has_new_pw or has_new_mail):
-        raise ValueError("Registration is only possible on the registration page.")
+        raise UserFeedbackError(
+            "Registration is only possible on the registration page."
+        )
 
     # e-mail sanity check
     if has_new_mail and not _validate_email(data.get("email")):
@@ -309,9 +319,11 @@ def profile():
     if request.method == "POST":
         try:
             profile_post(user, form_data)
-        except Exception as e:
-            _logger.exception("Error updating profile.")
+        except UserFeedbackError as e:
             flash(str(e), "danger")
+        except Exception:
+            _logger.exception("Error updating profile.")
+            flash("Error updating profile.", "danger")
 
     def create_select_options(objects):
         result = {}
@@ -347,7 +359,9 @@ def profile_notifications_post(user):
     data = dict(request.form)
     _logger.info("data: %s", data)
     if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("days")):
-        raise ValueError("Invalid days.")
+        raise UserFeedbackError(
+            "Please enter a comma-separated list of numbers in the 'days' field."
+        )
 
     modes = set()
     for key in data:
@@ -375,6 +389,7 @@ def profile_notifications_post(user):
         db.session.add(req)
 
     db.session.commit()
+    return True
 
 
 @html.route("/profile/notifications", methods=["GET", "POST"])
@@ -385,18 +400,32 @@ def profile_notifications():
         flash("User not found.", "danger")
         return redirect(url_for("html.profile"))
 
-    if request.method == "POST":
-        try:
-            profile_notifications_post(user)
-        except Exception as e:
-            _logger.exception("Error updating profile.")
-            flash(str(e), "danger")
-
     channels = NotificationChannel.query.filter_by(user_id=user.id).all()
     days = sorted({day for ch in channels for day in ch.days_in_advance})
     days = ", ".join(map(str, days))
     user_modes = {ch.mode for ch in channels}
     include_maybe_movies = any(ch.include_maybe_movies for ch in channels)
+
+    if request.method == "POST":
+        try:
+            success = profile_notifications_post(user)
+        except UserFeedbackError as e:
+            flash(str(e), "danger")
+            success = False
+        except Exception:
+            _logger.exception("Unexpected error while updating profile.")
+            success = False
+
+        if not success:
+            data = request.form
+            include_maybe_movies = bool(data.get("include_maybe_movies", False))
+            days = data.get("days")
+            user_modes = set()
+            for key in data:
+                if key.startswith("mode_"):
+                    user_modes.add(key[5:])
+        else:
+            flash("Settings saved successfully.", "success")
 
     all_modes = {"email": "Email", "push": "Push"}
 
@@ -415,9 +444,12 @@ def confirm_email(token):
     try:
         confirm_user_email(token)
         flash("Email confirmed successfully.", "success")
-    except Exception as e:
+    except UserFeedbackError as e:
         _logger.exception("Error confirming email.")
         flash(str(e), "danger")
+    except Exception:
+        _logger.exception("Error confirming email.")
+        flash("Error confirming email.", "danger")
 
     return redirect(url_for("html.profile"))
 
@@ -437,9 +469,12 @@ def request_confirmation_email():
         queue_confirmation_mail(user)
         flash("Confirmation email sent.", "success")
         return redirect(url_for("html.profile"))
-    except Exception as e:
-        _logger.exception("Error sending confirmation email.")
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+    except Exception:
+        _logger.exception("Error sending confirmation email.")
+        flash("Error sending confirmation email.", "danger")
         return redirect(url_for("html.profile"))
 
 
@@ -462,8 +497,12 @@ def reset_password_request():
                 "info",
             )
             return redirect(url_for("html.login"))
-        except Exception as e:
+        except UserFeedbackError as e:
             flash(str(e), "danger")
+            return redirect(url_for("html.reset_password_request"))
+        except Exception:
+            _logger.exception("Error sending reset email.")
+            flash("Error sending reset email.", "danger")
             return redirect(url_for("html.reset_password_request"))
     return render_template("reset_password_request.html")
 
@@ -477,9 +516,12 @@ def reset_password(token):
             reset_user_password(token, new_password)
             flash("Password reset successfully.", "success")
             return redirect(url_for("html.login"))
+        except UserFeedbackError as e:
+            flash(str(e), "danger")
+            return redirect(url_for("html.reset_password", token=token))
         except Exception as e:
             _logger.exception("Error resetting password.")
-            flash(str(e), "danger")
+            flash("Error resetting password.", "danger")
             return redirect(url_for("html.reset_password", token=token))
     return render_template("reset_password.html", token=token)
 
@@ -508,9 +550,12 @@ def get_movies(filter_mode):
         return render_template(
             "movie_list.html", movies=movies, filter_mode=filter_mode
         )
-    except Exception as e:
-        _logger.exception("Error fetching movies.")
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+    except Exception:
+        _logger.exception("Error fetching movies.")
+        flash("Error fetching movies.", "danger")
         return redirect(url_for("html.profile"))
 
 
@@ -538,8 +583,12 @@ def get_movie_details(movie_id):
             flash("Movie not found.", "danger")
             return redirect(url_for("html.profile"))
         return render_template("movie_details.html", movie=movie_data)
-    except Exception as e:
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+    except Exception as e:
+        _logger.exception("Error fetching movie details.")
+        flash("Error fetching movie details.", "danger")
         return redirect(url_for("html.profile"))
 
 
@@ -549,8 +598,12 @@ def get_user_release_dates():
     try:
         releases = fetch_user_events(user)
         return render_template("release_dates.html", releases=releases)
-    except Exception as e:
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+    except Exception as e:
+        _logger.exception("Error fetching release dates.")
+        flash("Error fetching release dates.", "danger")
         return redirect(url_for("html.profile"))
 
 
@@ -560,8 +613,12 @@ def get_user_calendar():
     try:
         releases = fetch_user_events(user)
         return render_template("calendar.html", releases=releases)
-    except Exception as e:
+    except UserFeedbackError as e:
         flash(str(e), "danger")
+        return redirect(url_for("html.profile"))
+    except Exception as e:
+        _logger.exception("Error fetching calendar.")
+        flash("Error fetching calendar.", "danger")
         return redirect(url_for("html.profile"))
 
 

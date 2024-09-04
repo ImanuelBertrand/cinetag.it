@@ -10,6 +10,7 @@ from flask import current_app, url_for, request, g
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from werkzeug.security import generate_password_hash
 
+from app.exceptions import UserFeedbackError
 from app.extensions import db, bcrypt
 from app.models.misc_data import MiscData
 from app.models.movie import Movie
@@ -36,7 +37,7 @@ def register_user(data):
     if User.query.filter(
         (User.username == username) | (User.email == email)
     ).first():
-        raise KeyError("Username or email already exists.")
+        raise UserFeedbackError("Username or email already exists.")
 
     hashed_password = generate_password_hash(password)
     user = User(username=username, email=email, password=hashed_password)
@@ -52,7 +53,7 @@ def authenticate_user(data) -> User:
 
     user = User.query.filter_by(email=email).first()
     if not user or not bcrypt.check_password_hash(user.password, password):
-        raise ValueError("Invalid email or password.")
+        raise UserFeedbackError("Invalid email or password.")
 
     return user
 
@@ -73,16 +74,16 @@ def confirm_user_email(token):
         )
         user = User.query.get(data["confirmation"])
         if not user:
-            raise KeyError("User not found.")
+            raise UserFeedbackError("User not found.")
         if not user.new_email or user.new_email != data["new_mail"]:
-            raise ValueError("Invalid token.")
+            raise UserFeedbackError("Invalid token.")
         user.email = user.new_email
         user.new_email = None
         db.session.commit()
     except jwt.ExpiredSignatureError:
-        raise ValueError("The confirmation link has expired.")
+        raise UserFeedbackError("The confirmation link has expired.")
     except jwt.InvalidTokenError:
-        raise ValueError("Invalid token.")
+        raise UserFeedbackError("Invalid token.")
 
 
 def hash_password(password: str) -> str:
@@ -97,21 +98,21 @@ def reset_user_password(token, new_password):
         user_id = data.get("reset_password")
         reset_token = data.get("token")
         if not user_id or not reset_token:
-            raise ValueError("Invalid reset token.")
+            raise UserFeedbackError("Invalid reset token.")
 
         user = User.query.filter_by(
             id=user_id, password_reset_token=reset_token
         ).first()
         if not user:
-            raise ValueError("Invalid reset token.")
+            raise UserFeedbackError("Invalid reset token.")
         user.password = hash_password(new_password)
         user.password_reset_token = None
         db.session.add(user)
         db.session.commit()
     except jwt.ExpiredSignatureError:
-        raise ValueError("The reset link has expired.")
+        raise UserFeedbackError("The reset link has expired.")
     except jwt.InvalidTokenError:
-        raise ValueError("Invalid token.")
+        raise UserFeedbackError("Invalid token.")
 
 
 def get_region_flag(region: str) -> str | None:
@@ -389,6 +390,8 @@ def queue_confirmation_mail(user: User):
     # If so, check how often to avoid abuse
     for seconds, limit in rate_limits.items():
         if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
-            raise ValueError("Too many confirmation mails sent to this address.")
+            raise UserFeedbackError(
+                "Too many confirmation mails sent to this address."
+            )
 
     queue_email(user, "confirm")
