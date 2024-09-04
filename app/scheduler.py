@@ -12,7 +12,10 @@ from app.services.tmdb_service import (
     refresh_changed_movies,
 )
 from app.utils.email import send_queued_emails
-from app.utils.notifications import cron_send_notifications
+from app.utils.notifications import (
+    cron_send_notifications,
+    cron_setup_notifications,
+)
 
 _logger = logging.getLogger(__name__)
 atexit.register(scheduler.shutdown)
@@ -51,6 +54,10 @@ def setup_cron_jobs():
         },
         "send_notifications": {
             "func": cron_send_notifications,
+            "options": {"hours": 1},
+        },
+        "setup_notifications": {
+            "func": cron_setup_notifications,
             "options": {"hours": 1},
         },
     }

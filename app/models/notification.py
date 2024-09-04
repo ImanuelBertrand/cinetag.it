@@ -23,6 +23,7 @@ class Notification(db.Model):
         "NotificationChannel", back_populates="notifications"
     )
     user = db.relationship("User", back_populates="notifications")
+    movie = db.relationship("Movie")
 
     def __init__(
         self, user_id, channel_id, movie_id, days_in_advance, scheduled_at

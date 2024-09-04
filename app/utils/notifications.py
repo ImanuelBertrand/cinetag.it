@@ -1,8 +1,9 @@
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 from app.extensions import db
+from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification import Notification
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
@@ -19,12 +20,23 @@ def cron_setup_notifications():
 
 
 def cron_send_notifications():
-    unset_notifications = Notification.query.filter_by(sent=False).all()
-    for notification in unset_notifications:
+    scheduled_notifications = (
+        Notification.query.filter(
+            Notification.is_sent.is_(False),
+            Notification.scheduled_at <= datetime.utcnow(),
+        )
+        .order_by(Notification.scheduled_at.asc())
+        .all()
+    )
+    _logger.info(f"Sending {len(scheduled_notifications)} notifications")
+
+    for notification in scheduled_notifications:
         try:
             if send_notification(notification):
-                notification.sent = True
+                notification.is_sent = True
                 notification.sent_at = datetime.utcnow()
+                db.session.add(notification)
+                db.session.commit()
         except Exception as e:
             _logger.error(
                 f"Failed to send notification {notification.id}: "
@@ -33,16 +45,18 @@ def cron_send_notifications():
 
 
 def send_notification(notification: Notification):
-    type_methods = {
+    mode_methods = {
         "email": send_email_notification,
         "push": send_push_notification,
     }
 
-    if notification.mode not in type_methods:
+    mode = notification.channel.mode
+
+    if mode not in mode_methods:
         _logger.error(f"Unknown notification type: {notification.mode}")
         return False
 
-    return type_methods[notification.mode](notification)
+    return mode_methods[mode](notification)
 
 
 def send_push_notification(notification: Notification):
@@ -53,14 +67,20 @@ def send_push_notification(notification: Notification):
 
 def send_email_notification(notification: Notification):
     user_mail = notification.user.email
-    movie_title = notification.movie.title
-    days_in_advance = notification.days_in_advance
+    movie_data = notification.movie.get_localized_data(notification.user.region)
+    movie_region_info = MovieRegionInfo.query.filter_by(
+        movie_id=notification.movie_id, region=notification.user.region
+    ).first()
+    movie_title = movie_data["title"]
+    release_date = movie_region_info.release_date
+    days_till_release = (release_date - date.today()).days
     body = (
         f"Hello! You have a movie '{movie_title}' "
-        f"coming up in {days_in_advance} days."
+        f"coming up in {days_till_release} days."
     )
-
-    return send_email(user_mail, "Movie Reminder", body)
+    subject = f"Upcoming movie ({days_till_release} days): {movie_title}"
+    _logger.info(f"Email notification for {notification.id} to {user_mail}")
+    return send_email(user_mail, subject, body)
 
 
 def setup_notifications(channel: NotificationChannel):
@@ -78,24 +98,45 @@ def setup_notifications(channel: NotificationChannel):
         (n.movie_id, n.days_in_advance): n for n in user_notifications
     }
 
+    user_region = channel.user.region
+
+    scheduled_at_threshold = datetime.now() - timedelta(days=7)
+
     # Add missing notifications
+    today = date.today()
     for user_movie in user_movies:
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=user_movie.movie_id, region=user_region
+        ).first()
+        if region_info is None:
+            continue
+        if region_info.release_date <= today:
+            continue
         for day in channel.days_in_advance:
+            scheduled_date = region_info.release_date - timedelta(days=day)
+            scheduled_date = datetime.combine(scheduled_date, datetime.min.time())
+            if scheduled_date < scheduled_at_threshold:
+                continue
             if (user_movie.movie_id, day) not in user_notification_dict:
                 notification = Notification(
                     user_id=channel.user_id,
                     channel_id=channel.id,
                     movie_id=user_movie.movie_id,
                     days_in_advance=day,
+                    scheduled_at=scheduled_date,
                 )
                 db.session.add(notification)
 
     # delete extra notifications, in case movies or days config has changed
     user_movie_ids = {m.movie_id for m in user_movies}
     for notification in user_notifications:
+        if notification.is_sent:
+            continue
+
         if (
             notification.movie_id not in user_movie_ids
             or notification.days_in_advance not in channel.days_in_advance
+            or notification.scheduled_at < scheduled_at_threshold
         ):
             db.session.delete(notification)
 
