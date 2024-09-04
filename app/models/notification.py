@@ -8,7 +8,7 @@ class Notification(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    request_id = db.Column(db.Integer, db.ForeignKey("notification_requests.id"))
+    channel_id = db.Column(db.Integer, db.ForeignKey("notification_channels.id"))
     movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"))
     days_in_advance = db.Column(db.Integer, nullable=False)
     sent = db.Column(db.Boolean, default=False)
@@ -18,12 +18,13 @@ class Notification(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    request = db.relationship(
-        "NotificationRequest", back_populates="notifications"
+    channel = db.relationship(
+        "NotificationChannel", back_populates="notifications"
     )
+    user = db.relationship("User", back_populates="notifications")
 
-    def __init__(self, user_id, request_id, movie_id, days_in_advance):
+    def __init__(self, user_id, channel_id, movie_id, days_in_advance):
         self.user_id = user_id
-        self.request_id = request_id
+        self.channel_id = channel_id
         self.movie_id = movie_id
         self.days_in_advance = days_in_advance

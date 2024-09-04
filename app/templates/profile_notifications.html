@@ -14,33 +14,20 @@
     <form method="POST" action="{{ url_for('html.profile_notifications') }}" accept-charset="UTF-8"
           enctype="application/x-www-form-urlencoded">
         <input type="hidden" name="csrf_token">
-        <table id="notification-setup">
-            <thead>
-            <tr>
-                <th>Days</th>
-                <th>Type</th>
-                <th>Include 'maybe' movies</th>
-            </tr>
-            </thead>
-            {% for request_row in request_rows %}
-                <tr>
-                    <td><input type="number" name="days[{{ loop.index }}]" value="{{ request_row.days }}" min="0" max="365" required></td>
-                    <td>
-                        <select name="type[{{ loop.index }}]" required id="type">
-                            {% for type in types %}
-                                <option value="{{ type }}"
-                                        {% if request_row.type == type %}selected{% endif %}>{{ types[type] }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td>
-                        <input type="checkbox" name="include_maybe[{{ loop.index }}]" id="include_maybe"
-                               {% if request_row.include_maybe %}checked{% endif %}>
-                        <label for="include_maybe">Include 'maybe' movies</label>
-                    </td>
-                </tr>
+        <div class="form-row checkbox">
+            <label>How?</label>
+            {% for type in all_types %}
+                <input id="type_{{ type }}" type="checkbox" name="type_{{ type }}" value="{{ type }}"
+                       {% if type in user_types %}checked{% endif %}>
+                <label for="type_{{ type }}">{{ all_types[type] }}</label>
             {% endfor %}
-        </table>
+        </div>
+        <div class="form-row">
+            <label for="days">When?</label>
+            <input type="text" id="days" name="days" value="{{ days }}" required>
+            <div>Days in advance of the release date<br>Multiple values separated by comma</div>
+        </div>
+
         <div class="form-row">
             <button type="submit">Save</button>
         </div>

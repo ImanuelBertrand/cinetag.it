@@ -23,3 +23,10 @@ class User(db.Model):
     user_movies = db.relationship(
         "UserMovie", back_populates="user", cascade="all, delete-orphan"
     )
+
+    notification_channels = db.relationship(
+        "NotificationChannel", back_populates="user", cascade="all, delete-orphan"
+    )
+    notifications = db.relationship(
+        "Notification", back_populates="user", cascade="all, delete-orphan"
+    )

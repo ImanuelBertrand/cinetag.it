@@ -21,7 +21,7 @@ from flask_jwt_extended import (
 from app.extensions import db, bcrypt
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo
-from app.models.notification_request import NotificationRequest
+from app.models.notification_channel import NotificationChannel
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
@@ -344,8 +344,32 @@ def profile():
 
 
 def profile_notifications_post(user):
-    data = request.form
-    print(data)
+    data = dict(request.form)
+    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("days")):
+        raise ValueError("Invalid days.")
+
+    modes = set()
+    for key in data:
+        if key.startswith("type_"):
+            modes.add(key[5:])
+
+    days = map(int, re.split(r"\s*,\s*", data.get("days").strip()))
+
+    requests = NotificationChannel.query.filter_by(user_id=user.id).all()
+    for req in requests:
+        if req.mode not in modes:
+            db.session.delete(req)
+        else:
+            modes.remove(req.mode)
+            req.days_in_advance = days
+            db.session.add(req)
+
+    for mode in modes:
+        req = NotificationChannel(user_id=user.id, mode=mode, notification_data={})
+        req.days_in_advance = days
+        db.session.add(req)
+
+    db.session.commit()
 
 
 @html.route("/profile/notifications", methods=["GET", "POST"])
@@ -363,28 +387,19 @@ def profile_notifications():
             _logger.exception("Error updating profile.")
             flash(str(e), "danger")
 
-    requests = NotificationRequest.query.filter_by(user_id=user.id).all()
-    request_rows = []
-    for req in requests:
-        data = {
-            "type": req.notification_type,
-            "include_maybe": req.include_maybe_movies,
-        }
-        for day in req.days_in_advance:
-            row_data = data.copy()
-            row_data["days_in_advance"] = day
-            request_rows.append(row_data)
+    requests = NotificationChannel.query.filter_by(user_id=user.id).all()
+    days = sorted({day for req in requests for day in req.days_in_advance})
+    days = ", ".join(map(str, days))
+    user_types = {req.type for req in requests}
 
-    # add one empty row
-    request_rows.append({"type": "", "include_maybe": False, "days": "1"})
-
-    types = {"email": "Email"}
+    all_types = {"email": "Email", "push": "Push"}
 
     return render_template(
         "profile_notifications.html",
-        request_rows=request_rows,
         user=user,
-        types=types,
+        user_types=user_types,
+        all_types=all_types,
+        days=days,
     )
 
 

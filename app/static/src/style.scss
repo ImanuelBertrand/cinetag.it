@@ -409,23 +409,35 @@ form {
   .form-row {
     margin: 0.6em 0;
     display: flex;
-    flex-direction: row;
+    flex-flow: row wrap;
     width: 100%;
     max-width: 25em;
+
+    &.checkbox {
+      margin: 1em 0;
+    }
 
     button {
       width: 30%;
       flex: 0 0 auto;
       margin-left: auto;
     }
+
+    div {
+      flex-basis: 100%;
+      font-size: 0.8em;
+      font-style: italic;
+      margin-left: 6.5rem;
+    }
   }
 
   label {
-    width: 6em;
+    width: 6rem;
     padding-right: 0.5em;
     text-align: right;
     flex: 0 0 auto;
   }
+
 
   input, select {
     flex: 1 1 auto;
@@ -439,6 +451,22 @@ form {
     position: relative;
     height: 2.5em;
     top: -7px;
+
+    &[type="checkbox"] {
+      position: relative;
+      top: 0;
+      height: auto;
+      flex: 0 0 auto;
+      padding: 0;
+      margin: 0;
+
+      + label {
+        text-align: left;
+        width: auto;
+        margin-right: 1em;
+        margin-left: 0.25em;
+      }
+    }
   }
 }
 
