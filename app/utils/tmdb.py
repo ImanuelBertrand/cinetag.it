@@ -47,6 +47,12 @@ def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None
         _logger.error(
             "TMDb API request failed with status code %s", response.status_code
         )
+        _logger.error(
+            "Request was: GET %s with params %s and headers %s",
+            url,
+            params,
+            headers,
+        )
         _logger.error("Response: %s", response.text)
         raise TMDbAPIError(
             f"TMDb API request failed with status code {response.status_code}",
@@ -117,6 +123,9 @@ def uncached_fetch_movie_changes(start_date: str, end_date: str) -> List[int]:
         if data["page"] >= data["total_pages"]:
             break
         params["page"] += 1
+        if params["page"] >= 500:
+            _logger.warning("Total pages exceeds 500, truncating")
+            break
 
     return list(all_movies)
 
