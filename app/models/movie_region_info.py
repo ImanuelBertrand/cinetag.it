@@ -12,7 +12,7 @@ class MovieRegionInfo(db.Model):
     release_date = db.Column(db.Date, nullable=False)
     is_fake = db.Column(db.Boolean, default=False)
 
-    movie = db.relationship("Movie", back_populates="region_info")
+    movie = db.relationship("Movie", back_populates="region_infos")
 
     __table_args__ = (
         db.Index("movie_region_info_idx", "movie_id", "region"),

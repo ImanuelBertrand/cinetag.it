@@ -17,10 +17,10 @@ class Movie(db.Model):
     runtime = db.Column(db.Integer, nullable=True)
     spoken_languages = db.Column(db.String(255), nullable=True)
 
-    region_info = db.relationship(
+    region_infos = db.relationship(
         "MovieRegionInfo", back_populates="movie", cascade="all, delete-orphan"
     )
-    language_info = db.relationship(
+    language_infos = db.relationship(
         "MovieLanguageInfo", back_populates="movie", cascade="all, delete-orphan"
     )
 
@@ -36,7 +36,7 @@ class Movie(db.Model):
     ) -> Dict[str, str]:
         if language_infos is None:
             language_infos = {
-                lang_info.language: lang_info for lang_info in self.language_info
+                lang_info.language: lang_info for lang_info in self.language_infos
             }
 
         langs = [lang, "en", self.original_language]

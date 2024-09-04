@@ -13,7 +13,7 @@ class MovieLanguageInfo(db.Model):
     tagline = db.Column(db.String(255), nullable=True)
     runtime = db.Column(db.Integer, nullable=True)
 
-    movie = db.relationship("Movie", back_populates="language_info")
+    movie = db.relationship("Movie", back_populates="language_infos")
 
     __table_args__ = (db.Index("movie_language_info_idx", "movie_id", "language"),)
 
