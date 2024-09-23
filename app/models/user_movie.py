@@ -20,4 +20,6 @@ class UserMovie(db.Model):
     user = db.relationship("User", back_populates="user_movies")
     movie = db.relationship("Movie", back_populates="user_movies")
 
-    __table_args__ = (db.Index("user_movie_idx", "user_id", "movie_id"),)
+    __table_args__ = (
+        db.Index("user_movie_idx", "user_id", "movie_id", unique=True),
+    )
