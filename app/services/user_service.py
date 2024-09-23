@@ -242,7 +242,7 @@ def _get_user_movies(
     if decisions is None:
         decisions = ["approve"]
 
-    if not start or not end:
+    if not start and not end:
         return UserMovie.query.filter(
             UserMovie.user_id == user.id, UserMovie.decision.in_(decisions)
         ).all()

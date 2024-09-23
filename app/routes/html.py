@@ -590,7 +590,7 @@ def get_movie_details(movie_id):
     except UserFeedbackError as e:
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
-    except Exception as e:
+    except Exception:
         _logger.exception("Error fetching movie details.")
         flash("Error fetching movie details.", "danger")
         return redirect(url_for("html.profile"))
