@@ -19,15 +19,11 @@ class Notification(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    channel = db.relationship(
-        "NotificationChannel", back_populates="notifications"
-    )
+    channel = db.relationship("NotificationChannel", back_populates="notifications")
     user = db.relationship("User", back_populates="notifications")
-    movie = db.relationship("Movie")
+    movie = db.relationship("Movie", back_populates="notifications")
 
-    def __init__(
-        self, user_id, channel_id, movie_id, days_in_advance, scheduled_at
-    ):
+    def __init__(self, user_id, channel_id, movie_id, days_in_advance, scheduled_at):
         self.user_id = user_id
         self.channel_id = channel_id
         self.movie_id = movie_id
