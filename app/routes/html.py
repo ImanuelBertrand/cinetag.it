@@ -1,6 +1,7 @@
 import logging
 import re
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 from babel.dates import format_date
 from flask import (
@@ -26,6 +27,7 @@ from app.models.notification_channel import NotificationChannel
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
+from app.services.image_service import get_image_contents, get_image_url
 from app.services.user_service import (
     get_movies_based_on_filter,
     fetch_user_events,
@@ -573,10 +575,12 @@ def get_movie_details(movie_id):
             "id": movie.id,
             "title": lang_info["title"],
             "overview": lang_info["overview"],
-            "poster_path": lang_info["poster_path"],
-            "release_date": format_date(region_info.release_date, locale=language)
-            if region_info.release_date
-            else None,
+            "poster_url": get_image_url(lang_info["poster_path"], 500),
+            "release_date": (
+                format_date(region_info.release_date, locale=language)
+                if region_info.release_date
+                else None
+            ),
             "imdb_id": movie.imdb_id,
         }
         if not movie:
@@ -622,6 +626,43 @@ def get_user_calendar():
         _logger.exception("Error fetching calendar.")
         flash("Error fetching calendar.", "danger")
         return redirect(url_for("html.profile"))
+
+
+@html.route("/poster/<int:width>/<filename>")
+def get_poster(width, filename):
+    def send_file(
+        file_contents: bytes,
+        mimetype: str,
+        as_attachment: bool = False,
+        filename: str = None,
+    ):
+        response = make_response(file_contents)
+        response.mimetype = mimetype
+        if as_attachment:
+            response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
+
+    def get_mime_type(filename: str) -> str:
+        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+            return "image/jpeg"
+        if filename.endswith(".png"):
+            return "image/png"
+        if filename.endswith(".gif"):
+            return "image/gif"
+        if filename.endswith(".webp"):
+            return "image/webp"
+        raise ValueError(f"Unsupported file type: {filename}")
+
+    valid_widths = {500}
+    if width not in valid_widths:
+        return "Invalid width", 400
+
+    mime_type = get_mime_type(filename)
+    return send_file(
+        get_image_contents(filename, int(width)),
+        mimetype=mime_type,
+        as_attachment=False,
+    )
 
 
 @html.errorhandler(400)

@@ -22,6 +22,7 @@ from app.models.send_confirmation_mails import (
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_movie import UserMovie
+from app.services.image_service import get_image_url
 from app.services.movie_service import get_region_infos
 from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import queue_email
@@ -34,9 +35,7 @@ def register_user(data):
     email = data.get("email")
     password = data.get("password")
 
-    if User.query.filter(
-        (User.username == username) | (User.email == email)
-    ).first():
+    if User.query.filter((User.username == username) | (User.email == email)).first():
         raise UserFeedbackError("Username or email already exists.")
 
     hashed_password = generate_password_hash(password)
@@ -69,9 +68,7 @@ def generate_confirmation_token(user):
 
 def confirm_user_email(token):
     try:
-        data = jwt.decode(
-            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user = User.query.get(data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
@@ -92,9 +89,7 @@ def hash_password(password: str) -> str:
 
 def reset_user_password(token, new_password):
     try:
-        data = jwt.decode(
-            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user_id = data.get("reset_password")
         reset_token = data.get("token")
         if not user_id or not reset_token:
@@ -231,7 +226,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
                 "release_date": fmt_date(main_region_info.release_date),
                 "release_date_raw": main_region_info.release_date,
                 "overview": lang_info["overview"],
-                "poster_path": lang_info["poster_path"],
+                "poster_url": get_image_url(lang_info["poster_path"], 500),
                 "popularity": movie.popularity,
                 "decision": movie_decisions.get(movie.id),
                 "all_release_dates": all_release_dates,
@@ -303,9 +298,7 @@ def fetch_user_events(
         if not lang_info or not region_info:
             continue
 
-        start_datetime = datetime.combine(
-            region_info.release_date, datetime.min.time()
-        )
+        start_datetime = datetime.combine(region_info.release_date, datetime.min.time())
 
         movie = Movie.query.get(user_movie.movie_id)
 
@@ -315,9 +308,7 @@ def fetch_user_events(
                 "start": start_datetime.isoformat(),
                 "start_pretty": fmt_date(region_info.release_date),
                 "sort_order": region_info.release_date,
-                "url": url_for(
-                    "html.get_movie_details", movie_id=user_movie.movie_id
-                ),
+                "url": url_for("html.get_movie_details", movie_id=user_movie.movie_id),
                 "allDay": True,
                 "decision": user_movie.decision,
             }
@@ -390,8 +381,6 @@ def queue_confirmation_mail(user: User):
     # If so, check how often to avoid abuse
     for seconds, limit in rate_limits.items():
         if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
-            raise UserFeedbackError(
-                "Too many confirmation mails sent to this address."
-            )
+            raise UserFeedbackError("Too many confirmation mails sent to this address.")
 
     queue_email(user, "confirm")

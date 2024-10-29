@@ -44,6 +44,12 @@ class Config:
     DEFAULT_REGION = "US"
     DEFAULT_LANGUAGE = "en"
 
+    ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    APP_DIR = os.path.join(ROOT_DIR, "app")
+    STORAGE_DIR = os.path.join(ROOT_DIR, "storage")
+    POSTER_DIR = os.path.join(STORAGE_DIR, "posters")
+    TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False

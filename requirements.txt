@@ -16,5 +16,6 @@ crawlerdetect
 flask
 libsass
 natsort
+pillow
 requests
 werkzeug

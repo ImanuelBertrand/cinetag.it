@@ -4,7 +4,7 @@
 
 {% block content %}
     <h2>{{ movie.title }}</h2>
-    <img src="https://image.tmdb.org/t/p/w500/{{ movie.poster_path }}"
+    <img src="{{ movie.poster_url }}"
          alt="{{ movie.title }}" style="float: left; margin:0 1em 1em 0;"/>
     <p>{{ movie["overview"] }}</p>
     <p>Release Date: {{ movie["release_date"] }}</p>
