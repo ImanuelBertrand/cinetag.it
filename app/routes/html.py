@@ -596,7 +596,9 @@ def get_movie_details(movie_id):
 def get_user_release_dates():
     user = initialize_user()
     try:
-        releases = fetch_user_events(user)
+        # four weeks ago
+        start = datetime.now() - timedelta(weeks=4)
+        releases = fetch_user_events(user, start)
         return render_template("release_dates.html", releases=releases)
     except UserFeedbackError as e:
         flash(str(e), "danger")
