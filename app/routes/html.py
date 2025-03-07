@@ -548,7 +548,11 @@ def get_movies(filter_mode):
         return redirect(url_for("html.profile"))
 
     try:
-        movies = get_movies_based_on_filter(user, filter_mode)
+        need_imdb = True  # TODO toggle in user settings
+        need_poster = True  # TODO toggle in user settings
+        movies = get_movies_based_on_filter(
+            user, filter_mode, need_imdb, need_poster
+        )
         return render_template(
             "movie_list.html", movies=movies, filter_mode=filter_mode
         )

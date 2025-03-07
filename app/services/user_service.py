@@ -35,7 +35,9 @@ def register_user(data):
     email = data.get("email")
     password = data.get("password")
 
-    if User.query.filter((User.username == username) | (User.email == email)).first():
+    if User.query.filter(
+        (User.username == username) | (User.email == email)
+    ).first():
         raise UserFeedbackError("Username or email already exists.")
 
     hashed_password = generate_password_hash(password)
@@ -68,7 +70,9 @@ def generate_confirmation_token(user):
 
 def confirm_user_email(token):
     try:
-        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+        data = jwt.decode(
+            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
+        )
         user = User.query.get(data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
@@ -89,7 +93,9 @@ def hash_password(password: str) -> str:
 
 def reset_user_password(token, new_password):
     try:
-        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+        data = jwt.decode(
+            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
+        )
         user_id = data.get("reset_password")
         reset_token = data.get("token")
         if not user_id or not reset_token:
@@ -119,7 +125,31 @@ def get_region_flag(region: str) -> str | None:
     return first_flag_char + second_flag_char
 
 
-def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
+def get_movie_list_query(region: TmdbRegion, need_imdb: bool, need_poster: bool):
+    upcoming_movie_query = MovieRegionInfo.query.filter_by(region=region).filter(
+        MovieRegionInfo.release_date > datetime.now().date()
+    )
+
+    if need_imdb:
+        upcoming_movie_query = upcoming_movie_query.join(
+            Movie, MovieRegionInfo.movie_id == Movie.id
+        ).filter(Movie.imdb_id.isnot(None))
+
+    if need_poster:
+        poster_subquery = db.exists().where(
+            db.and_(
+                MovieLangInfo.movie_id == MovieRegionInfo.movie_id,
+                MovieLangInfo.poster_path.isnot(None),
+            )
+        )
+        upcoming_movie_query = upcoming_movie_query.filter(poster_subquery)
+
+    return upcoming_movie_query
+
+
+def get_movies_based_on_filter(
+    user: User, mode: str, need_imdb: bool = False, need_poster: bool = False
+) -> List[Dict[str, str]]:
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
     reviewed_movie_ids = {um.movie_id for um in user_movies_query}
 
@@ -137,10 +167,7 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
         sync_upcoming_movies(region, language)
 
     upcoming_movie_ids = {
-        m.movie_id
-        for m in MovieRegionInfo.query.filter_by(region=region).filter(
-            MovieRegionInfo.release_date > datetime.now().date()
-        )
+        m.movie_id for m in get_movie_list_query(region, need_imdb, need_poster)
     }
 
     if mode == "all":
@@ -216,6 +243,9 @@ def get_movies_based_on_filter(user: User, mode: str) -> List[Dict[str, str]]:
 
         lang_info = movie.get_localized_data(language, language_dict[movie.id])
         if not lang_info:
+            continue
+
+        if need_poster and not lang_info.get("poster_path"):
             continue
 
         result.append(
@@ -298,7 +328,9 @@ def fetch_user_events(
         if not lang_info or not region_info:
             continue
 
-        start_datetime = datetime.combine(region_info.release_date, datetime.min.time())
+        start_datetime = datetime.combine(
+            region_info.release_date, datetime.min.time()
+        )
 
         movie = Movie.query.get(user_movie.movie_id)
 
@@ -308,7 +340,9 @@ def fetch_user_events(
                 "start": start_datetime.isoformat(),
                 "start_pretty": fmt_date(region_info.release_date),
                 "sort_order": region_info.release_date,
-                "url": url_for("html.get_movie_details", movie_id=user_movie.movie_id),
+                "url": url_for(
+                    "html.get_movie_details", movie_id=user_movie.movie_id
+                ),
                 "allDay": True,
                 "decision": user_movie.decision,
             }
@@ -381,6 +415,8 @@ def queue_confirmation_mail(user: User):
     # If so, check how often to avoid abuse
     for seconds, limit in rate_limits.items():
         if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
-            raise UserFeedbackError("Too many confirmation mails sent to this address.")
+            raise UserFeedbackError(
+                "Too many confirmation mails sent to this address."
+            )
 
     queue_email(user, "confirm")
