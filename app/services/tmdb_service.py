@@ -410,20 +410,24 @@ def check_movie_information(movie: Movie):
     if not movie:
         return
     threshold = _get_movie_info_update_threshold()
-    if not movie.info_update_at or movie.info_update_at < threshold:
-        try:
-            update_movie_details(movie)
-            update_movie_languages(movie)
-            update_movie_posters(movie)
-            update_movie_regions(movie)
-            movie.info_update_at = datetime.now()
-            db.session.add(movie)
-        except TMDbAPIError as e:
-            if e.status_code == 404:
-                _logger.error("Movie %s not found on TMDb", movie)
-                db.session.delete(movie)
-        except Exception as e:
+    if movie.info_update_at and movie.info_update_at >= threshold:
+        return
+
+    try:
+        update_movie_details(movie)
+        update_movie_languages(movie)
+        update_movie_posters(movie)
+        update_movie_regions(movie)
+        movie.info_update_at = datetime.now()
+        db.session.add(movie)
+    except TMDbAPIError as e:
+        if e.status_code == 404:
+            _logger.error("Movie %s not found on TMDb", movie)
+            db.session.delete(movie)
+        else:
             _logger.error("Error updating movie information for %s: %s", movie, e)
+    except Exception as e:
+        _logger.error("Error updating movie information for %s: %s", movie, e)
 
 
 def update_all_upcoming_movies():
