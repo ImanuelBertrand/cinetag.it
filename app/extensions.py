@@ -1,3 +1,5 @@
+import base64
+
 import pymysql
 from apscheduler.executors.pool import ThreadPoolExecutor
 from flask import request
@@ -31,6 +33,10 @@ def get_locale():
     return request.accept_languages.best_match(["en", "de"])
 
 
+def obfuscate_email(email: str) -> str:
+    return base64.b64encode(email.encode("utf-8")).decode("utf-8")[::-1]
+
+
 def init_extensions(app):
     """
     Initialize the Flask extensions with the application instance.
@@ -52,6 +58,8 @@ def init_extensions(app):
         },
     )
     scheduler.init_app(app)
+
+    app.jinja_env.filters["obfuscate_email"] = obfuscate_email
 
     # Configure Flask-Assets
     scss = Bundle("src/style.scss", filters="libsass", output="dist/style.css")
