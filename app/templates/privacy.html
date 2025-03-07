@@ -1,0 +1,74 @@
+{% extends "_base.html" %}
+
+{% block title %}Privacy policy{% endblock %}
+
+{% block content %}
+    <div class="content-text">
+        <p><strong>Privacy Policy</strong></p>
+        <h3>1. Data Controller</h3>
+        <p>The data controller responsible for data processing on this website is:</p>
+        <address>
+            Imanuel Bertrand<br>
+            Freibadstraße 18<br>
+            81543 Munich<br>
+            Germany<br>
+            <span class="obfuscated-email" data-email="{{ 'mail@cinetag.it' | obfuscate_email }}"/>
+        </address>
+        <h3>2. Collection and Storage of Personal Data and the Type and Purpose of Their Use</h3>
+        <p><strong>a) Server Log Files</strong><br>
+            When you access our website, information is automatically collected by
+            the web server and stored in server log files. The data collected includes:</p>
+        <ul>
+            <li>IP address</li>
+            <li>Access time (timestamp)</li>
+            <li>URL of the accessed page</li>
+            <li>User-Agent (browser type and version)</li>
+        </ul>
+        <p><strong>Purpose of Processing:</strong> This data is used exclusively for administrative and security-related
+            purposes, such as for error analysis and troubleshooting as part of website development and
+            improvement.<br>
+            <strong>Storage Duration:</strong> Server log files are stored for a maximum of 14 days and are
+            automatically deleted afterward unless security incidents require a longer storage period.</p>
+        <p><strong>b) User Account and Email Address</strong><br>
+            For using the account functions on our website, you may
+            optionally create a user account. In this process, we collect:</p>
+        <ul>
+            <li>Your email address</li>
+            <li>A password (stored in encrypted form)</li>
+        </ul>
+        <p><strong>Purpose of Processing:</strong> The email address is used for account management (e.g., login,
+            “forgot
+            password”). It is not used for any other purposes, such as marketing.<br>
+            Optional email notifications for movie
+            release dates can be activated or deactivated by the user within their account.<br>
+            <strong>Storage
+                Duration:</strong> The data is stored as long as the user has an account with us. Users can delete their
+            accounts and data independently.</p>
+        <h3>3. Data Subject Rights</h3>
+        <p>As a user, you have the following rights regarding your personal data:</p>
+        <ul>
+            <li>Right to access the data we store about you.</li>
+            <li>Right to correct incorrect data.</li>
+            <li>Right to deletion ("right to be forgotten") if no legal retention requirements exist.</li>
+            <li>Right to restrict processing if the accuracy of the data is contested, the processing is unlawful, or
+                the
+                data is no longer needed for the purpose of processing.
+            </li>
+            <li>Right to data portability.</li>
+        </ul>
+        <p>To exercise these rights or if you have any other questions about data privacy, you can contact us at the
+            email
+            address provided above.</p>
+        <h3>4. External Services</h3>
+        <p>Our website does not use any external services, tracking tools, web analytics, third-party fonts, CDNs, or
+            similar tools. No data is transmitted to third parties.</p>
+        <h3>5. Data Security</h3>
+        <p>We use technical and organizational security measures to protect your personal data against loss,
+            manipulation,
+            or unauthorized access. Data transmission between your browser and our server is encrypted via TLS transport
+            encryption to ensure confidentiality and data integrity. Passwords are stored in encrypted form using the
+            bcrypt
+            algorithm, which ensures secure and resilient storage against unauthorized access. Our security measures are
+            regularly reviewed and enhanced in line with technological advancements.</p>
+    </div>
+{% endblock %}

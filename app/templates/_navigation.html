@@ -37,4 +37,11 @@
             {% endif %}
         </div>
     </div>
+    <div class="dropdown hoverable">
+        <a href="#" class="dropbtn">About</a>
+        <div class="dropdown-content">
+            <a href="{{ url_for('html.about') }}">About this site</a>
+            <a href="{{ url_for('html.privacy') }}">Privacy policy</a>
+        </div>
+    </div>
 </nav>

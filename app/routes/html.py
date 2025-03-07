@@ -665,6 +665,16 @@ def get_poster(width, filename):
     )
 
 
+@html.route("/about", methods=["GET"])
+def about():
+    return render_template("about.html")
+
+
+@html.route("/privacy", methods=["GET"])
+def privacy():
+    return render_template("privacy.html")
+
+
 @html.errorhandler(400)
 def bad_request(error):
     return render_template("400.html"), 400

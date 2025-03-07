@@ -65,4 +65,12 @@ document.addEventListener("DOMContentLoaded", function () {
             nav.classList.remove('open');
         }
     });
+
+    // de-obfuscate email addresses
+    document.querySelectorAll('.obfuscated-email').forEach(function (element) {
+        const obfuscatedEmail = element.getAttribute('data-email');
+        const reversed = obfuscatedEmail.split("").reverse().join("");
+        const decoded = atob(reversed);
+        element.innerHTML = `<a href="mailto:${decoded}">${decoded}</a>`;
+    });
 });

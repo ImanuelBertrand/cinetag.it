@@ -16,6 +16,7 @@ body {
   font-family: 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
+  line-height: 1.4;
 }
 
 header {
@@ -238,10 +239,12 @@ ul {
 }
 
 li {
-  margin: 0.6em 0;
-  padding: 0.6em;
-  background-color: $cool-gray;
-  border-radius: 5px;
+  margin: 0 0 0 1em ;
+  padding: 0;
+}
+
+.content-text ul {
+  list-style-type: disc;
 }
 
 footer {
@@ -503,6 +506,9 @@ button {
 }
 
 ul.release-list li {
+  margin: 0.6em 0;
+  background-color: $cool-gray;
+  border-radius: 5px;
   position: relative;
   padding: 0;
 
