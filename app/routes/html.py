@@ -639,7 +639,8 @@ def get_poster(width, filename):
         response = make_response(file_contents)
         response.mimetype = mimetype
         if as_attachment:
-            response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+            header_value = f"attachment; filename={filename}"
+            response.headers["Content-Disposition"] = header_value
         return response
 
     def get_mime_type(filename: str) -> str:
