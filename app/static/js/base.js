@@ -19,38 +19,60 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Hover with touch support
-    const hover_class = 'hovered';
-    const scroll_threshold = 10;
-    document.querySelectorAll('.hoverable').forEach(function (element) {
-        let touchStartX = 0;
-        let touchStartY = 0;
+    const hover_class = "hovered";
+    const scroll_threshold = 10; // Adjust as needed
 
-        element.addEventListener('mouseover', () => element.classList.add(hover_class));
-        element.addEventListener('mouseout', () => element.classList.remove(hover_class));
+    let touchStartX = 0;
+    let touchStartY = 0;
 
-        element.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        });
-        element.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
+    // Mouse hover events (added via event delegation)
+    document.addEventListener("mouseover", event => {
+        const element = event.target.closest(".hoverable");
+        if (element) element.classList.add(hover_class);
+    });
 
-            const diffX = Math.abs(touchEndX - touchStartX);
-            const diffY = Math.abs(touchEndY - touchStartY);
+    document.addEventListener("mouseout", event => {
+        const element = event.target.closest(".hoverable");
+        if (element) element.classList.remove(hover_class);
+    });
 
-            const is_scroll = diffX > scroll_threshold || diffY > scroll_threshold;
-            if (is_scroll) {
-                return;
-            }
+    // Touch events (added via event delegation)
+    document.addEventListener("touchstart", event => {
+        const element = event.target.closest(".hoverable");
+        if (!element) return;
 
-            if (!element.classList.contains(hover_class)) {
-                e.preventDefault(); // Prevent the click event
-                element.classList.add(hover_class);
-            }
-        });
-        document.addEventListener('touchend', evt => {
-            if (!element.contains(evt.target)) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+
+        element.dataset.touching = "true"; // Mark element as being touched
+    });
+
+    document.addEventListener("touchend", event => {
+        const element = event.target.closest(".hoverable");
+        if (!element) return;
+
+        const touchEndX = event.changedTouches[0].clientX;
+        const touchEndY = event.changedTouches[0].clientY;
+
+        const diffX = Math.abs(touchEndX - touchStartX);
+        const diffY = Math.abs(touchEndY - touchStartY);
+
+        const is_scroll = diffX > scroll_threshold || diffY > scroll_threshold;
+        if (is_scroll) {
+            element.dataset.touching = "false";
+            return;
+        }
+
+        if (!element.classList.contains(hover_class)) {
+            event.preventDefault(); // Prevent accidental clicks
+            element.classList.add(hover_class);
+        }
+    });
+
+    // Remove hover class when tapping outside
+    document.addEventListener("touchend", event => {
+        document.querySelectorAll(".hoverable").forEach(element => {
+            if (!element.contains(event.target)) {
                 element.classList.remove(hover_class);
             }
         });

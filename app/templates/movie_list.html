@@ -20,48 +20,8 @@
 
 {% block content %}
     <h2>{{ title }}</h2>
-    <div class="movie-grid movie-grid-{{ filter_mode }}">
-        {% for movie in movies %}
-            {% set movie_link = url_for('html.get_movie_details', movie_id=movie.id) %}
-            {% set decision_class = "decided decided-" + movie.decision if always_show_decisions and movie.decision else '' %}
-            {% set poster_class = "has-no-poster" if not movie.poster_path else '' %}
-            <div class="movie-item hoverable {{ decision_class }} {{ poster_class }}" id="movie-{{ movie.id }}">
-                {% if movie.poster_url %}
-                    <img src="{{ movie.poster_url }}"
-                         alt="{{ movie.title }}"
-                         class="movie-poster"
-                         loading="lazy"/>
-                {% else %}
-                    <span class="no-poster">{{ movie.title }}</span>
-                {% endif %}
-                <div class="overlay">
-                    <a class="details-link" href="{{ movie_link }}">{{ movie.title }}</a>
-                    <div class="decide">
-                        <div data-decision="approve" data-movie-id="{{ movie.id }}">👍️</div>
-                        <div data-decision="maybe" data-movie-id="{{ movie.id }}">🤷</div>
-                        <div data-decision="disapprove" data-movie-id="{{ movie.id }}">👎</div>
-                    </div>
-                    <a class="details-link" href="{{ movie_link }}">
-                        {% if movie.all_release_dates %}
-                            <div class="release-dates">
-                                {% for release_date in movie.all_release_dates %}
-                                    <div title="{{ release_date.region_info.english_name }}">
-                                        {% if release_date.flag %}
-                                            <span class="flag-icon">{{ release_date.flag }}</span>
-                                        {% else %}
-                                            <span>release_date.region</span>
-                                        {% endif %}
-                                        <span>{{ release_date.date }}</span>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            {{ movie.release_date }}
-                        {% endif %}
-                    </a>
-                </div>
-            </div>
-        {% endfor %}
+    <div class="movie-container movie-grid movie-grid-{{ filter_mode }}" data-filter-mode="{{ filter_mode }}">
+        <!-- Movies will be dynamically loaded here -->
     </div>
 {% endblock %}
 

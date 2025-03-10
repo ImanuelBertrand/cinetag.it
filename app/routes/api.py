@@ -1,15 +1,19 @@
+import logging
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 
+from app.exceptions import UserFeedbackError
 from app.extensions import db
 from app.models.user_movie import UserMovie
-from app.services.user_service import fetch_user_events
+from app.services.user_service import fetch_user_events, get_movies_based_on_filter
 from app.services.user_service import (
     initialize_user,
 )
 
 api = Blueprint("api", __name__)
+
+_logger = logging.getLogger(__name__)
 
 
 @api.route("/user/movies/review", methods=["POST"])
@@ -70,6 +74,28 @@ def get_user_events():
     end = datetime.fromisoformat(end)
     events = fetch_user_events(user, start, end)
     return jsonify(events)
+
+
+@api.route("/movies/<filter_mode>", methods=["GET"])
+def get_movies_api(filter_mode):
+    user = initialize_user()
+
+    try:
+        need_imdb = True  # TODO toggle in user settings
+        need_poster = True  # TODO toggle in user settings
+        return jsonify(
+            {
+                "success": True,
+                "movies": get_movies_based_on_filter(
+                    user, filter_mode, need_imdb, need_poster
+                ),
+            }
+        )
+    except UserFeedbackError as e:
+        return jsonify({"success": False, "error": str(e)})
+    except Exception:
+        _logger.exception("Error fetching movies.")
+        return jsonify({"success": False, "error": "Error fetching movies."})
 
 
 @api.errorhandler(400)

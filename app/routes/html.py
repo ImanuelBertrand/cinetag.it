@@ -29,7 +29,6 @@ from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.services.image_service import get_image_contents, get_image_url
 from app.services.user_service import (
-    get_movies_based_on_filter,
     fetch_user_events,
     confirm_user_email,
     authenticate_user,
@@ -535,7 +534,6 @@ def get_all_movies():
 
 @html.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies(filter_mode):
-    user = initialize_user()
     if filter_mode not in {
         "all",
         "maybe",
@@ -547,22 +545,7 @@ def get_movies(filter_mode):
         flash("Invalid filter mode.", "danger")
         return redirect(url_for("html.profile"))
 
-    try:
-        need_imdb = True  # TODO toggle in user settings
-        need_poster = True  # TODO toggle in user settings
-        movies = get_movies_based_on_filter(
-            user, filter_mode, need_imdb, need_poster
-        )
-        return render_template(
-            "movie_list.html", movies=movies, filter_mode=filter_mode
-        )
-    except UserFeedbackError as e:
-        flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
-    except Exception:
-        _logger.exception("Error fetching movies.")
-        flash("Error fetching movies.", "danger")
-        return redirect(url_for("html.profile"))
+    return render_template("movie_list.html", filter_mode=filter_mode)
 
 
 @html.route("/movie/<int:movie_id>", methods=["GET"])

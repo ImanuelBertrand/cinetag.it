@@ -239,7 +239,7 @@ ul {
 }
 
 li {
-  margin: 0 0 0 1em ;
+  margin: 0 0 0 1em;
   padding: 0;
 }
 
@@ -311,6 +311,10 @@ footer {
       position: relative;
       top: 30%;
       padding: 1em;
+    }
+
+    .movie-title {
+      margin: 0 0.5em;
     }
 
     &.decided {

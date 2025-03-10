@@ -30,3 +30,12 @@ class TmdbRegion(db.Model):
             self.native_name = data["native_name"]
             updated = True
         return updated
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "code": self.code,
+            "english_name": self.english_name,
+            "native_name": self.native_name,
+            "sort_order": self.sort_order,
+        }

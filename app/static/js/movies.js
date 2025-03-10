@@ -1,14 +1,77 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll('.decide > div').forEach(function (element) {
-        element.addEventListener('click', handleDecision);
+    const movieContainers = document.querySelectorAll(".movie-container");
+
+    // Fetch movies for each container
+    movieContainers.forEach(movieContainer => {
+        fetchMovies(movieContainer);
+    });
+
+    async function fetchMovies(movieContainer) {
+        try {
+            // load filterMode from data-filter-mode in movieContainer
+            const filterMode = movieContainer.getAttribute("data-filter-mode");
+            const response = await fetch(`/api/movies/${filterMode}`);
+            const data = await response.json();
+
+            if (data.success) {
+                renderMovies(movieContainer, data.movies);
+            } else {
+                movieContainer.innerHTML = `<p>${data.error || 'Error fetching movies.'}</p>`;
+            }
+        } catch (error) {
+            console.error('Error fetching movies:', error);
+            movieContainer.innerHTML = `<p>Error fetching movies. Please try again later.</p>`;
+        }
+    }
+
+    function renderMovies(movieContainer, movies) {
+        movieContainer.innerHTML = movies.map(movie => {
+            const decisionClass = movie.decision ? `decided decided-${movie.decision}` : '';
+            const posterClass = movie.poster_url ? '' : 'has-no-poster';
+
+            return `
+                <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
+                    ${movie.poster_url ?
+                `<img src="${movie.poster_url}" alt="${movie.title}" class="movie-poster" loading="lazy"/>`
+                : `<span class="no-poster">${movie.title}</span>`}
+                    <div class="overlay">
+                        <a class="details-link" href="/movie/${movie.id}">${movie.title}</a>
+                        <div class="decide">
+                            <div data-decision="approve" data-movie-id="${movie.id}">👍️</div>
+                            <div data-decision="maybe" data-movie-id="${movie.id}">🤷</div>
+                            <div data-decision="disapprove" data-movie-id="${movie.id}">👎</div>
+                        </div>
+                        <a class="details-link" href="/movie/${movie.id}">
+                            <div class="release-dates">
+                                ${movie.all_release_dates ? renderReleaseDates(movie.all_release_dates) : movie.release_date_pretty}
+                            </div>
+                        </a>
+                    </div>
+                </div>`;
+        }).join("");
+    }
+
+    function renderReleaseDates(releaseDates) {
+        return releaseDates.map(
+            date => `<div title="${date.region_info.english_name}">
+                ${date.flag ? `<span class="flag-icon">${date.flag}</span>` : `<span>${date.region}</span>`}
+                <span>${date.date_pretty}</span>
+            </div>`
+        ).join("");
+    }
+
+    document.addEventListener('click', function (event) {
+        if (event.target.matches('.decide > div')) {
+            handleDecision(event);
+        }
     });
 
     function get_decision(target) {
-        const movieId = event.target.getAttribute('data-movie-id');
+        const movieId = target.getAttribute('data-movie-id');
         const movieElement = document.getElementById(`movie-${movieId}`);
-        let decision = event.target.getAttribute('data-decision');
+        let decision = target.getAttribute('data-decision');
         if (movieElement.classList.contains('decided-' + decision)) {
             return 'remove';
         }

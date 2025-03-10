@@ -233,8 +233,9 @@ def get_movies_based_on_filter(
         all_release_dates = [
             {
                 "region": r,
-                "region_info": tmdb_regions_dict.get(r),
+                "region_info": tmdb_regions_dict.get(r).to_dict(),
                 "date": rg_infos.get(r).release_date,
+                "date_pretty": fmt_date(rg_infos.get(r).release_date),
                 "flag": get_region_flag(r),
             }
             for r in relevant_regions
@@ -253,8 +254,8 @@ def get_movies_based_on_filter(
                 "id": movie.id,
                 "title": lang_info["title"],
                 "original_title": movie.original_title,
-                "release_date": fmt_date(main_region_info.release_date),
-                "release_date_raw": main_region_info.release_date,
+                "release_date_pretty": fmt_date(main_region_info.release_date),
+                "release_date": main_region_info.release_date,
                 "overview": lang_info["overview"],
                 "poster_url": get_image_url(lang_info["poster_path"], 500),
                 "popularity": movie.popularity,
@@ -263,7 +264,7 @@ def get_movies_based_on_filter(
             }
         )
 
-    return sorted(result, key=lambda x: x["release_date_raw"])
+    return sorted(result, key=lambda x: x["release_date"])
 
 
 def _get_user_movies(
