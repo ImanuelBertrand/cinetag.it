@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+
+{% block title %}Imprint{% endblock %}
+
+{% block content %}
+    <div class="content-text">
+        <h2>Imprint</h2>
+    <address>
+        Imanuel Bertrand<br>
+        Freibadstr. 18<br>
+        81543 München<br>
+        Email: <span class="obfuscated-email" data-email="{{ 'mail@cinetag.it' | obfuscate_email }}"/>
+    </address>
+        <h3>Source of movie data</h3>
+        <p>This product uses the TMDB API but is not endorsed or certified by <a href="https://www.themoviedb.org"><img id="tmdb-logo" src="{{ url_for('static', filename='img/tmdb.svg') }}" alt="TMDB"/></a>.</p>
+    </div>
+{% endblock %}

@@ -1,26 +1,24 @@
 <a class="mobile-menu-toggle">☰</a>
 <nav>
     <a href="{{ url_for('html.get_all_movies') }}">All movies</a>
-    {% if current_user %}
-        <div class="dropdown hoverable">
-            <a href="#" class="dropbtn">My movies</a>
-            <div class="dropdown-content">
-                <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Not yet tagged</a>
-                <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
-                <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
-                <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
-            </div>
+    <div class="dropdown hoverable">
+        <a href="#" class="dropbtn">My movies</a>
+        <div class="dropdown-content">
+            <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Not yet tagged</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
         </div>
-        <div class="dropdown hoverable">
-            <a href="#" class="dropbtn">My releases</a>
-            <div class="dropdown-content">
-                {% if current_user %}
-                    <a href="{{ url_for('html.get_user_release_dates') }}">As a list</a>
-                    <a href="{{ url_for('html.get_user_calendar') }}">As a calendar</a>
-                {% endif %}
-            </div>
+    </div>
+    <div class="dropdown hoverable">
+        <a href="#" class="dropbtn">My releases</a>
+        <div class="dropdown-content">
+            {% if current_user %}
+                <a href="{{ url_for('html.get_user_release_dates') }}">As a list</a>
+                <a href="{{ url_for('html.get_user_calendar') }}">As a calendar</a>
+            {% endif %}
         </div>
-    {% endif %}
+    </div>
     <div class="dropdown hoverable">
         <a href="#" class="dropbtn">User</a>
         <div class="dropdown-content">
@@ -40,7 +38,10 @@
     <div class="dropdown hoverable">
         <a href="#" class="dropbtn">About</a>
         <div class="dropdown-content">
-            <a href="{{ url_for('html.about') }}">About this site</a>
+            <a href="{{ url_for('html.why') }}">Why?</a>
+            <a href="{{ url_for('html.how') }}">How?</a>
+            <a href="{{ url_for('html.who') }}">Who?</a>
+            <a href="{{ url_for('html.imprint') }}">Imprint / legal infos</a>
             <a href="{{ url_for('html.privacy') }}">Privacy policy</a>
         </div>
     </div>

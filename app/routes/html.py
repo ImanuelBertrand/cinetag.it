@@ -670,9 +670,24 @@ def get_poster(width, filename):
     )
 
 
-@html.route("/about", methods=["GET"])
-def about():
-    return render_template("about.html")
+@html.route("/why", methods=["GET"])
+def why():
+    return render_template("why.html")
+
+
+@html.route("/how", methods=["GET"])
+def how():
+    return render_template("how.html")
+
+
+@html.route("/who", methods=["GET"])
+def who():
+    return render_template("who.html")
+
+
+@html.route("/imprint", methods=["GET"])
+def imprint():
+    return render_template("imprint.html")
 
 
 @html.route("/privacy", methods=["GET"])
