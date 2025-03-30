@@ -144,17 +144,25 @@ def merge_temporary_user():
     temp_user = User.query.get(temp_user)
 
     if merge:
-        user_movies = {movie.id: movie for movie in user.user_movies}
+        user_movies = {movie.movie_id: movie for movie in user.user_movies}
         for temp_movie in temp_user.user_movies:
-            if temp_movie.id not in user_movies:
+            user_movie = user_movies.get(temp_movie.movie_id)
+            if not user_movie:
+                _logger.info("Adding movie %s", temp_movie.movie.original_title)
                 temp_movie.user_id = user.id
                 db.session.add(temp_movie)
-            elif temp_movie.updated_at > user_movies[temp_movie.id].updated_at:
-                user_movies[temp_movie.id].delete()
+            elif temp_movie.updated_at > user_movie.updated_at:
+                _logger.info("Replacing movie %s", user_movie.movie.original_title)
+                db.session.delete(temp_movie)
                 temp_movie.user_id = user.id
             else:
-                temp_movie.delete()
-            db.session.commit()
+                _logger.info(
+                    "Deleting movie %s because there is a newer decision: %s",
+                    temp_movie.movie.original_title,
+                    user_movie.decision,
+                )
+                db.session.delete(temp_movie)
+        db.session.commit()
         flash("Movie tags were successfully imported.", "success")
 
     db.session.delete(temp_user)
