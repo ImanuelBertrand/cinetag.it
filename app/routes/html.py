@@ -365,39 +365,36 @@ def profile():
 
 
 def profile_notifications_post(user):
+    """A POST request to the notification page (form submit)
+    only handles the email notifications.
+    An API endpoint handles push notifications."""
     data = dict(request.form)
     _logger.info("data: %s", data)
-    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("days")):
+    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("email_days")):
         raise UserFeedbackError(
             "Please enter a comma-separated list of numbers in the 'days' field."
         )
 
-    modes = set()
-    for key in data:
-        if key.startswith("mode_"):
-            modes.add(key[5:])
+    email_channels = NotificationChannel.query.filter_by(
+        user_id=user.id, mode="email"
+    )
+    if email_channels.count() > 0:
+        email_channel = email_channels[0]
+    else:
+        email_channel = NotificationChannel(
+            user_id=user.id, mode="email", enabled=False
+        )
 
-    include_maybe_movies = bool(data.get("include_maybe_movies", False))
+    _logger.info(str(data))
 
-    days = list(map(int, re.split(r"\s*,\s*", data.get("days").strip())))
+    days = re.split(r"\s*,\s*", data.get("email_days").strip())
 
-    requests = NotificationChannel.query.filter_by(user_id=user.id).all()
-    for req in requests:
-        if req.mode not in modes:
-            db.session.delete(req)
-        else:
-            modes.remove(req.mode)
-            req.days_in_advance = days
-            req.include_maybe_movies = include_maybe_movies
-            db.session.add(req)
-
-    for mode in modes:
-        req = NotificationChannel(user_id=user.id, mode=mode, notification_data={})
-        req.days_in_advance = days
-        req.include_maybe_movies = include_maybe_movies
-        db.session.add(req)
-
+    email_channel.enabled = bool(data.get("email_enabled", False))
+    email_channel.days_in_advance = list(map(int, days))
+    email_channel.include_maybe_movies = bool(data.get("email_with_maybe", False))
+    db.session.add(email_channel)
     db.session.commit()
+
     return True
 
 
@@ -409,12 +406,7 @@ def profile_notifications():
         flash("User not found.", "danger")
         return redirect(url_for("html.profile"))
 
-    channels = NotificationChannel.query.filter_by(user_id=user.id).all()
-    days = sorted({day for ch in channels for day in ch.days_in_advance})
-    days = ", ".join(map(str, days))
-    user_modes = {ch.mode for ch in channels}
-    include_maybe_movies = any(ch.include_maybe_movies for ch in channels)
-
+    template_data = None
     if request.method == "POST":
         try:
             success = profile_notifications_post(user)
@@ -427,24 +419,38 @@ def profile_notifications():
 
         if not success:
             data = request.form
-            include_maybe_movies = bool(data.get("include_maybe_movies", False))
-            days = data.get("days")
-            user_modes = set()
-            for key in data:
-                if key.startswith("mode_"):
-                    user_modes.add(key[5:])
+            template_data = {
+                "email_enabled": data.get("email_enabled"),
+                "email_days": data.get("email_days"),
+                "email_with_maybe": data.get("email_with_maybe"),
+            }
         else:
             flash("Settings saved successfully.", "success")
 
-    all_modes = {"email": "Email", "push": "Push"}
+    if not template_data:
+        email_channels = NotificationChannel.query.filter_by(
+            user_id=user.id, mode="email"
+        )
+        if email_channels.count() > 0:
+            email_channel = email_channels[0]
+        else:
+            email_channel = NotificationChannel(
+                user_id=user.id, mode="email", enabled=False
+            )
+
+        days = sorted(email_channel.days_in_advance or [])
+        template_data = {
+            "email_enabled": email_channel.enabled,
+            "email_days": ", ".join(map(str, days)),
+            "email_with_maybe": email_channel.include_maybe_movies,
+        }
 
     return render_template(
         "profile_notifications.html",
         user=user,
-        user_modes=user_modes,
-        all_modes=all_modes,
-        days=days,
-        include_maybe_movies=include_maybe_movies,
+        email_enabled=template_data["email_enabled"],
+        email_days=template_data["email_days"],
+        email_with_maybe=template_data["email_with_maybe"],
     )
 
 

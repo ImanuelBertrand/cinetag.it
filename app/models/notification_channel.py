@@ -8,6 +8,7 @@ class NotificationChannel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    enabled = db.Column(db.Integer)
     days_in_advance = db.Column(db.JSON, nullable=False)
     mode = db.Column(db.Enum("email", "push"), nullable=False)
     notification_data = db.Column(db.JSON, nullable=True)
@@ -26,7 +27,7 @@ class NotificationChannel(db.Model):
     def get_valid_types():
         return ["email", "push"]
 
-    def __init__(self, user_id, mode, notification_data):
+    def __init__(self, user_id: int, mode: str, enabled: bool):
         self.user_id = user_id
         self.mode = mode
-        self.notification_data = notification_data
+        self.enabled = enabled
