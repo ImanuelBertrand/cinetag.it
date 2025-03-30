@@ -255,15 +255,16 @@ def update_movie_details(movie: Movie):
 
 
 def update_movie_languages(movie: Movie):
-    movie_languages = fetch_movie_languages(movie.id)
-    if not movie_languages:
+    tmdb_movie_languages = fetch_movie_languages(movie.id)
+    if not tmdb_movie_languages:
         return
 
-    lang_dict = {lang["iso_639_1"]: lang for lang in movie_languages}
+    lang_dict = {lang["iso_639_1"]: lang for lang in tmdb_movie_languages}
 
     existing_lang_infos = MovieLanguageInfo.query.filter_by(
         movie_id=movie.id
     ).all()
+    existing_languages = {info.language for info in existing_lang_infos}
 
     lang_ids_to_delete = [
         info.id for info in existing_lang_infos if info.language not in lang_dict
@@ -283,15 +284,20 @@ def update_movie_languages(movie: Movie):
 
     new_languages = [
         lang["iso_639_1"]
-        for lang in movie_languages
-        if lang["iso_639_1"] not in {info.language for info in existing_lang_infos}
-    ]
-    new_infos = [
-        MovieLanguageInfo.create_from_tmdb(movie.id, lang_dict[lang])
-        for lang in new_languages
+        for lang in tmdb_movie_languages
+        if lang["iso_639_1"] not in existing_languages
     ]
 
-    db.session.bulk_save_objects(new_infos)
+    # Deduplication of TMDB languages. TODO research, find better solution
+    new_infos = {}
+    for lang in new_languages:
+        if lang in new_infos:
+            continue
+        new_infos[lang] = MovieLanguageInfo.create_from_tmdb(
+            movie.id, lang_dict[lang]
+        )
+
+    db.session.bulk_save_objects(new_infos.values())
 
 
 def update_movie_posters(movie: Movie):
@@ -353,12 +359,16 @@ def update_movie_regions(movie: Movie):
     ).all()
 
     # Create new objects that are missing in the db (not fake ones)
-    new_region_infos = [
-        MovieRegionInfo.create_from_tmdb(movie.id, rd, best_release_dates[rd])
-        for rd in best_release_dates
-        if rd not in {info.region for info in existing_region_infos}
-    ]
-    db.session.bulk_save_objects(new_region_infos)
+    existing_regions = {info.region for info in existing_region_infos}
+
+    new_region_infos = {}
+    for rd in best_release_dates:
+        if rd in existing_regions or rd in new_region_infos:
+            continue
+        new_region_infos[rd] = MovieRegionInfo.create_from_tmdb(
+            movie.id, rd, best_release_dates[rd]
+        )
+    db.session.bulk_save_objects(new_region_infos.values())
 
     # Update existing objects (remove fake flag if set previously)
     region_infos_to_update = [
@@ -372,8 +382,10 @@ def update_movie_regions(movie: Movie):
     # Create fake objects for regions that are missing in the DB
     original_release_date = min(best_release_dates.values())
     all_regions = TmdbRegion.query.all()
-    missing_regions = {region.code for region in all_regions} - set(
-        [info.region for info in existing_region_infos]
+    missing_regions = (
+        {region.code for region in all_regions}
+        - existing_regions
+        - set(new_region_infos.keys())
     )
     fake_region_infos = [
         MovieRegionInfo(
@@ -409,6 +421,7 @@ def _get_movie_info_update_threshold():
 def check_movie_information(movie: Movie):
     if not movie:
         return
+
     threshold = _get_movie_info_update_threshold()
     if movie.info_update_at and movie.info_update_at >= threshold:
         return
@@ -426,8 +439,8 @@ def check_movie_information(movie: Movie):
             db.session.delete(movie)
         else:
             _logger.error("Error updating movie information for %s: %s", movie, e)
-    except Exception as e:
-        _logger.error("Error updating movie information for %s: %s", movie, e)
+    except Exception:
+        _logger.exception("Error updating movie information for %s", movie)
 
 
 def update_all_upcoming_movies():
@@ -484,7 +497,12 @@ def refresh_movie_information(movies: List[Movie]):
     _logger.info("Checking %s movies for updated information", len(movies))
     c = 0
     for movie in movies:
-        check_movie_information(movie)
+        try:
+            check_movie_information(movie)
+        except Exception:
+            _logger.exception(
+                "Exception while checking movie information of %s", movie
+            )
         c += 1
         if c % 10 == 0:
             db.session.commit()

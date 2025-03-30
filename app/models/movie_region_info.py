@@ -15,7 +15,7 @@ class MovieRegionInfo(db.Model):
     movie = db.relationship("Movie", back_populates="region_infos")
 
     __table_args__ = (
-        db.Index("movie_region_info_idx", "movie_id", "region"),
+        db.UniqueConstraint("movie_id", "region", name="movie_region_info_idx"),
         db.Index("movie_region_info_release_date_idx", "release_date"),
     )
 
