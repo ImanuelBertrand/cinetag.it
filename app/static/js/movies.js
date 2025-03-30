@@ -30,12 +30,13 @@ document.addEventListener("DOMContentLoaded", function () {
         movieContainer.innerHTML = movies.map(movie => {
             const decisionClass = movie.decision ? `decided decided-${movie.decision}` : '';
             const posterClass = movie.poster_url ? '' : 'has-no-poster';
+            const poster = movie.poster_url
+                ? `<img src="${movie.poster_url}" alt="${movie.title}" class="movie-poster" loading="lazy"/>`
+                : `<span class="no-poster">${movie.title}</span>`;
 
             return `
                 <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
-                    ${movie.poster_url ?
-                `<img src="${movie.poster_url}" alt="${movie.title}" class="movie-poster" loading="lazy"/>`
-                : `<span class="no-poster">${movie.title}</span>`}
+                    ${poster}
                     <div class="overlay">
                         <a class="details-link" href="/movie/${movie.id}">${movie.title}</a>
                         <div class="decide">
