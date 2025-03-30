@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
 from app.extensions import db, bcrypt
-from app.models.misc_data import MiscData
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo
@@ -24,7 +23,6 @@ from app.models.user import User
 from app.models.user_movie import UserMovie
 from app.services.image_service import get_image_url
 from app.services.movie_service import get_region_infos
-from app.services.tmdb_service import sync_upcoming_movies
 from app.utils.email import queue_email
 
 _logger = logging.getLogger(__name__)
@@ -125,15 +123,24 @@ def get_region_flag(region: str) -> str | None:
     return first_flag_char + second_flag_char
 
 
-def get_movie_list_query(region: TmdbRegion, need_imdb: bool, need_poster: bool):
-    upcoming_movie_query = MovieRegionInfo.query.filter_by(region=region).filter(
-        MovieRegionInfo.release_date > datetime.now().date()
-    )
+def get_movie_list_query(
+    region: TmdbRegion,
+    need_imdb: bool,
+    need_poster: bool,
+    user: User = None,
+    user_decision: str = None,
+):
+    upcoming_movie_query = Movie.query.join(
+        MovieRegionInfo,
+        db.and_(
+            MovieRegionInfo.region == region, MovieRegionInfo.movie_id == Movie.id
+        ),
+    ).filter(MovieRegionInfo.release_date > datetime.now().date())
 
     if need_imdb:
-        upcoming_movie_query = upcoming_movie_query.join(
-            Movie, MovieRegionInfo.movie_id == Movie.id
-        ).filter(Movie.imdb_id.isnot(None))
+        upcoming_movie_query = upcoming_movie_query.filter(
+            Movie.imdb_id.isnot(None)
+        )
 
     if need_poster:
         poster_subquery = db.exists().where(
@@ -144,55 +151,67 @@ def get_movie_list_query(region: TmdbRegion, need_imdb: bool, need_poster: bool)
         )
         upcoming_movie_query = upcoming_movie_query.filter(poster_subquery)
 
+    if user is not None:
+        # if user_decision is None, we filter for untagged movies,
+        # so we need an outer join
+        is_outer = user_decision is None
+
+        upcoming_movie_query = upcoming_movie_query.join(
+            UserMovie,
+            db.and_(UserMovie.user_id == user.id, UserMovie.movie_id == Movie.id),
+            isouter=is_outer,
+        )
+
+        if user_decision is None:
+            upcoming_movie_query = upcoming_movie_query.filter(
+                UserMovie.id.is_(None)
+            )
+        else:
+            upcoming_movie_query = upcoming_movie_query.filter(
+                UserMovie.decision == user_decision
+            )
+
     return upcoming_movie_query
+
+
+def get_user_movie_ids(user: User, decision: str = None):
+    user_movies_query = UserMovie.query.filter_by(user_id=user.id)
+
+    if decision is not None:
+        user_movies_query = user_movies_query.filter_by(decision=decision)
+
+    return user_movies_query
 
 
 def get_movies_based_on_filter(
     user: User, mode: str, need_imdb: bool = False, need_poster: bool = False
 ) -> List[Dict[str, str]]:
-    user_movies_query = UserMovie.query.filter_by(user_id=user.id)
-    reviewed_movie_ids = {um.movie_id for um in user_movies_query}
-
     region = user.region or current_app.config.DEFAULT_REGION
     language = user.language or current_app.config.DEFAULT_LANGUAGE
 
     def fmt_date(date):
         return format_date(date, locale=language) if date else None
 
-    # Sync upcoming movies from TMDb with the local database if necessary
-    last_query = MiscData.get("last_sync_upcoming_movies_%s" % region)
-    if last_query:
-        last_query = datetime.fromisoformat(last_query)
-    if not last_query or (datetime.now() - last_query).total_seconds() > 86400:
-        sync_upcoming_movies(region, language)
+    filter_user = None
+    filter_decision = None
+    if mode != "all":
+        filter_user = user
+        if mode == "approved":
+            filter_decision = "approve"
+        if mode == "disapproved":
+            filter_decision = "disapprove"
+        if mode == "maybe":
+            filter_decision = "maybe"
 
-    upcoming_movie_ids = {
-        m.movie_id for m in get_movie_list_query(region, need_imdb, need_poster)
-    }
+    _logger.info("Loading movies...")
+    filtered_movies = get_movie_list_query(
+        region, need_imdb, need_poster, filter_user, filter_decision
+    )
+    movie_ids = {m.id for m in filtered_movies}
 
-    if mode == "all":
-        movie_ids = upcoming_movie_ids
-    elif mode == "pending":
-        movie_ids = upcoming_movie_ids - reviewed_movie_ids
-    elif mode == "reviewed":
-        movie_ids = upcoming_movie_ids & reviewed_movie_ids
-    elif mode == "maybe":
-        movie_ids = upcoming_movie_ids & {
-            um.movie_id for um in user_movies_query if um.decision == "maybe"
-        }
-    elif mode == "approved":
-        movie_ids = upcoming_movie_ids & {
-            um.movie_id for um in user_movies_query if um.decision == "approve"
-        }
-    elif mode == "disapproved":
-        movie_ids = upcoming_movie_ids & {
-            um.movie_id for um in user_movies_query if um.decision == "disapprove"
-        }
-    else:
-        raise ValueError("Invalid filter mode.")
-
-    filtered_movies = Movie.query.filter(Movie.id.in_(movie_ids)).all()
-
+    user_movies_query = UserMovie.query.filter(
+        db.and_(UserMovie.user_id == user.id, UserMovie.movie_id.in_(movie_ids))
+    )
     movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
 
     langs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
