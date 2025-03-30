@@ -548,6 +548,7 @@ def get_all_movies():
 
 @html.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies(filter_mode):
+    initialize_user()
     if filter_mode not in {
         "all",
         "maybe",
@@ -579,7 +580,7 @@ def get_movie_details(movie_id):
             "poster_url": get_image_url(lang_info["poster_path"], 500),
             "release_date": (
                 format_date(region_info.release_date, locale=language)
-                if region_info.release_date
+                if region_info and region_info.release_date
                 else None
             ),
             "imdb_id": movie.imdb_id,
@@ -669,26 +670,31 @@ def get_poster(width, filename):
 
 @html.route("/why", methods=["GET"])
 def why():
+    initialize_user()
     return render_template("why.html")
 
 
 @html.route("/how", methods=["GET"])
 def how():
+    initialize_user()
     return render_template("how.html")
 
 
 @html.route("/who", methods=["GET"])
 def who():
+    initialize_user()
     return render_template("who.html")
 
 
 @html.route("/imprint", methods=["GET"])
 def imprint():
+    initialize_user()
     return render_template("imprint.html")
 
 
 @html.route("/privacy", methods=["GET"])
 def privacy():
+    initialize_user()
     return render_template("privacy.html")
 
 
