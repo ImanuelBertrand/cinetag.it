@@ -94,12 +94,15 @@
     </form>
 
     <!-- Delete all data -->
-    <form method="POST" action="{{ url_for('html.delete_data') }}" accept-charset="UTF-8"
-          enctype="application/x-www-form-urlencoded">
-        <input type="hidden" name="csrf_token">
-        <button id="delete-all-data" type="submit" name="delete_data" class="danger needs-confirmation"
-                data-confirmation-message="Are you sure you want to delete all your data?">
-            Delete all my data
-        </button>
-    </form>
+    <div class="danger-zone">
+        <h4>Danger zone</h4>
+        <form method="POST" action="{{ url_for('html.delete_data') }}" accept-charset="UTF-8"
+              enctype="application/x-www-form-urlencoded">
+            <input type="hidden" name="csrf_token">
+            <button id="delete-all-data" type="submit" name="delete_data" class="danger needs-confirmation"
+                    data-confirmation-message="Are you sure you want to delete all your data?">
+                Delete all my data
+            </button>
+        </form>
+    </div>
 {% endblock %}

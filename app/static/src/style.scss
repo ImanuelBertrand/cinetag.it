@@ -318,10 +318,6 @@ footer {
     }
 
     &.decided {
-      &::after {
-        opacity: 0.75;
-      }
-
       &.decided-approve {
         outline-color: #0f0;
       }
@@ -406,6 +402,12 @@ footer {
           flex: 1 1 33%;
         }
       }
+    }
+  }
+
+  &.movie-grid-all, &.movie-grid-pending {
+    .movie-item.decided::after {
+      opacity: 0.75;
     }
   }
 }
@@ -495,8 +497,15 @@ button {
     color: white;
   }
 
-  &#delete-all-data {
-    margin-top: 7em;
+  &:disabled {
+    background-color: $gunmetal-gray;
+    color: $cool-gray;
+    cursor: default;
+
+    &:hover, &.danger {
+      background-color: $gunmetal-gray;
+      color: $cool-gray;
+    }
   }
 }
 
@@ -538,4 +547,14 @@ ul.release-list li {
 
 #tmdb-logo {
   height: 1em;
+}
+
+.danger-zone {
+  margin-top: 7em;
+  border: 1px solid red;
+  padding: 1em 4em;
+  background-color: #ff000014;
+  display: inline-block;
+  color: white;
+  text-transform: uppercase;
 }

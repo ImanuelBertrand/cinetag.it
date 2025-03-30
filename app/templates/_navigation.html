@@ -23,11 +23,11 @@
         <a href="#" class="dropbtn">User</a>
         <div class="dropdown-content">
             <a href="{{ url_for('html.profile') }}">Profile</a>
+            <a href="{{ url_for('html.profile_notifications') }}">Notifications</a>
             {% if not current_user or not current_user.email %}
                 <a href="{{ url_for('html.login') }}">Login</a>
                 <a href="{{ url_for('html.register') }}">Register</a>
             {% else %}
-                <a href="{{ url_for('html.profile_notifications') }}">Notifications</a>
                 <form method="POST" action="{{ url_for('html.logout') }}">
                     <input type="hidden" name="csrf_token">
                     <button type="submit">Logout</button>
