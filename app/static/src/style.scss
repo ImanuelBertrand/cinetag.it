@@ -318,16 +318,37 @@ footer {
     }
 
     &.decided {
+      .decision-icon::after {
+        position: absolute;
+        right: 0.3em;
+        top: 0;
+        opacity: 0.5;
+        font-size: 1.3em;
+        z-index: 5;
+      }
+
       &.decided-approve {
         outline-color: #0f0;
+
+        .decision-icon::after {
+          content: "👍️";
+        }
       }
 
       &.decided-disapprove {
         outline-color: #f00;
+
+        .decision-icon::after {
+          content: "👎️";
+        }
       }
 
       &.decided-maybe {
         outline-color: #00f;
+
+        .decision-icon::after {
+          content: "🤷️";
+        }
       }
     }
 

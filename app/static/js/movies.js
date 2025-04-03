@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             return `
                 <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
+                    <div class="decision-icon"></div>
                     ${poster}
                     <div class="overlay">
                         <a class="details-link" href="/movie/${movie.id}">${movie.title}</a>
