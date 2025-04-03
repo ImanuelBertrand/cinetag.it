@@ -4,9 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const movieContainers = document.querySelectorAll(".movie-container");
 
     // Fetch movies for each container
-    movieContainers.forEach(movieContainer => {
-        fetchMovies(movieContainer);
-    });
+    movieContainers.forEach(fetchMovies);
 
     async function fetchMovies(movieContainer) {
         try {
@@ -34,6 +32,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? `<img src="${movie.poster_url}" alt="${movie.title}" class="movie-poster" loading="lazy"/>`
                 : `<span class="no-poster">${movie.title}</span>`;
 
+            const release_dates = movie.all_release_dates && movie.all_release_dates.count > 0
+                ? renderReleaseDates(movie.all_release_dates)
+                : movie.release_date_pretty;
+
             return `
                 <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
                     ${poster}
@@ -45,9 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             <div data-decision="disapprove" data-movie-id="${movie.id}">👎</div>
                         </div>
                         <a class="details-link" href="/movie/${movie.id}">
-                            <div class="release-dates">
-                                ${movie.all_release_dates ? renderReleaseDates(movie.all_release_dates) : movie.release_date_pretty}
-                            </div>
+                            <div class="release-dates">${release_dates}</div>
                         </a>
                     </div>
                 </div>`;
