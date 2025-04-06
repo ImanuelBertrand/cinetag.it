@@ -203,7 +203,6 @@ def get_movies_based_on_filter(
         if mode == "maybe":
             filter_decision = "maybe"
 
-    _logger.info("Loading movies...")
     filtered_movies = get_movie_list_query(
         region, need_imdb, need_poster, filter_user, filter_decision
     )
