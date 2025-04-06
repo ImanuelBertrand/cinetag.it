@@ -65,13 +65,6 @@ def create_app(config_name):
     app.config.from_object(config_instance)
     config_class.init_app(app)
 
-    # Add config needed for token expiry times in seconds for set_cookie
-    app.config.setdefault(
-        "JWT_ACCESS_TOKEN_EXPIRES_SECONDS",
-        app.config.get("JWT_ACCESS_TOKEN_EXPIRES", 900),
-    )
-    app.config.setdefault("JWT_REFRESH_TOKEN_EXPIRES_SECONDS", 180 * 24 * 3600)
-
     init_extensions(app)
 
     # === Request Hooks (New Auth Logic) ===
@@ -217,11 +210,11 @@ def create_app(config_name):
                 new_refresh_tkn = getattr(g, "new_refresh_token", None)
 
                 if new_access_tkn:
-                    a_max_age = app.config.get("JWT_ACCESS_TOKEN_EXPIRES_SECONDS")
+                    a_max_age = app.config.get("JWT_ACCESS_TOKEN_EXPIRES")
                     set_access_cookies(response, new_access_tkn, a_max_age)
 
                 if new_refresh_tkn:
-                    r_max_age = app.config.get("JWT_REFRESH_TOKEN_EXPIRES_SECONDS")
+                    r_max_age = app.config.get("JWT_REFRESH_TOKEN_EXPIRES")
                     set_refresh_cookies(response, new_refresh_tkn, r_max_age)
 
         except Exception as e:

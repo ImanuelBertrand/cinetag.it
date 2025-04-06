@@ -1,4 +1,5 @@
 import os
+
 import yaml
 
 
@@ -30,7 +31,7 @@ class Config:
     JWT_TOKEN_LOCATION = ["headers", "cookies"]
     JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
     JWT_ACCESS_COOKIE_PATH = "/"
-    JWT_ACCESS_TOKEN_EXPIRES = 86400 * 365
+    JWT_ACCESS_TOKEN_EXPIRES = 3600
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/"
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
