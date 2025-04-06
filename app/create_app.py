@@ -1,5 +1,4 @@
 import logging
-import os
 import traceback
 
 import jwt
@@ -33,17 +32,6 @@ from app.utils.auth import (
     verify_refresh_token_and_get_identity,
     generate_new_tokens,
     create_temporary_user,
-)
-
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-logging.basicConfig(
-    level=logging.INFO,
-    filename=os.path.join(log_dir, "app.log"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    encoding="utf-8",
 )
 
 _logger = logging.getLogger(__name__)
