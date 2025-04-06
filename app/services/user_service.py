@@ -5,9 +5,9 @@ from typing import Dict, List
 
 import jwt
 from babel.dates import format_date
-from crawlerdetect import CrawlerDetect
-from flask import current_app, url_for, request, g
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask import current_app, url_for, g
+from flask_sqlalchemy.session import Session
+from sqlalchemy.orm.exc import UnmappedInstanceError
 from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
@@ -376,40 +376,42 @@ def create_temporary_user() -> User:
     return user
 
 
-def get_current_user(allow_guest: bool = True) -> User | None:
-    user_id = get_jwt_identity()
-    if user_id:
-        user = User.query.get(user_id)
-        if user:
-            return user
+def get_current_user() -> User | None:
+    """
+    Retrieves the current user from Flask's g object.
+    If the user object exists but is detached from the current session,
+    it attempts to re-attach it before returning.
+    Returns the User object or None.
+    """
+    user = g.get("current_user")
 
-    if allow_guest:
-        return create_temporary_user()
+    if user and isinstance(user, User):  # Check if it's actually a User instance
+        try:
+            # Check if the instance is associated with the *current* session
+            object_session = Session.object_session(user)
 
-    return None
+            # If not attached to any session OR attached to a different session
+            if not object_session or object_session is not db.session:
+                _logger.debug(
+                    f"User {getattr(user, 'id', 'N/A')} found in g "
+                    "but potentially detached. Merging into current session."
+                )
+                # Merge the instance back into the current session.
+                # If the instance has been modified, this might raise issues,
+                # but usually safe for just re-associating for lazy loads.
+                user = db.session.merge(user)
+        except UnmappedInstanceError:
+            # Handle case where g.current_user might be something unexpected
+            _logger.warning("g.current_user was not a mapped User instance.")
+            return None  # Treat as no user
+        except Exception as e:
+            _logger.error(
+                f"Error checking/re-attaching user session state "
+                f"for user {getattr(user, 'id', 'N/A')}: {e}",
+                exc_info=True,
+            )
 
-
-def is_bot() -> bool:
-    return CrawlerDetect(request.headers).isCrawler()
-
-
-def initialize_user(allow_guest: bool = True) -> User | None:
-    if is_bot():
-        _logger.info(
-            "Bot detected, skipping user initialization: '%s', '%s'",
-            request.remote_addr,
-            request.headers.get("User-Agent"),
-        )
-        return None
-
-    try:
-        verify_jwt_in_request(optional=True)
-        g.current_user = get_current_user(allow_guest)
-    except Exception as e:
-        _logger.error("Error verifying JWT in request: %s", e)
-        g.current_user = create_temporary_user()
-
-    return g.current_user
+    return user
 
 
 def queue_confirmation_mail(user: User):

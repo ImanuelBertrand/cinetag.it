@@ -6,9 +6,10 @@ from flask import Blueprint, request, jsonify
 from app.exceptions import UserFeedbackError
 from app.extensions import db
 from app.models.user_movie import UserMovie
-from app.services.user_service import fetch_user_events, get_movies_based_on_filter
 from app.services.user_service import (
-    initialize_user,
+    fetch_user_events,
+    get_movies_based_on_filter,
+    get_current_user,
 )
 
 api = Blueprint("api", __name__)
@@ -18,7 +19,8 @@ _logger = logging.getLogger(__name__)
 
 @api.route("/user/movies/review", methods=["POST"])
 def review_movie():
-    user = initialize_user()
+    user = get_current_user()
+
     data = request.get_json()
     movie_id = data.get("movie_id")
     decision = data.get("decision")
@@ -63,7 +65,7 @@ def review_movie():
 
 @api.route("/user/events", methods=["GET"])
 def get_user_events():
-    user = initialize_user()
+    user = get_current_user()
     if not user:
         return jsonify({"error": "User not found."}), 404
     start = request.args.get("start")
@@ -78,7 +80,7 @@ def get_user_events():
 
 @api.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies_api(filter_mode):
-    user = initialize_user()
+    user = get_current_user()
 
     try:
         need_imdb = True  # TODO toggle in user settings

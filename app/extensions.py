@@ -18,7 +18,7 @@ pymysql.install_as_MySQLdb()
 # Initialize extensions
 db = SQLAlchemy()
 mail = Mail()
-jwt = JWTManager()
+jwt_manager = JWTManager()
 bcrypt = Bcrypt()
 migrate = Migrate()
 cache = Cache()
@@ -43,7 +43,7 @@ def init_extensions(app):
     """
     db.init_app(app)
     mail.init_app(app)
-    jwt.init_app(app)
+    jwt_manager.init_app(app)
     bcrypt.init_app(app)
     migrate.init_app(app, db)
     cache.init_app(app)

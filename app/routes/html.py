@@ -14,6 +14,7 @@ from flask import (
     make_response,
     current_app,
     g,
+    send_from_directory,
 )
 from flask_jwt_extended import (
     unset_jwt_cookies,
@@ -35,8 +36,9 @@ from app.services.user_service import (
     reset_user_password,
     hash_password,
     queue_confirmation_mail,
+    get_current_user,
 )
-from app.services.user_service import initialize_user
+from app.utils.auth import generate_new_tokens
 from app.utils.email import queue_email
 
 html = Blueprint("html", __name__)
@@ -45,7 +47,6 @@ _logger = logging.getLogger(__name__)
 
 @html.route("/", methods=["GET"])
 def home():
-    initialize_user()
     return render_template("home.html")
 
 
@@ -109,7 +110,7 @@ def register_post(user: User):
 
 @html.route("/register", methods=["GET", "POST"])
 def register():
-    user = initialize_user()
+    user = get_current_user()
     form_data = defaultdict(str)
 
     if request.method == "POST":
@@ -123,7 +124,7 @@ def register():
 
 @html.route("/merge-temporary-user", methods=["POST"])
 def merge_temporary_user():
-    user = initialize_user()
+    user = get_current_user()
     if not user:
         flash("User not found.", "danger")
         return redirect(url_for("html.profile"))
@@ -177,8 +178,7 @@ def merge_temporary_user():
 
 @html.route("/login", methods=["GET", "POST"])
 def login():
-    pre_login_user = initialize_user()
-    _logger.info("pre_login_user: %s", pre_login_user)
+    pre_login_user = get_current_user()
 
     if request.method == "GET":
         return render_template("login.html")
@@ -186,8 +186,6 @@ def login():
     data = request.form
     try:
         user = authenticate_user(data)
-        _logger.info("user: %s", user)
-        _logger.info("pre_login_user movies: %s", pre_login_user.user_movies)
         if not pre_login_user.user_movies:
             db.session.delete(pre_login_user)
         else:
@@ -195,6 +193,10 @@ def login():
             db.session.add(user)
             db.session.commit()
 
+        (
+            g.new_access_token,
+            g.new_refresh_token,
+        ) = generate_new_tokens(user.id)
         g.current_user = user
         return make_response(redirect(url_for("html.profile")))
     except UserFeedbackError as e:
@@ -211,7 +213,7 @@ def login():
 def logout():
     flash("Logged out successfully.", "success")
     response = make_response(redirect(url_for("html.home")))
-    unset_jwt_cookies(response)
+    g.clear_auth_cookies = True
     return response
 
 
@@ -222,7 +224,7 @@ def delete_data():
     temporary user.
     :return:
     """
-    user = initialize_user()
+    user = get_current_user()
     if user:
         db.session.delete(user)
         db.session.commit()
@@ -313,7 +315,7 @@ def profile_post(user, form_data):
 
 @html.route("/profile", methods=["GET", "POST"])
 def profile():
-    user = initialize_user()
+    user = get_current_user()
 
     if not user:
         flash("User not found.", "danger")
@@ -400,7 +402,7 @@ def profile_notifications_post(user):
 
 @html.route("/profile/notifications", methods=["GET", "POST"])
 def profile_notifications():
-    user = initialize_user()
+    user = get_current_user()
 
     if not user:
         flash("User not found.", "danger")
@@ -471,7 +473,7 @@ def confirm_email(token):
 
 @html.route("/request-confirmation-mail", methods=["POST"])
 def request_confirmation_email():
-    user = initialize_user()
+    user = get_current_user()
     if not user:
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
@@ -548,7 +550,6 @@ def get_all_movies():
 
 @html.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies(filter_mode):
-    initialize_user()
     if filter_mode not in {
         "all",
         "maybe",
@@ -566,7 +567,7 @@ def get_movies(filter_mode):
 @html.route("/movie/<int:movie_id>", methods=["GET"])
 def get_movie_details(movie_id):
     try:
-        user = initialize_user()
+        user = get_current_user()
         language = user.language or current_app.config.DEFAULT_LANGUAGE
         movie = Movie.query.get(movie_id)
         lang_info = movie.get_localized_data(language)
@@ -600,7 +601,7 @@ def get_movie_details(movie_id):
 
 @html.route("/release-dates", methods=["GET"])
 def get_user_release_dates():
-    user = initialize_user()
+    user = get_current_user()
     try:
         # four weeks ago
         start = datetime.now() - timedelta(weeks=4)
@@ -617,7 +618,7 @@ def get_user_release_dates():
 
 @html.route("/calendar", methods=["GET"])
 def get_user_calendar():
-    user = initialize_user()
+    user = get_current_user()
     try:
         releases = fetch_user_events(user)
         return render_template("calendar.html", releases=releases)
@@ -670,31 +671,26 @@ def get_poster(width, filename):
 
 @html.route("/why", methods=["GET"])
 def why():
-    initialize_user()
     return render_template("why.html")
 
 
 @html.route("/how", methods=["GET"])
 def how():
-    initialize_user()
     return render_template("how.html")
 
 
 @html.route("/who", methods=["GET"])
 def who():
-    initialize_user()
     return render_template("who.html")
 
 
 @html.route("/imprint", methods=["GET"])
 def imprint():
-    initialize_user()
     return render_template("imprint.html")
 
 
 @html.route("/privacy", methods=["GET"])
 def privacy():
-    initialize_user()
     return render_template("privacy.html")
 
 
