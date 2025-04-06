@@ -404,10 +404,10 @@ def initialize_user(allow_guest: bool = True) -> User | None:
 
     try:
         verify_jwt_in_request(optional=True)
+        g.current_user = get_current_user(allow_guest)
     except Exception as e:
         _logger.error("Error verifying JWT in request: %s", e)
-        raise e
-    g.current_user = get_current_user(allow_guest)
+        g.current_user = create_temporary_user()
 
     return g.current_user
 
