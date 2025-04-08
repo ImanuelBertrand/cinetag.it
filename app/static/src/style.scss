@@ -385,9 +385,10 @@ footer {
       flex-direction: column;
       justify-content: space-around;
       align-items: stretch;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.55);
       opacity: 0;
       transition: opacity 0.3s ease;
+      z-index: 10;
 
       > a,
       > .decide > * {
@@ -428,7 +429,7 @@ footer {
 
   &.movie-grid-all, &.movie-grid-pending {
     .movie-item.decided::after {
-      opacity: 0.75;
+      opacity: 0.5;
     }
   }
 }
@@ -466,6 +467,7 @@ form {
     padding-right: 0.5em;
     text-align: right;
     flex: 0 0 auto;
+    box-sizing: border-box;
   }
 
 
@@ -474,6 +476,7 @@ form {
     box-sizing: border-box;
     padding: 5px;
     min-width: 0;
+    max-width: calc(25em - 6rem);
     border-radius: 4px;
     background-color: $cool-gray;
     color: $steel-gray;
@@ -578,4 +581,18 @@ ul.release-list li {
   display: inline-block;
   color: white;
   text-transform: uppercase;
+}
+
+.movie-details {
+  max-width: 1200px;
+
+  .poster {
+    float: right;
+    margin: 0 0 2em 2em;
+    max-width: 100%;
+  }
+
+  .plot {
+    max-width: 30em;
+  }
 }
