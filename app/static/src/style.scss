@@ -434,32 +434,28 @@ footer {
   }
 }
 
-form {
-  margin-bottom: 1em;
+.form-row {
+  margin: 0.6em 0;
+  display: flex;
+  flex-flow: row wrap;
+  width: 100%;
+  max-width: 25em;
 
-  .form-row {
-    margin: 0.6em 0;
-    display: flex;
-    flex-flow: row wrap;
-    width: 100%;
-    max-width: 25em;
+  &.checkbox {
+    margin: 1em 0;
+  }
 
-    &.checkbox {
-      margin: 1em 0;
-    }
+  button {
+    width: 30%;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
 
-    button {
-      width: 30%;
-      flex: 0 0 auto;
-      margin-left: auto;
-    }
-
-    div {
-      flex-basis: 100%;
-      font-size: 0.8em;
-      font-style: italic;
-      margin-left: 6.5rem;
-    }
+  div {
+    flex-basis: 100%;
+    font-size: 0.8em;
+    font-style: italic;
+    margin-left: 6.5rem;
   }
 
   label {
@@ -469,7 +465,6 @@ form {
     flex: 0 0 auto;
     box-sizing: border-box;
   }
-
 
   input, select {
     flex: 1 1 auto;
@@ -501,6 +496,11 @@ form {
       }
     }
   }
+}
+
+form {
+  margin-bottom: 1em;
+
 }
 
 button {

@@ -13,10 +13,6 @@
         <form method="POST" action="{{ url_for('html.profile_notifications') }}" accept-charset="UTF-8"
               enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="csrf_token">
-            <!-- Invisible fields to store subscription data -->
-            <input type="hidden" id="pushEndpoint" name="pushEndpoint">
-            <input type="hidden" id="pushP256dh" name="pushP256dh">
-            <input type="hidden" id="pushAuth" name="pushAuth">
 
             <h3>Email notifications</h3>
             <div class="form-row checkbox">
@@ -45,38 +41,40 @@
             </div>
         </form>
 
+        <h3>Browser push notifications</h3>
+        <div class="form-row">
+            <p>
+                Receive notifications directly in your browser, even when you're not on the site.
+                <br>
+                <small>Note: Push notifications require browser permission and may not work in all browsers.</small>
+            </p>
+        </div>
+
+        <div class="form-row">
+            <button id="addPush" class="btn btn-primary">Enable Push Notifications</button>
+            <button id="cancelPush" class="btn btn-danger">Disable Push Notifications</button>
+        </div>
+
+        <div id="pushSettings" style="display: none; margin-top: 20px;">
+            <h4>Push Notification Settings</h4>
+            <div class="form-row">
+                <label for="pushDays">When?</label>
+                <input type="text" id="pushDays" placeholder="1, 3, 7">
+                <div>Days in advance of the release date<br>Multiple values separated by comma</div>
+            </div>
+
+            <div class="form-row">
+                <label>Which?</label>
+                <input type="checkbox" id="pushWithMaybe" checked>
+                <label for="pushWithMaybe">Include 'Maybe' movies</label>
+            </div>
+
+            <div class="form-row">
+                <button id="savePushSettings" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+
+        <script src="{{ url_for('static', filename='js/profile_notifications.js') }}"></script>
     {% endif %}
-
-    <form method="POST" action="{{ url_for('html.profile_notifications') }}" accept-charset="UTF-8"
-          enctype="application/x-www-form-urlencoded">
-        <input type="hidden" name="csrf_token">
-
-        <div class="form-row checkbox">
-            <label>How?</label>
-            {% for mode in all_modes %}
-                <input id="mode_{{ mode }}" type="checkbox" name="mode_{{ mode }}" value="{{ mode }}"
-                       {% if mode in user_modes %}checked{% endif %}>
-                <label for="mode_{{ mode }}">{{ all_modes[mode] }}</label>
-            {% endfor %}
-        </div>
-
-        <div class="form-row">
-            <label for="days">When?</label>
-            <input type="text" id="days" name="days" value="{{ days }}" required>
-            <div>Days in advance of the release date<br>Multiple values separated by comma</div>
-        </div>
-
-        <div class="form-row">
-            <label>Which?</label>
-            <input type="checkbox" id="include_maybe_movies" name="include_maybe_movies"
-                    {% if include_maybe_movies %}checked{% endif %}
-                   value="1">
-            <label for="include_maybe_movies">Include 'Maybe' movies</label>
-        </div>
-
-        <div class="form-row">
-            <button type="submit">Save</button>
-        </div>
-    </form>
 
 {% endblock %}

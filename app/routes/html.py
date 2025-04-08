@@ -14,6 +14,7 @@ from flask import (
     make_response,
     current_app,
     g,
+    send_from_directory,
 )
 from flask_jwt_extended import (
     unset_jwt_cookies,
@@ -44,6 +45,11 @@ from app.utils.ics import create_ics_file
 
 html = Blueprint("html", __name__)
 _logger = logging.getLogger(__name__)
+
+
+@html.route("/sw.js")
+def service_worker():
+    return send_from_directory("static/js", "sw.js")
 
 
 @html.route("/", methods=["GET"])

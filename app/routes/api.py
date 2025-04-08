@@ -5,12 +5,15 @@ from flask import Blueprint, request, jsonify
 
 from app.exceptions import UserFeedbackError
 from app.extensions import db
+from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
 from app.services.user_service import (
     fetch_user_events,
     get_movies_based_on_filter,
     get_current_user,
 )
+from app.utils.notifications import setup_notifications
+from app.utils.webpush import get_vapid_public_key_for_js
 
 api = Blueprint("api", __name__)
 
@@ -150,6 +153,274 @@ def forbidden(error):
 @api.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "Not Found"}), 404
+
+
+@api.route("/vapid-public-key", methods=["GET"])
+def get_vapid_public_key():
+    """Get the VAPID public key for push notifications"""
+    try:
+        return jsonify(
+            {"success": True, "publicKey": get_vapid_public_key_for_js()}
+        )
+    except Exception as e:
+        _logger.exception(f"Error getting VAPID public key: {e}")
+        return (
+            jsonify({"success": False, "error": "Error getting VAPID public key"}),
+            500,
+        )
+
+
+@api.route("/check-push-subscription", methods=["POST"])
+def check_push_subscription():
+    """Check if a push subscription exists for the current user"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    data = request.get_json()
+    if not data or "endpoint" not in data:
+        return jsonify({"success": False, "error": "Invalid request data"}), 400
+
+    endpoint = data["endpoint"]
+
+    # Check if the user has a push notification channel with this endpoint
+    push_channels = NotificationChannel.query.filter_by(
+        user_id=user.id, mode="push"
+    ).all()
+
+    for channel in push_channels:
+        if (
+            channel.notification_data
+            and channel.notification_data.get("endpoint") == endpoint
+        ):
+            # Return the subscription settings along with the existence flag
+            return jsonify(
+                {
+                    "success": True,
+                    "exists": True,
+                    "settings": {
+                        "days_in_advance": channel.days_in_advance,
+                        "include_maybe_movies": channel.include_maybe_movies,
+                    },
+                }
+            )
+
+    return jsonify({"success": True, "exists": False})
+
+
+@api.route("/subscribe", methods=["POST"])
+def subscribe_push():
+    """Subscribe to push notifications"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    data = request.get_json()
+    if not data or "endpoint" not in data:
+        return (
+            jsonify({"success": False, "error": "Invalid subscription data"}),
+            400,
+        )
+
+    # Extract notification settings if provided
+    days_in_advance = data.get(
+        "days_in_advance", [1, 3, 7]
+    )  # Default values if not provided
+    include_maybe_movies = data.get(
+        "include_maybe_movies", True
+    )  # Default value if not provided
+
+    # Check if the user already has a push channel with this endpoint
+    push_channels = NotificationChannel.query.filter_by(
+        user_id=user.id, mode="push"
+    ).all()
+
+    existing_channel = None
+    for channel in push_channels:
+        if (
+            channel.notification_data
+            and channel.notification_data.get("endpoint") == data["endpoint"]
+        ):
+            existing_channel = channel
+            break
+
+    if existing_channel:
+        # Update the existing channel
+        existing_channel.notification_data = data
+        existing_channel.enabled = True
+        existing_channel.days_in_advance = days_in_advance
+        existing_channel.include_maybe_movies = include_maybe_movies
+        db.session.add(existing_channel)
+    else:
+        # Create a new push notification channel
+        channel = NotificationChannel(user_id=user.id, mode="push", enabled=True)
+        channel.notification_data = data
+        channel.days_in_advance = days_in_advance
+        channel.include_maybe_movies = include_maybe_movies
+        db.session.add(channel)
+
+    try:
+        db.session.commit()
+
+        # Set up notifications for this channel
+        for channel in push_channels:
+            if channel.enabled:
+                setup_notifications(channel)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Successfully subscribed to push notifications",
+                "settings": {
+                    "days_in_advance": days_in_advance,
+                    "include_maybe_movies": include_maybe_movies,
+                },
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        _logger.exception(f"Error subscribing to push notifications: {e}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Error subscribing to push notifications",
+                }
+            ),
+            500,
+        )
+
+
+@api.route("/update-push-settings", methods=["POST"])
+def update_push_settings():
+    """Update push notification settings"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    data = request.get_json()
+    if not data or "endpoint" not in data:
+        return jsonify({"success": False, "error": "Invalid request data"}), 400
+
+    endpoint = data["endpoint"]
+    days_in_advance = data.get("days_in_advance")
+    include_maybe_movies = data.get("include_maybe_movies")
+
+    if days_in_advance is None and include_maybe_movies is None:
+        return (
+            jsonify({"success": False, "error": "No settings provided to update"}),
+            400,
+        )
+
+    # Find the push notification channel with this endpoint
+    push_channels = NotificationChannel.query.filter_by(
+        user_id=user.id, mode="push"
+    ).all()
+
+    found = False
+    for channel in push_channels:
+        if (
+            channel.notification_data
+            and channel.notification_data.get("endpoint") == endpoint
+        ):
+            if days_in_advance is not None:
+                channel.days_in_advance = days_in_advance
+            if include_maybe_movies is not None:
+                channel.include_maybe_movies = include_maybe_movies
+            db.session.add(channel)
+            found = True
+            break
+
+    if not found:
+        return jsonify({"success": False, "error": "Subscription not found"}), 404
+
+    try:
+        db.session.commit()
+
+        # Set up notifications for this channel
+        for channel in push_channels:
+            if channel.enabled:
+                setup_notifications(channel)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Successfully updated push notification settings",
+                "settings": {
+                    "days_in_advance": days_in_advance
+                    if days_in_advance is not None
+                    else "",
+                    "include_maybe_movies": include_maybe_movies
+                    if include_maybe_movies is not None
+                    else True,
+                },
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        _logger.exception(f"Error updating push notification settings: {e}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Error updating push notification settings",
+                }
+            ),
+            500,
+        )
+
+
+@api.route("/unsubscribe", methods=["POST"])
+def unsubscribe_push():
+    """Unsubscribe from push notifications"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    data = request.get_json()
+    if not data or "endpoint" not in data:
+        return jsonify({"success": False, "error": "Invalid request data"}), 400
+
+    endpoint = data["endpoint"]
+
+    # Find and disable the push notification channel with this endpoint
+    push_channels = NotificationChannel.query.filter_by(
+        user_id=user.id, mode="push"
+    ).all()
+
+    found = False
+    for channel in push_channels:
+        if (
+            channel.notification_data
+            and channel.notification_data.get("endpoint") == endpoint
+        ):
+            channel.enabled = False
+            db.session.add(channel)
+            found = True
+
+    if not found:
+        return jsonify({"success": False, "error": "Subscription not found"}), 404
+
+    try:
+        db.session.commit()
+        return jsonify(
+            {
+                "success": True,
+                "message": "Successfully unsubscribed from push notifications",
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        _logger.exception(f"Error unsubscribing from push notifications: {e}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Error unsubscribing from push notifications",
+                }
+            ),
+            500,
+        )
 
 
 @api.errorhandler(500)

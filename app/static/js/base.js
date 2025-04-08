@@ -318,6 +318,11 @@ CineTagIt.init = function() {
         });
     }
 
+    navigator.serviceWorker.register("/sw.js")
+    .catch(error => {
+        console.error("Service Worker registration failed:", error);
+    });
+
     // Initialize UI components
     CineTagIt.UI.initMobileMenu();
     CineTagIt.UI.initHoverWithTouchSupport();

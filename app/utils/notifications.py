@@ -60,9 +60,66 @@ def send_notification(notification: Notification):
 
 
 def send_push_notification(notification: Notification):
-    # TODO implement push notification
-    _logger.info(f"Push notification for {notification.id}")
-    pass
+    """
+    Send a push notification to the user's browser.
+
+    Args:
+        notification: The Notification object to send
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from app.utils.webpush import send_web_push
+
+    _logger.info(f"Sending push notification for {notification.id}")
+
+    # Get the channel and check if it has subscription data
+    channel = notification.channel
+    if not channel or not channel.notification_data:
+        _logger.error(
+            f"No subscription data found for notification {notification.id}"
+        )
+        return False
+
+    # Get the movie data
+    movie_data = notification.movie.get_localized_data(
+        notification.user.language or "en"
+    )
+    movie_region_info = MovieRegionInfo.query.filter_by(
+        movie_id=notification.movie_id, region=notification.user.region or "US"
+    ).first()
+
+    if not movie_region_info:
+        _logger.error(f"No region info found for movie {notification.movie_id}")
+        return False
+
+    # Create the notification data
+    movie_title = movie_data["title"]
+    release_date = movie_region_info.release_date
+    days_till_release = (release_date - date.today()).days
+
+    notification_data = {
+        "title": f"Movie Release: {movie_title}",
+        "body": f"'{movie_title}' will be released in {days_till_release} days!",
+        "icon": f"/poster/500/{movie_data.get('poster_path', 'default.jpg')}",
+        "url": f"/movie/{notification.movie_id}",
+    }
+
+    # Send the push notification
+    try:
+        subscription_info = channel.notification_data
+        result = send_web_push(subscription_info, notification_data)
+
+        if not result:
+            _logger.error(
+                f"Failed to send push notification for {notification.id}"
+            )
+            return False
+
+        return True
+    except Exception as e:
+        _logger.exception(f"Error sending push notification: {e}")
+        return False
 
 
 def send_email_notification(notification: Notification):
@@ -101,7 +158,6 @@ def setup_notifications(channel: NotificationChannel):
     user_region = channel.user.region
 
     scheduled_at_threshold = datetime.now() - timedelta(days=7)
-
     # Add missing notifications
     today = date.today()
     for user_movie in user_movies:

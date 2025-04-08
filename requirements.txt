@@ -1,4 +1,5 @@
 APScheduler
+Babel
 Flask-APScheduler
 Flask-Assets
 Flask-Babel
@@ -12,12 +13,17 @@ Flask-Script
 PyJWT
 PyMySQL
 PyYAML
+SQLAlchemy
 crawlerdetect
+cryptography
 flask
 flask-redis
 icalendar
 libsass
 natsort
 pillow
+py-vapid
+pywebpush
 requests
+uuid
 werkzeug
