@@ -402,7 +402,7 @@ def update_movie_regions(movie: Movie):
     # Update outdated fake objects
     fake_region_infos = MovieRegionInfo.query.filter(
         MovieRegionInfo.movie_id == movie.id,
-        MovieRegionInfo.is_fake == True,  # noqa E712
+        MovieRegionInfo.is_fake.is_(True),
         MovieRegionInfo.release_date != original_release_date,
     ).all()
     fake_ids_to_update = [info.id for info in fake_region_infos]
