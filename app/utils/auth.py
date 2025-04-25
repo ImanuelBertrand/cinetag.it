@@ -144,9 +144,9 @@ def generate_new_tokens(
         jti = str(uuid.uuid4())
 
         # 3. Attempt to create BOTH tokens
-        access_token = create_access_token(identity=identity)
+        access_token = create_access_token(identity=str(identity))
         refresh_token = create_refresh_token(
-            identity=identity, additional_claims={"jti": jti}
+            identity=str(identity), additional_claims={"jti": jti}
         )
 
         # 4. Basic check if creation somehow failed silently (unlikely but safe)
