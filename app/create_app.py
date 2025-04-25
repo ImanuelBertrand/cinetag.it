@@ -58,6 +58,25 @@ def create_app(config_name):
     # === Request Hooks (New Auth Logic) ===
     @app.before_request
     def unified_auth_check():
+        """
+        Authentication middleware that runs before each request.
+
+        This function implements CineTagIt's unique user authentication flow:
+
+        1. First, it tries to authenticate the user using JWT tokens
+           (access token or refresh token)
+        2. If no valid tokens are found and the endpoint requires authentication,
+           it automatically creates a temporary anonymous user account
+        3. This allows visitors to use the application without
+           explicitly registering first
+
+        The temporary user becomes permanent when the user registers
+        by setting an email and password through the registration process.
+
+        This approach provides a seamless experience for users,
+        allowing them to try the application before committing to registration,
+        while maintaining data continuity when they do register.
+        """
         g.current_user = None  # Ensure g.current_user is reset at start of request
         g.new_access_token = None  # Ensure reset
         g.new_refresh_token = None  # Ensure reset

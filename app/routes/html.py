@@ -61,8 +61,27 @@ def _validate_password(password):
 def register_post(user: User):
     """
     Register a new user or update the temporary user with the provided data.
-    :param user: User
-    :return:
+
+    In CineTagIt's unique authentication flow, users start with a
+    temporary anonymous account.
+    This function converts that temporary account into a permanent one
+    by adding an email address and password.
+
+    The function:
+    1. Validates the email and password
+    2. Sets the email and password on the user object
+    3. Queues a confirmation email
+    4. Saves the updated user to the database
+
+    This approach allows users
+    to use the application before explicitly registering
+    and ensures no data is lost when they decide to register.
+
+    Args:
+        user: The User object to update (typically a temporary anonymous user)
+
+    Returns:
+        A redirect response or None if there was an error
     """
     data = request.form
     email = data.get("email")
