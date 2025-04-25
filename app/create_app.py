@@ -25,6 +25,7 @@ from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F40
 from app.models.tmdb_language import TmdbLanguage  # noqa F401
 from app.models.tmdb_region import TmdbRegion  # noqa F401
 from app.models.user import User  # noqa F401
+from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
 from app.scheduler import setup_cron_jobs

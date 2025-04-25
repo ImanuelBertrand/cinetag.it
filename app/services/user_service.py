@@ -315,7 +315,7 @@ def _get_user_movies(
 
 
 def fetch_user_events(
-    user, start: datetime = None, end: datetime = None
+    user, start: datetime = None, end: datetime = None, external_urls: bool = False
 ) -> List[Dict[str, str]]:
     if not user:
         raise ValueError("User not found.")
@@ -360,7 +360,9 @@ def fetch_user_events(
                 "start_pretty": fmt_date(region_info.release_date),
                 "sort_order": region_info.release_date,
                 "url": url_for(
-                    "html.get_movie_details", movie_id=user_movie.movie_id
+                    "html.get_movie_details",
+                    movie_id=user_movie.movie_id,
+                    _external=not external_urls,
                 ),
                 "allDay": True,
                 "decision": user_movie.decision,

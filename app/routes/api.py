@@ -100,6 +100,38 @@ def get_movies_api(filter_mode):
         return jsonify({"success": False, "error": "Error fetching movies."})
 
 
+@api.route("/calendar/reset-hashes", methods=["POST"])
+def reset_calendar_hashes():
+    """Reset the calendar hashes for the current user"""
+    user = get_current_user()
+    if not user:
+        return jsonify(
+            {
+                "success": False,
+                "error": "There was an error with your session. Please try again.",
+            }
+        )
+
+    try:
+        user.reset_calendar_hashes()
+        db.session.commit()
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Calendar links have been reset successfully.",
+            }
+        )
+    except Exception as e:
+        _logger.exception(f"Error resetting calendar hashes: {e}")
+        return jsonify(
+            {
+                "success": False,
+                "error": "Error resetting calendar links.",
+            }
+        )
+
+
 @api.errorhandler(400)
 def bad_request(error):
     return jsonify({"error": "Bad Request"}), 400

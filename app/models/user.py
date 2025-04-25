@@ -24,9 +24,29 @@ class User(db.Model):
         "UserMovie", back_populates="user", cascade="all, delete-orphan"
     )
 
+    calendars = db.relationship(
+        "UserCalendar", back_populates="user", cascade="all, delete-orphan"
+    )
+
     notification_channels = db.relationship(
         "NotificationChannel", back_populates="user", cascade="all, delete-orphan"
     )
     notifications = db.relationship(
         "Notification", back_populates="user", cascade="all, delete-orphan"
     )
+
+    def reset_calendar_hashes(self):
+        """
+        Generate new random hashes for calendar URLs
+
+        This method now uses the UserCalendar model to store calendar hashes,
+        but also updates the legacy fields for backward compatibility.
+        """
+        from app.models.user_calendar import UserCalendar
+
+        # Reset or create calendars using the UserCalendar model
+        UserCalendar.reset_hash(self.id, "wanted")
+        UserCalendar.reset_hash(self.id, "maybe")
+        UserCalendar.reset_hash(self.id, "all")
+
+        return self

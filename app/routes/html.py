@@ -14,7 +14,6 @@ from flask import (
     make_response,
     current_app,
     g,
-    send_from_directory,
 )
 from flask_jwt_extended import (
     unset_jwt_cookies,
@@ -28,6 +27,7 @@ from app.models.notification_channel import NotificationChannel
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
+from app.models.user_calendar import UserCalendar
 from app.services.image_service import get_image_contents, get_image_url
 from app.services.user_service import (
     fetch_user_events,
@@ -40,6 +40,7 @@ from app.services.user_service import (
 )
 from app.utils.auth import generate_new_tokens
 from app.utils.email import queue_email
+from app.utils.ics import create_ics_file
 
 html = Blueprint("html", __name__)
 _logger = logging.getLogger(__name__)
@@ -340,6 +341,11 @@ def profile():
         flash("User not found.", "danger")
         return redirect(url_for("html.home"))
 
+    if len(user.calendars) == 0:
+        user.reset_calendar_hashes()
+        db.session.add(user)
+        db.session.commit()
+
     form_data = defaultdict(str)
     form_data["name"] = user.name or ""
     form_data["language"] = user.language or ""
@@ -638,6 +644,10 @@ def get_user_release_dates():
 @html.route("/calendar", methods=["GET"])
 def get_user_calendar():
     user = get_current_user()
+    if not user:
+        flash("There was an error with your session. Please try again.", "danger")
+        return redirect(url_for("html.profile"))
+
     try:
         releases = fetch_user_events(user)
         return render_template("calendar.html", releases=releases)
@@ -648,6 +658,64 @@ def get_user_calendar():
         _logger.exception("Error fetching calendar.")
         flash("Error fetching calendar.", "danger")
         return redirect(url_for("html.profile"))
+
+
+@html.route("/calendar/ics/<calendar_hash>", methods=["GET"])
+def get_ics_calendar(calendar_hash):
+    """
+    Generate an ICS calendar file for a user based on the calendar hash.
+
+    Args:
+        calendar_hash: The hash identifying the user and calendar type
+
+    Returns:
+        ICS calendar file as a response
+    """
+
+    # First try to find the calendar in the new UserCalendar model
+    calendar = UserCalendar.query.filter_by(calendar_hash=calendar_hash).first()
+
+    if not calendar:
+        return "Calendar not found", 404
+
+    calendar_type = calendar.calendar_type
+
+    try:
+        # Set calendar name and decisions based on calendar type
+        calendar_name = "Movie Calendar"
+
+        decisions = []
+        if calendar_type == "wanted":
+            calendar_name = "Wanted Movies"
+            decisions = ["approve"]
+        elif calendar_type == "maybe":
+            calendar_name = "Maybe Movies"
+            decisions = ["maybe"]
+        elif calendar_type == "all":
+            calendar_name = "All Movies"
+            decisions = ["approve", "maybe"]
+
+        # Fetch events for the requested calendar type
+        events = fetch_user_events(calendar.user)
+
+        # Filter events based on the calendar type
+        if calendar_type != "all":
+            events = [event for event in events if event["decision"] in decisions]
+
+        # Generate the ICS file
+        ics_data = create_ics_file(events, calendar_name)
+
+        # Create the response
+        response = make_response(ics_data)
+        response.headers["Content-Type"] = "text/calendar"
+        response.headers[
+            "Content-Disposition"
+        ] = f"attachment; filename={calendar_type}_movies.ics"
+
+        return response
+    except Exception as e:
+        _logger.exception(f"Error generating ICS calendar: {e}")
+        return "Error generating calendar", 500
 
 
 @html.route("/poster/<int:width>/<filename>")

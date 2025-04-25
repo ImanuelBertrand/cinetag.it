@@ -569,6 +569,27 @@ ul.release-list li {
   max-width: 1500px;
 }
 
+.calendar-type {
+  margin-top: 1em;
+}
+
+.calendar-url {
+  font-family: monospace;
+  padding: 1em;
+  border: 1px solid $steel-gray;
+  background: $gunmetal-gray;
+  margin: 0.5em 0;
+  display: inline-block;
+}
+
+.calendar-copy-button {
+  display: block;
+}
+
+.post-button {
+  margin-top: 1em;
+}
+
 #tmdb-logo {
   height: 1em;
 }

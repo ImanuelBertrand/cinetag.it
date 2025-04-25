@@ -93,6 +93,61 @@
         </div>
     </form>
 
+    <!-- Calendar URLs -->
+    <h3>Calendar URLs</h3>
+    <p>You can add these URLs to your calendar application to automatically sync your movie releases.</p>
+
+    {% set ns = namespace(wanted_hash=None, maybe_hash=None, all_hash=None) %}
+
+    {% for calendar in user.calendars %}
+        {% if calendar.calendar_type == 'wanted' %}
+            {% set ns.wanted_hash = calendar.calendar_hash %}
+        {% elif calendar.calendar_type == 'maybe' %}
+            {% set ns.maybe_hash = calendar.calendar_hash %}
+        {% elif calendar.calendar_type == 'all' %}
+            {% set ns.all_hash = calendar.calendar_hash %}
+        {% endif %}
+    {% endfor %}
+
+    {% set has_calendars = ns.wanted_hash and ns.maybe_hash and ns.all_hash %}
+
+    {% if has_calendars %}
+        <div class="calendar-urls">
+            <div class="calendar-url-wrapper">
+                <div class="calendar-type">Wanted 👍 Movies:</div>
+                <div class="calendar-url" id="calendar-wanted">
+                    {{ url_for('html.get_ics_calendar', calendar_hash=ns.wanted_hash, _external=True) }}
+                </div>
+                <button class="calendar-copy-button copy-button" data-clipboard-target="#calendar-wanted">Copy URL
+                </button>
+            </div>
+            <div class="calendar-url-wrapper">
+                <div class="calendar-type">Maybe 🤷‍♂️ Movies:</div>
+                <div class="calendar-url" id="calendar-maybe">
+                    {{ url_for('html.get_ics_calendar', calendar_hash=ns.maybe_hash, _external=True) }}
+                </div>
+                <button class="calendar-copy-button copy-button" data-clipboard-target="#calendar-maybe">Copy URL
+                </button>
+            </div>
+            <div class="calendar-url-wrapper">
+                <div class="calendar-type">All 👍+🤷‍♂️ Movies:</div>
+                <div class="calendar-url" id="calendar-all">
+                    {{ url_for('html.get_ics_calendar', calendar_hash=ns.all_hash, _external=True) }}
+                </div>
+                <button class="calendar-copy-button copy-button" data-clipboard-target="#calendar-all">Copy URL</button>
+            </div>
+        </div>
+    {% else %}
+        <p>You don't have any calendar URLs yet. Click the button below to generate them.</p>
+    {% endif %}
+    <div class="regenerate-calendar-urls-wrapper">
+        <button id="regenerate-calendar-hashes" class="post-button needs-confirmation"
+                data-url="{{ url_for('api.reset_calendar_hashes') }}"
+                data-confirmation-message="Are you sure you want to reset your calendar URLs? This will invalidate any existing calendar subscriptions.">
+            Generate Calendar URLs
+        </button>
+    </div>
+
     <!-- Delete all data -->
     <div class="danger-zone">
         <h4>Danger zone</h4>
