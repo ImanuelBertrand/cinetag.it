@@ -8,6 +8,50 @@ document.addEventListener("DOMContentLoaded", function () {
         element.value = csrf_token;
     });
 
+    function displayMessage(message, category = 'info') {
+        const container = document.getElementById('flash-messages-container');
+        if (!container) {
+            console.error('Error: Message container #flash-messages-container not found.');
+            return;
+        }
+
+        // Create the message element (e.g., a div)
+        const messageElement = document.createElement('div');
+        messageElement.className = `alert ${category}`; // Apply classes
+        messageElement.textContent = message; // Set the text content
+
+        // Optional: Add a close button ('×')
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.className = 'alert-close-btn'; // Add a class for styling/selection
+        closeButton.setAttribute('aria-label', 'Close'); // Accessibility
+        closeButton.onclick = () => {
+            messageElement.remove(); // Remove the message element when clicked
+        };
+        messageElement.appendChild(closeButton);
+
+        // Append the new message to the container
+        container.appendChild(messageElement);
+
+        // Optional: Auto-dismiss after a few seconds (e.g., 5 seconds)
+        // setTimeout(() => {
+        //    messageElement.remove();
+        // }, 5000);
+    }
+
+    function clearMessages() {
+        const container = document.getElementById('flash-messages-container');
+        if (container) {
+            container.innerHTML = ''; // Remove all child elements
+        }
+    }
+
+    if (typeof window.cinetagit.initialFlashedMessages !== 'undefined' && Array.isArray(window.cinetagit.initialFlashedMessages)) {
+        window.cinetagit.initialFlashedMessages.forEach(([category, message]) => {
+            displayMessage(message, category);
+        });
+    }
+
     // Confirmations
     document.querySelectorAll('button[type="submit"].needs-confirmation').forEach(function (element) {
         const msg = element.getAttribute('data-confirmation-message');

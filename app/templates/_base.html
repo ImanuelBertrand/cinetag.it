@@ -10,8 +10,9 @@
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
     <script>
-        window.cinetag = window.cinetag || {};
-        window.cinetag.language = '{{ current_user.language if current_user and current_user.language else 'en' }}';
+        window.cinetagit = window.cinetagit || {};
+        window.cinetagit.language = '{{ current_user.language if current_user and current_user.language else 'en' }}';
+        window.cinetagit.initialFlashedMessages = {{ get_flashed_messages(with_categories=true)|tojson }};
     </script>
     {% block scripts %}{% endblock %}
 </head>
@@ -21,13 +22,7 @@
     {% include '_navigation.html' %}
 </header>
 <main>
-    {% if get_flashed_messages(with_categories=true) %}
-        <ul>
-            {% for category, message in get_flashed_messages(with_categories=true) %}
-                <li class="alert {{ category }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+    <div id="flash-messages-container"></div>
     {% block content %}{% endblock %}
 </main>
 </body>
