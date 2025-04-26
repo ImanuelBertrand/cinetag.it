@@ -85,24 +85,15 @@ document.addEventListener("DOMContentLoaded", function () {
         const movieElement = document.getElementById(`movie-${movieId}`);
         const decision = get_decision(event.target);
 
-        function get_csrf_token() {
-            const cookies = document.cookie.split('; ');
-            if (!cookies) return '';
-            for (let i = 0; i < cookies.length; i++) {
-                if (cookies[i].startsWith('csrf_access_token')) {
-                    return cookies[i].split('=')[1];
-                }
-            }
-            return '';
-        }
+        const csrfToken = window.CineTagIt?.Utils?.getCsrfToken() || '';
 
         fetch(`/api/user/movies/review`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': get_csrf_token()
+                'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({movie_id: movieId, decision: decision, csrf_token: get_csrf_token()})
+            body: JSON.stringify({movie_id: movieId, decision: decision, csrf_token: csrfToken})
         })
             .then(response => response.json())
             .then(data => {
@@ -116,13 +107,30 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                     movieElement.classList.remove('hovered');
                 } else if (data.error) {
-                    alert(data.error);
+                    if (window.CineTagIt?.UI?.displayMessage) {
+                        window.CineTagIt.UI.displayMessage(data.error, 'danger');
+                    } else {
+                        alert(data.error);
+                    }
                 } else if (data.message) {
-                    alert(data.message);
+                    if (window.CineTagIt?.UI?.displayMessage) {
+                        window.CineTagIt.UI.displayMessage(data.message, data.message_category || 'info');
+                    } else {
+                        alert(data.message);
+                    }
                 } else {
-                    alert('An error occurred. Please try again later.');
+                    if (window.CineTagIt?.UI?.displayMessage) {
+                        window.CineTagIt.UI.displayMessage('An error occurred. Please try again later.', 'danger');
+                    } else {
+                        alert('An error occurred. Please try again later.');
+                    }
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                if (window.CineTagIt?.UI?.displayMessage) {
+                    window.CineTagIt.UI.displayMessage(`Error: ${error.message || 'Unknown error'}`, 'danger');
+                }
+            });
     }
 });

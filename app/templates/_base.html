@@ -10,9 +10,9 @@
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
     <script>
-        window.cinetagit = window.cinetagit || {};
-        window.cinetagit.language = '{{ current_user.language if current_user and current_user.language else 'en' }}';
-        window.cinetagit.initialFlashedMessages = {{ get_flashed_messages(with_categories=true)|tojson }};
+        window.CineTagIt = window.CineTagIt || {};
+        window.CineTagIt.language = '{{ current_user.language if current_user and current_user.language else 'en' }}';
+        window.CineTagIt.initialFlashedMessages = {{ get_flashed_messages(with_categories=true)|tojson }};
     </script>
     {% block scripts %}{% endblock %}
 </head>
