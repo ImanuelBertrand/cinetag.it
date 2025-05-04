@@ -4,7 +4,9 @@ import yaml
 
 
 class Config:
-    def __init__(self, config_file="app/config.yaml"):
+    def __init__(self, config_file=None):
+        if config_file is None:
+            config_file = os.environ.get("CONFIG_FILE", "app/config.yaml")
         self.load_config(config_file)
 
     def load_config(self, config_file):

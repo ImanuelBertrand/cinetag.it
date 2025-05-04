@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, date
 from typing import List, Callable, Any, Dict
 
@@ -19,10 +20,17 @@ def get_base_url() -> str:
 
 def get_tmdb_api_token() -> str:
     """
-    Retrieve the TMDb API token from the application configuration.
+    Retrieve the TMDb API token from environment variables
+    or application configuration.
     :return: The TMDb API token
     """
-    token = current_app.config.get("TMDB_API_TOKEN")
+    # First check environment variable
+    token = os.environ.get("TMDB_API_TOKEN")
+
+    # Fall back to configuration file if not in environment
+    if not token:
+        token = current_app.config.get("TMDB_API_TOKEN")
+
     if not token:
         raise TMDbAPIError("TMDb API Token is not configured.")
     return token

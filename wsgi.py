@@ -26,4 +26,7 @@ logging.getLogger(__name__).info(f"Starting application in {config_name} mode")
 application = create_app(config_name)
 
 if __name__ == "__main__":
-    application.run()
+    # In development mode, bind to all interfaces (0.0.0.0)
+    # In production mode, bind only to localhost (127.0.0.1) for security
+    host = "0.0.0.0" if config_name == "development" else "127.0.0.1"
+    application.run(host=host)

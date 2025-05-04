@@ -1,0 +1,35 @@
+# CineTagIt Docker Configuration Example
+# Copy this file to devenv/docker-config.yaml and fill in your own values
+
+# TMDB API Token - Get this from https://www.themoviedb.org/settings/api
+TMDB_API_TOKEN: your_tmdb_api_token_here
+
+# JWT Configuration
+JWT_COOKIE_DOMAIN: localhost
+JWT_SESSION_COOKIE: False
+JWT_SECRET_KEY: docker-dev-jwt-secret-key
+
+# Server Configuration
+SERVER_NAME: localhost:5000
+SECRET_KEY: docker-dev-secret-key
+
+# Mail Configuration
+MAIL_DEFAULT_SENDER: test@example.com
+MAIL_DEFAULT_SENDER_NAME: Cine Tag It (Docker)
+MAIL_SERVER: mailhog
+MAIL_PORT: 1025
+MAIL_USE_TLS: False
+MAIL_USERNAME: test
+MAIL_PASSWORD: test
+
+# Database Configuration
+SQLALCHEMY_DATABASE_URI: mysql+pymysql://cinetagit:password@db/cinetagit
+
+# Cache Configuration
+CACHE_KEY_PREFIX: cinetag-docker
+CACHE_TYPE: RedisCache
+CACHE_REDIS_URL: redis://redis:6379/0
+
+# Additional JWT Configuration
+JWT_ACCESS_TOKEN_EXPIRES: 3600
+JWT_REFRESH_TOKEN_EXPIRES: 15552000
