@@ -103,7 +103,7 @@ def get_push_notification_content(
 
     return {
         "title": f"Upcoming movie: {movie_title}",
-        "body": f"'In {days_till_release} days!",
+        "body": f"In {days_till_release} days!",
         "icon": f"/poster/500/{movie_data.get('poster_path', 'default.jpg')}",
         "url": f"/movie/{notification.movie_id}",
     }
