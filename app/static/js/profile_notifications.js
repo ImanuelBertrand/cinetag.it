@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             const subscription = await registration.pushManager.getSubscription();
 
             if (subscription) {
-                console.log('Subscription found!');
                 currentSubscription = subscription;
 
                 // Verify with the server
@@ -63,20 +62,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
                 const result = await response.json();
                 if (result.exists) {
-                    console.log("Push subscription exists on the server.");
                     addPushButton.disabled = true;
                     cancelPushButton.disabled = false;
 
                     // Fetch and display current settings
                     await fetchPushSettings(subscription.endpoint);
                 } else {
-                    console.log("Push subscription not found on the server.");
                     addPushButton.disabled = false;
                     cancelPushButton.disabled = true;
                     pushSettingsDiv.style.display = "none";
                 }
             } else {
-                console.log('No subscription');
                 addPushButton.disabled = false;
                 cancelPushButton.disabled = true;
                 pushSettingsDiv.style.display = "none";
@@ -84,13 +80,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         } catch (error) {
             console.error("Error checking push subscription:", error);
         }
-    } else {
-        console.log('No workers');
     }
 
     addPushButton.addEventListener("click", async function () {
         if (Notification.permission === "granted") {
-            console.log("Push notifications are already allowed.");
         } else if (Notification.permission === "denied") {
             alert("Push notifications are blocked. Please enable them in your browser settings.");
             return;
@@ -146,7 +139,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const result = await response.json();
 
-            console.log("Push subscription created and sent to server.");
             addPushButton.disabled = true;
             cancelPushButton.disabled = false;
 
@@ -176,7 +168,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                 });
 
                 await subscription.unsubscribe();
-                console.log("Push subscription canceled and removed from server.");
                 currentSubscription = null;
             }
         } catch (error) {
@@ -211,7 +202,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             const result = await response.json();
 
             if (result.success) {
-                console.log("Push notification settings updated successfully");
                 alert("Push notification settings saved successfully!");
 
                 // Update UI with returned settings
