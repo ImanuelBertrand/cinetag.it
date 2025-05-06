@@ -6,6 +6,46 @@
 window.CineTagIt = window.CineTagIt || {};
 
 /**
+ * Array to store module initialization functions
+ * @type {Array}
+ */
+CineTagIt.modules = [];
+
+/**
+ * Flag to track if CineTagIt has been initialized
+ * @type {boolean}
+ */
+CineTagIt.initialized = false;
+
+/**
+ * Register a module initialization function
+ * @param {string} moduleName - The name of the module
+ * @param {Function} initFunction - The initialization function for the module
+ */
+CineTagIt.registerModule = function(moduleName, initFunction) {
+    if (typeof initFunction !== 'function') {
+        console.error(`Failed to register module '${moduleName}': initFunction must be a function`);
+        return;
+    }
+
+    const moduleInfo = {
+        name: moduleName,
+        init: initFunction
+    };
+
+    CineTagIt.modules.push(moduleInfo);
+
+    // If CineTagIt is already initialized, initialize this module immediately
+    if (CineTagIt.initialized) {
+        try {
+            moduleInfo.init();
+        } catch (error) {
+            console.error(`Error initializing module '${moduleName}':`, error);
+        }
+    }
+};
+
+/**
  * Utility functions
  */
 CineTagIt.Utils = {
@@ -332,6 +372,18 @@ CineTagIt.init = function() {
     CineTagIt.Events.initPostButtons();
     CineTagIt.Events.initEmailDeobfuscation();
     CineTagIt.Events.initCopyToClipboard();
+
+    // Initialize registered modules
+    CineTagIt.modules.forEach(module => {
+        try {
+            module.init();
+        } catch (error) {
+            console.error(`Error initializing module '${module.name}':`, error);
+        }
+    });
+
+    // Set initialized flag to true
+    CineTagIt.initialized = true;
 };
 
 // Initialize the application when the DOM is loaded

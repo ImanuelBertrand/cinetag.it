@@ -1,27 +1,38 @@
 "use strict";
 
-document.addEventListener("DOMContentLoaded", async function () {
-    const addPushButton = document.getElementById("addPush");
-    const cancelPushButton = document.getElementById("cancelPush");
-    const pushSettingsDiv = document.getElementById("pushSettings");
-    const pushDaysInput = document.getElementById("pushDays");
-    const pushWithMaybeCheckbox = document.getElementById("pushWithMaybe");
-    const savePushSettingsButton = document.getElementById("savePushSettings");
+/**
+ * CineTagIt - Main namespace for the CineTagIt application
+ */
+window.CineTagIt = window.CineTagIt || {};
 
-    cancelPushButton.disabled = true;
-    let currentSubscription = null;
+/**
+ * Profile Notifications functionality
+ */
+CineTagIt.ProfileNotifications = {
+    currentSubscription: null,
 
-    // Function to parse days input
-    function parseDaysInput(input) {
+    /**
+     * Parse days input string into array of integers
+     * @param {string} input - Comma-separated list of days
+     * @returns {Array} Array of integers
+     */
+    parseDaysInput: function(input) {
         if (!input || input.trim() === "") {
             return [1, 3, 7]; // Default values
         }
         return input.split(",").map(day => parseInt(day.trim())).filter(day => !isNaN(day));
-    }
+    },
 
-    // Function to fetch and display current push settings
-    async function fetchPushSettings(endpoint) {
+    /**
+     * Fetch and display current push settings
+     * @param {string} endpoint - The subscription endpoint
+     */
+    fetchPushSettings: async function(endpoint) {
         try {
+            const pushDaysInput = document.getElementById("pushDays");
+            const pushWithMaybeCheckbox = document.getElementById("pushWithMaybe");
+            const pushSettingsDiv = document.getElementById("pushSettings");
+
             const response = await fetch("/api/check-push-subscription", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -43,49 +54,90 @@ document.addEventListener("DOMContentLoaded", async function () {
         } catch (error) {
             console.error("Error fetching push settings:", error);
         }
-    }
+    },
 
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
+    /**
+     * Initialize push notification functionality
+     */
+    init: async function() {
+        const addPushButton = document.getElementById("addPush");
+        const cancelPushButton = document.getElementById("cancelPush");
+        const pushSettingsDiv = document.getElementById("pushSettings");
+        const pushDaysInput = document.getElementById("pushDays");
+        const pushWithMaybeCheckbox = document.getElementById("pushWithMaybe");
+        const savePushSettingsButton = document.getElementById("savePushSettings");
 
-            if (subscription) {
-                currentSubscription = subscription;
+        if (!addPushButton || !cancelPushButton || !pushSettingsDiv || 
+            !pushDaysInput || !pushWithMaybeCheckbox || !savePushSettingsButton) {
+            console.warn("Push notification elements not found in the DOM");
+            return;
+        }
 
-                // Verify with the server
-                const response = await fetch("/api/check-push-subscription", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({endpoint: subscription.endpoint}),
-                });
+        cancelPushButton.disabled = true;
 
-                const result = await response.json();
-                if (result.exists) {
-                    addPushButton.disabled = true;
-                    cancelPushButton.disabled = false;
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
 
-                    // Fetch and display current settings
-                    await fetchPushSettings(subscription.endpoint);
+                if (subscription) {
+                    this.currentSubscription = subscription;
+
+                    // Verify with the server
+                    const response = await fetch("/api/check-push-subscription", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({endpoint: subscription.endpoint}),
+                    });
+
+                    const result = await response.json();
+                    if (result.exists) {
+                        addPushButton.disabled = true;
+                        cancelPushButton.disabled = false;
+
+                        // Fetch and display current settings
+                        await this.fetchPushSettings(subscription.endpoint);
+                    } else {
+                        addPushButton.disabled = false;
+                        cancelPushButton.disabled = true;
+                        pushSettingsDiv.style.display = "none";
+                    }
                 } else {
                     addPushButton.disabled = false;
                     cancelPushButton.disabled = true;
                     pushSettingsDiv.style.display = "none";
                 }
-            } else {
-                addPushButton.disabled = false;
-                cancelPushButton.disabled = true;
-                pushSettingsDiv.style.display = "none";
+            } catch (error) {
+                console.error("Error checking push subscription:", error);
             }
-        } catch (error) {
-            console.error("Error checking push subscription:", error);
         }
-    }
 
-    addPushButton.addEventListener("click", async function () {
+        // Add event listeners
+        this.addEventListeners(addPushButton, cancelPushButton, savePushSettingsButton);
+    },
+
+    /**
+     * Add event listeners to buttons
+     */
+    addEventListeners: function(addPushButton, cancelPushButton, savePushSettingsButton) {
+        addPushButton.addEventListener("click", this.handleAddPush.bind(this));
+        cancelPushButton.addEventListener("click", this.handleCancelPush.bind(this));
+        savePushSettingsButton.addEventListener("click", this.handleSaveSettings.bind(this));
+    },
+
+    /**
+     * Handle add push button click
+     */
+    handleAddPush: async function() {
+        const pushDaysInput = document.getElementById("pushDays");
+        const pushWithMaybeCheckbox = document.getElementById("pushWithMaybe");
+        const pushSettingsDiv = document.getElementById("pushSettings");
+        const addPushButton = document.getElementById("addPush");
+        const cancelPushButton = document.getElementById("cancelPush");
+
         if (Notification.permission === "granted") {
         } else if (Notification.permission === "denied") {
-            alert("Push notifications are blocked. Please enable them in your browser settings.");
+            CineTagIt.UI.displayMessage("Push notifications are blocked. Please enable them in your browser settings.", "warning");
             return;
         } else {
             try {
@@ -118,10 +170,10 @@ document.addEventListener("DOMContentLoaded", async function () {
                 applicationServerKey: applicationServerKey
             });
 
-            currentSubscription = subscription;
+            this.currentSubscription = subscription;
 
             // Get settings from UI
-            const days = parseDaysInput(pushDaysInput.value);
+            const days = this.parseDaysInput(pushDaysInput.value);
             const includeMaybe = pushWithMaybeCheckbox.checked;
 
             // Create subscription data with settings
@@ -153,9 +205,16 @@ document.addEventListener("DOMContentLoaded", async function () {
         } catch (error) {
             console.error("Error subscribing to push notifications:", error);
         }
-    });
+    },
 
-    cancelPushButton.addEventListener("click", async function () {
+    /**
+     * Handle cancel push button click
+     */
+    handleCancelPush: async function() {
+        const addPushButton = document.getElementById("addPush");
+        const cancelPushButton = document.getElementById("cancelPush");
+        const pushSettingsDiv = document.getElementById("pushSettings");
+
         try {
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
@@ -168,7 +227,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 });
 
                 await subscription.unsubscribe();
-                currentSubscription = null;
+                this.currentSubscription = null;
             }
         } catch (error) {
             console.error("Error canceling push subscription:", error);
@@ -177,23 +236,29 @@ document.addEventListener("DOMContentLoaded", async function () {
         addPushButton.disabled = false;
         cancelPushButton.disabled = true;
         pushSettingsDiv.style.display = "none";
-    });
+    },
 
-    savePushSettingsButton.addEventListener("click", async function() {
-        if (!currentSubscription) {
+    /**
+     * Handle save settings button click
+     */
+    handleSaveSettings: async function() {
+        const pushDaysInput = document.getElementById("pushDays");
+        const pushWithMaybeCheckbox = document.getElementById("pushWithMaybe");
+
+        if (!this.currentSubscription) {
             console.error("No active subscription found");
             return;
         }
 
         try {
-            const days = parseDaysInput(pushDaysInput.value);
+            const days = this.parseDaysInput(pushDaysInput.value);
             const includeMaybe = pushWithMaybeCheckbox.checked;
 
             const response = await fetch("/api/update-push-settings", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    endpoint: currentSubscription.endpoint,
+                    endpoint: this.currentSubscription.endpoint,
                     days_in_advance: days,
                     include_maybe_movies: includeMaybe
                 }),
@@ -202,7 +267,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             const result = await response.json();
 
             if (result.success) {
-                alert("Push notification settings saved successfully!");
+                CineTagIt.UI.displayMessage("Push notification settings saved successfully!", "success");
 
                 // Update UI with returned settings
                 if (result.settings) {
@@ -211,11 +276,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                 }
             } else {
                 console.error("Error updating push settings:", result.error);
-                alert("Error saving settings: " + result.error);
+                CineTagIt.UI.displayMessage("Error saving settings: " + result.error, "danger");
             }
         } catch (error) {
             console.error("Error saving push notification settings:", error);
-            alert("Error saving settings. Please try again.");
+            CineTagIt.UI.displayMessage("Error saving settings. Please try again.", "danger");
         }
-    });
+    }
+};
+
+// Register the profile notifications module for initialization
+CineTagIt.registerModule("ProfileNotifications", function() {
+    CineTagIt.ProfileNotifications.init();
 });
