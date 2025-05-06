@@ -1,7 +1,8 @@
 import logging
-import traceback
 from datetime import datetime, timedelta, date
+from typing import Dict
 
+from app.exceptions import WebPushSubscriptionExpiredError
 from app.extensions import db
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification import Notification
@@ -16,14 +17,28 @@ def cron_setup_notifications():
     # TODO performance in case of many users
     channels = NotificationChannel.query.all()
     for channel in channels:
-        setup_notifications(channel)
+        if channel.enabled:
+            setup_notifications(channel)
+        else:
+            deleted_notifications = Notification.query.filter_by(
+                channel_id=channel.id,
+                is_sent=False,  # if the channel is re-enabled, so we don't resend
+            ).delete()
+            _logger.info(
+                f"Deleted {deleted_notifications} notifications "
+                f"for disabled channel {channel.id}"
+            )
+            db.session.add(channel)
+            db.session.commit()
 
 
 def cron_send_notifications():
     scheduled_notifications = (
-        Notification.query.filter(
+        Notification.query.join(NotificationChannel)
+        .filter(
             Notification.is_sent.is_(False),
             Notification.scheduled_at <= datetime.utcnow(),
+            NotificationChannel.enabled == True,
         )
         .order_by(Notification.scheduled_at.asc())
         .all()
@@ -32,15 +47,19 @@ def cron_send_notifications():
 
     for notification in scheduled_notifications:
         try:
+            if not notification.channel.enabled:
+                # In case the channel was disabled by a
+                # failed notification earlier in the loop
+                continue
+
             if send_notification(notification):
                 notification.is_sent = True
                 notification.sent_at = datetime.utcnow()
                 db.session.add(notification)
                 db.session.commit()
         except Exception as e:
-            _logger.error(
-                f"Failed to send notification {notification.id}: "
-                f"#{e}\n{traceback.format_exc()}"
+            _logger.exception(
+                f"Failed to send notification {notification.id}: {e}"
             )
 
 
@@ -56,7 +75,38 @@ def send_notification(notification: Notification):
         _logger.error(f"Unknown notification type: {notification.mode}")
         return False
 
-    return mode_methods[mode](notification)
+    try:
+        return mode_methods[mode](notification)
+    except Exception as e:
+        _logger.exception(f"Error sending notification {notification.id}: {e}")
+        return False
+
+
+def get_push_notification_content(
+    notification: Notification,
+) -> Dict[str, str] | None:
+    # Get the movie data
+    movie_data = notification.movie.get_localized_data(
+        notification.user.language or "en"
+    )
+    movie_region_info = MovieRegionInfo.query.filter_by(
+        movie_id=notification.movie_id, region=notification.user.region or "US"
+    ).first()
+
+    if not movie_region_info:
+        _logger.error(f"No region info found for movie {notification.movie_id}")
+        return None
+
+    movie_title = movie_data["title"]
+    release_date = movie_region_info.release_date
+    days_till_release = (release_date - date.today()).days
+
+    return {
+        "title": f"Upcoming movie: {movie_title}",
+        "body": f"'In {days_till_release} days!",
+        "icon": f"/poster/500/{movie_data.get('poster_path', 'default.jpg')}",
+        "url": f"/movie/{notification.movie_id}",
+    }
 
 
 def send_push_notification(notification: Notification):
@@ -81,42 +131,25 @@ def send_push_notification(notification: Notification):
         )
         return False
 
-    # Get the movie data
-    movie_data = notification.movie.get_localized_data(
-        notification.user.language or "en"
-    )
-    movie_region_info = MovieRegionInfo.query.filter_by(
-        movie_id=notification.movie_id, region=notification.user.region or "US"
-    ).first()
-
-    if not movie_region_info:
-        _logger.error(f"No region info found for movie {notification.movie_id}")
+    notification_content = get_push_notification_content(notification)
+    if notification_content is None:
+        _logger.error(f"Failed to get notification data for {notification.id}")
         return False
-
-    # Create the notification data
-    movie_title = movie_data["title"]
-    release_date = movie_region_info.release_date
-    days_till_release = (release_date - date.today()).days
-
-    notification_data = {
-        "title": f"Movie Release: {movie_title}",
-        "body": f"'{movie_title}' will be released in {days_till_release} days!",
-        "icon": f"/poster/500/{movie_data.get('poster_path', 'default.jpg')}",
-        "url": f"/movie/{notification.movie_id}",
-    }
 
     # Send the push notification
     try:
         subscription_info = channel.notification_data
-        result = send_web_push(subscription_info, notification_data)
-
-        if not result:
-            _logger.error(
-                f"Failed to send push notification for {notification.id}"
-            )
-            return False
-
-        return True
+        return send_web_push(subscription_info, notification_content)
+    except WebPushSubscriptionExpiredError:
+        _logger.warning(
+            f"Push subscription expired for channel {channel.id}, "
+            f"disabling channel"
+        )
+        # Disable the notification channel
+        channel.enabled = False
+        db.session.add(channel)
+        db.session.commit()
+        return False
     except Exception as e:
         _logger.exception(f"Error sending push notification: {e}")
         return False

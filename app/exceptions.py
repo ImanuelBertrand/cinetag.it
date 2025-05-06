@@ -15,3 +15,13 @@ class UserFeedbackError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+
+
+class WebPushSubscriptionExpiredError(Exception):
+    """
+    Custom exception for expired web push subscriptions (HTTP 410).
+    """
+
+    def __init__(self, message, subscription_info=None):
+        super().__init__(message)
+        self.subscription_info = subscription_info

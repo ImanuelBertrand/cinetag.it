@@ -9,6 +9,8 @@ from flask import current_app
 from py_vapid import Vapid
 from pywebpush import webpush, WebPushException
 
+from app.exceptions import WebPushSubscriptionExpiredError
+
 _logger = logging.getLogger(__name__)
 
 
@@ -113,14 +115,16 @@ def send_web_push(
         )
         return True
     except WebPushException as e:
-        _logger.error(f"Web Push failed: {e}")
         # Check if subscription is expired
         if e.response and e.response.status_code == 410:
-            _logger.warning(f"Subscription has expired or been unsubscribed")
-            return False
+            raise WebPushSubscriptionExpiredError(
+                "Push subscription has expired or been unsubscribed",
+                subscription_info=subscription_info,
+            )
+
         # Handle other errors
         _logger.error(f"WebPushException: {e}")
         return False
     except Exception as e:
-        _logger.exception(f"Error sending push notification: {e}")
+        _logger.error(f"Error sending push notification: {e}")
         return False
