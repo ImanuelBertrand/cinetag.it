@@ -39,7 +39,7 @@ The service worker handles two main events:
 self.addEventListener("push", function (event) {
     if (event.data) {
         const notificationData = event.data.json();
-        
+
         event.waitUntil(
             self.registration.showNotification(notificationData.title, {
                 body: notificationData.body,
@@ -53,7 +53,7 @@ self.addEventListener("push", function (event) {
 
 self.addEventListener("notificationclick", function (event) {
     event.notification.close();
-    
+
     if (event.notification.data) {
         event.waitUntil(
             clients.openWindow(event.notification.data)
@@ -149,11 +149,12 @@ The notification system uses several utility functions:
 
 ### API Endpoints
 
-Three API endpoints are needed for push notifications:
+Four API endpoints are used for push notifications:
 
 1. **/check-push-subscription**: Verifies if a subscription exists on the server.
 2. **/subscribe**: Stores a new push subscription.
-3. **/unsubscribe**: Removes a push subscription.
+3. **/update-push-settings**: Updates notification preferences for an existing subscription.
+4. **/unsubscribe**: Removes a push subscription.
 
 ## User Interface
 
@@ -178,15 +179,12 @@ The notification settings page allows users to:
 
 ## Implementation Status
 
-The push notification feature is currently a work in progress. The following components have been implemented:
+The push notification feature is fully implemented and includes the following components:
 
 - Service worker for handling push messages and notification clicks
 - Client-side JavaScript for managing subscriptions
 - Service worker registration in the base application
 - Server-side models for storing notification preferences
-
-The following components still need to be implemented:
-
 - API endpoints for subscription management
 - Server-side functionality for sending push notifications
 - Integration with the existing notification scheduling system

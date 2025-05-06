@@ -101,7 +101,7 @@ The Docker environment uses a specific configuration file located at `devenv/doc
 
 ## Known Issues
 
-- There is no database migration setup yet, so the DB will remain empty after initialization. You'll need to manually add data or implement migrations.
+- The database will be empty after initialization. You'll need to run migrations to set up the database schema and add initial data.
 
 ## Troubleshooting
 
