@@ -95,6 +95,18 @@ def register_post(user: User):
         flash("Invalid email.", "danger")
         return None
 
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        flash("Email address already in use.", "danger")
+        queue_confirmation_mail(existing_user)
+        return None
+
+    pending_user = User.query.filter_by(new_email=email).first()
+    if pending_user:
+        flash("Email address already in use.", "danger")
+        queue_confirmation_mail(pending_user)
+        return None
+
     # password sanity check
     password = data.get("password")
     if not password:
