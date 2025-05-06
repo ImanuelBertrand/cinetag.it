@@ -62,8 +62,9 @@ def init_extensions(app):
     app.jinja_env.filters["obfuscate_email"] = obfuscate_email
 
     # Configure Flask-Assets
-    scss = Bundle("src/style.scss", filters="libsass", output="dist/style.css")
-    assets_env.register("scss_all", scss)
+    if "scss_all" not in assets_env:
+        scss = Bundle("src/style.scss", filters="libsass", output="dist/style.css")
+        assets_env.register("scss_all", scss)
 
     with app.app_context():
         db.create_all()
