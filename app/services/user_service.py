@@ -218,7 +218,7 @@ def get_movies_based_on_filter(
             query = query.filter(UserMovie.movie_id.is_(None))
 
     # Order by release date for consistent pagination
-    query = query.order_by(MovieRegionInfo.release_date)
+    query = query.order_by(MovieRegionInfo.release_date, Movie.id)
 
     # Apply limit for pagination
     # (get one extra to check if there are more results)
