@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta, date
 from typing import Dict
 
@@ -45,6 +46,7 @@ def cron_send_notifications():
     )
     _logger.info(f"Sending {len(scheduled_notifications)} notifications")
 
+    sent_notifications = defaultdict(set)
     for notification in scheduled_notifications:
         try:
             if not notification.channel.enabled:
@@ -52,11 +54,19 @@ def cron_send_notifications():
                 # failed notification earlier in the loop
                 continue
 
-            if send_notification(notification):
+            if notification.movie_id in sent_notifications[notification.user_id]:
+                # In case multiple notifications are scheduled
+                # for the same movie and user, only send one
+                is_sent = True
+            else:
+                is_sent = send_notification(notification)
+
+            if is_sent:
                 notification.is_sent = True
                 notification.sent_at = datetime.utcnow()
                 db.session.add(notification)
                 db.session.commit()
+                sent_notifications[notification.user_id].add(notification.movie_id)
         except Exception as e:
             _logger.exception(
                 f"Failed to send notification {notification.id}: {e}"
