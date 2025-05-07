@@ -221,6 +221,7 @@ CineTagIt.Movies = {
                 loadMoreBtn = document.createElement('button');
                 loadMoreBtn.className = 'load-more-btn';
                 loadMoreBtn.textContent = 'Load More Movies';
+                loadMoreBtn.style.order = '1000';
                 loadMoreBtn.addEventListener('click', () => this.loadMoreMovies(movieContainer));
                 movieContainer.appendChild(loadMoreBtn);
             }
