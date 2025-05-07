@@ -214,6 +214,8 @@ def get_movies_based_on_filter(
             query = query.filter(UserMovie.decision == "disapprove")
         elif mode == "maybe":
             query = query.filter(UserMovie.decision == "maybe")
+        elif mode == "pending":
+            query = query.filter(UserMovie.movie_id.is_(None))
 
     # Order by release date for consistent pagination
     query = query.order_by(MovieRegionInfo.release_date)
