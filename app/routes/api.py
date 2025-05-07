@@ -88,18 +88,46 @@ def get_movies_api(filter_mode):
     try:
         need_imdb = True  # TODO toggle in user settings
         need_poster = True  # TODO toggle in user settings
+
+        # Get pagination parameters
+        min_release_date = request.args.get("min_release_date")
+        min_movie_id = request.args.get("min_movie_id")
+        limit = int(request.args.get("limit", 50))
+
+        # Convert min_release_date to datetime if provided
+        if min_release_date:
+            min_release_date = datetime.strptime(
+                min_release_date, "%Y-%m-%d"
+            ).date()
+
+        # Convert min_movie_id to int if provided
+        if min_movie_id:
+            min_movie_id = int(min_movie_id)
+
+        # Get movies with pagination
+        result = get_movies_based_on_filter(
+            user,
+            filter_mode,
+            need_imdb,
+            need_poster,
+            min_release_date=min_release_date,
+            min_movie_id=min_movie_id,
+            limit=limit,
+        )
+
         return jsonify(
             {
                 "success": True,
-                "movies": get_movies_based_on_filter(
-                    user, filter_mode, need_imdb, need_poster
-                ),
+                "movies": result["movies"],
+                "next_release_date": result["next_release_date"],
+                "next_movie_id": result["next_movie_id"],
+                "has_more": result["has_more"],
             }
         )
     except UserFeedbackError as e:
         return jsonify({"success": False, "error": str(e)})
-    except Exception:
-        _logger.exception("Error fetching movies.")
+    except Exception as e:
+        _logger.exception(f"Error fetching movies: {e}")
         return jsonify({"success": False, "error": "Error fetching movies."})
 
 

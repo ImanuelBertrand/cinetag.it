@@ -1,17 +1,18 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import jwt
 from babel.dates import format_date
 from flask import current_app, url_for, g
 from flask_sqlalchemy.session import Session
+from sqlalchemy import func
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
-from app.extensions import db, bcrypt
+from app.extensions import db, bcrypt, cache
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo
@@ -24,6 +25,7 @@ from app.models.user_movie import UserMovie
 from app.services.image_service import get_image_url
 from app.services.movie_service import get_region_infos
 from app.utils.email import queue_email
+from app.utils.profiler import Profiler, profile_function
 
 _logger = logging.getLogger(__name__)
 
@@ -123,57 +125,6 @@ def get_region_flag(region: str) -> str | None:
     return first_flag_char + second_flag_char
 
 
-def get_movie_list_query(
-    region: TmdbRegion,
-    need_imdb: bool,
-    need_poster: bool,
-    user: User = None,
-    user_decision: str = None,
-):
-    upcoming_movie_query = Movie.query.join(
-        MovieRegionInfo,
-        db.and_(
-            MovieRegionInfo.region == region, MovieRegionInfo.movie_id == Movie.id
-        ),
-    ).filter(MovieRegionInfo.release_date > datetime.now().date())
-
-    if need_imdb:
-        upcoming_movie_query = upcoming_movie_query.filter(
-            Movie.imdb_id.isnot(None)
-        )
-
-    if need_poster:
-        poster_subquery = db.exists().where(
-            db.and_(
-                MovieLangInfo.movie_id == MovieRegionInfo.movie_id,
-                MovieLangInfo.poster_path.isnot(None),
-            )
-        )
-        upcoming_movie_query = upcoming_movie_query.filter(poster_subquery)
-
-    if user is not None:
-        # if user_decision is None, we filter for untagged movies,
-        # so we need an outer join
-        is_outer = user_decision is None
-
-        upcoming_movie_query = upcoming_movie_query.join(
-            UserMovie,
-            db.and_(UserMovie.user_id == user.id, UserMovie.movie_id == Movie.id),
-            isouter=is_outer,
-        )
-
-        if user_decision is None:
-            upcoming_movie_query = upcoming_movie_query.filter(
-                UserMovie.id.is_(None)
-            )
-        else:
-            upcoming_movie_query = upcoming_movie_query.filter(
-                UserMovie.decision == user_decision
-            )
-
-    return upcoming_movie_query
-
-
 def get_user_movie_ids(user: User, decision: str = None):
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
 
@@ -183,89 +134,167 @@ def get_user_movie_ids(user: User, decision: str = None):
     return user_movies_query
 
 
+@profile_function
 def get_movies_based_on_filter(
-    user: User, mode: str, need_imdb: bool = False, need_poster: bool = False
-) -> List[Dict[str, str]]:
+    user: User,
+    mode: str,
+    need_imdb: bool = False,
+    need_poster: bool = False,
+    min_release_date=None,
+    min_movie_id=None,
+    limit: int = 20,
+) -> Dict[str, Any]:
+    profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
+    profiler.start()
+
+    profiler.start_section("initialization")
     region = user.region or current_app.config.DEFAULT_REGION
     language = user.language or current_app.config.DEFAULT_LANGUAGE
 
     def fmt_date(date):
         return format_date(date, locale=language) if date else None
 
-    filter_user = None
-    filter_decision = None
-    if mode != "all":
-        filter_user = user
-        if mode == "approved":
-            filter_decision = "approve"
-        if mode == "disapproved":
-            filter_decision = "disapprove"
-        if mode == "maybe":
-            filter_decision = "maybe"
+    # Cache regions data
+    profiler.start_section("cache_retrieval")
+    tmdb_regions_dict = cache.get("tmdb_regions_dict")
+    if not tmdb_regions_dict:
+        tmdb_regions = TmdbRegion.query.all()
+        tmdb_regions_dict = {r.code: r for r in tmdb_regions}
+        # Cache for 1 hour
+        cache.set("tmdb_regions_dict", tmdb_regions_dict, timeout=3600)
 
-    filtered_movies = get_movie_list_query(
-        region, need_imdb, need_poster, filter_user, filter_decision
+    # Use a single query with joins instead of multiple queries
+
+    ##############################################
+    profiler.start_section("query_building")
+    query = (
+        db.session.query(Movie, MovieRegionInfo, UserMovie)
+        .join(
+            MovieRegionInfo,
+            db.and_(
+                MovieRegionInfo.movie_id == Movie.id,
+                MovieRegionInfo.region == region,
+            ),
+        )
+        .outerjoin(
+            UserMovie,
+            db.and_(UserMovie.movie_id == Movie.id, UserMovie.user_id == user.id),
+        )
+        .filter(MovieRegionInfo.release_date > datetime.now().date())
     )
-    movie_ids = {m.id for m in filtered_movies}
 
-    user_movies_query = UserMovie.query.filter(
-        db.and_(UserMovie.user_id == user.id, UserMovie.movie_id.in_(movie_ids))
-    )
-    movie_decisions = {um.movie_id: um.decision for um in user_movies_query}
-
-    langs = MovieLangInfo.query.filter(MovieLangInfo.movie_id.in_(movie_ids)).all()
-    language_dict = defaultdict(dict)
-    for movie_lang in langs:
-        language_dict[movie_lang.movie_id][movie_lang.language] = movie_lang
-
-    region_infos = MovieRegionInfo.query.filter(
-        MovieRegionInfo.movie_id.in_(movie_ids)
-    ).all()
-    region_info_dict = defaultdict(dict)
-    for reg_info in region_infos:
-        region_info_dict[reg_info.movie_id][reg_info.region] = reg_info
-
-    tmdb_regions = TmdbRegion.query.all()
-    tmdb_regions_dict = {r.code: r for r in tmdb_regions}
-
-    now = datetime.now().date()
-    result = []
-    for movie in filtered_movies:
-        rg_infos = region_info_dict.get(movie.id, {})
-        origin_countries = movie.origin_country.split(",")
-        main_region_info = rg_infos.get(region) or rg_infos.get("US")
-        if not main_region_info:
-            main_region_info = next(
-                (rg_infos.get(c) for c in origin_countries if rg_infos.get(c)),
-                None,
+    # Apply pagination filter
+    if min_release_date and min_movie_id:
+        # If we have both release date and movie ID, use a composite filter
+        # to avoid deadlock when multiple movies have the same release date
+        query = query.filter(
+            db.or_(
+                MovieRegionInfo.release_date > min_release_date,
+                db.and_(
+                    MovieRegionInfo.release_date == min_release_date,
+                    Movie.id > min_movie_id,
+                ),
             )
+        )
+        query = query.filter(MovieRegionInfo.release_date >= min_release_date)
+    elif min_release_date or min_movie_id:
+        raise ValueError(
+            "min_release_date and min_movie_id can only be used together"
+        )
 
-        if (
-            not main_region_info
-            or not main_region_info.release_date
-            or main_region_info.release_date < now
-        ):
-            continue
+    # Apply other filters
+    if need_imdb:
+        query = query.filter(Movie.imdb_id.isnot(None))
 
-        relevant_regions = list({region} | set(origin_countries))
-        all_release_dates = [
-            {
-                "region": r,
-                "region_info": tmdb_regions_dict.get(r).to_dict(),
-                "date": rg_infos.get(r).release_date,
-                "date_pretty": fmt_date(rg_infos.get(r).release_date),
-                "flag": get_region_flag(r),
-            }
-            for r in relevant_regions
-            if rg_infos.get(r) and not rg_infos.get(r).is_fake
-        ]
+    # Apply mode filters
+    if mode != "all":
+        if mode == "approved":
+            query = query.filter(UserMovie.decision == "approve")
+        elif mode == "disapproved":
+            query = query.filter(UserMovie.decision == "disapprove")
+        elif mode == "maybe":
+            query = query.filter(UserMovie.decision == "maybe")
 
-        lang_info = movie.get_localized_data(language, language_dict[movie.id])
+    # Order by release date for consistent pagination
+    query = query.order_by(MovieRegionInfo.release_date)
+
+    # Apply limit for pagination
+    # (get one extra to check if there are more results)
+    query = query.limit(limit + 1)
+
+    # Execute the query
+    profiler.start_section("query_execution")
+    results = query.all()
+
+    profiler.start_section("result_processing")
+    has_more = len(results) > limit
+
+    # Trim to the requested limit
+    if has_more:
+        results = results[:limit]
+
+    profiler.start_section("movie_preprocessing")
+
+    # Preload all necessary movie regions
+    movie_ids = [r[0].id for r in results]
+    movie_regions_query = (
+        db.session.query(MovieRegionInfo)
+        .join(Movie, Movie.id == MovieRegionInfo.movie_id)
+        .filter(MovieRegionInfo.movie_id.in_(movie_ids))
+        .filter(MovieRegionInfo.is_fake == False)
+        .filter(
+            db.or_(
+                MovieRegionInfo.region == region,
+                func.find_in_set(MovieRegionInfo.region, Movie.origin_country) > 0,
+            )
+        )
+    )
+    movie_regions_dict = defaultdict(list)
+    for movie_region in movie_regions_query.all():
+        movie_regions_dict[movie_region.movie_id] += [movie_region]
+
+    # preload all necessary movie languages
+    movie_languages_query = (
+        db.session.query(MovieLangInfo)
+        .join(Movie, Movie.id == MovieLangInfo.movie_id)
+        .filter(MovieLangInfo.movie_id.in_(movie_ids))
+        .filter(
+            db.or_(
+                MovieLangInfo.language == language,
+                MovieLangInfo.language == Movie.original_language,
+                MovieLangInfo.language == "en",
+            )
+        )
+    )
+    movie_languages_dict = defaultdict(dict)
+    for mov_lang in movie_languages_query.all():
+        movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
+
+    profiler.start_section("movie_processing")
+    result = []
+    for movie_tuple in results:
+        movie, main_region_info, user_movie = movie_tuple
+
+        # Get language info
+        lang_info = movie.get_localized_data(
+            language, movie_languages_dict[movie.id]
+        )
         if not lang_info:
             continue
 
         if need_poster and not lang_info.get("poster_path"):
             continue
+
+        all_release_dates = [
+            {
+                "region": ri.region,
+                "region_info": tmdb_regions_dict.get(ri.region).to_dict(),
+                "date": ri.release_date,
+                "date_pretty": fmt_date(ri.release_date),
+                "flag": get_region_flag(ri.region),
+            }
+            for ri in movie_regions_dict[movie.id]
+        ]
 
         result.append(
             {
@@ -277,12 +306,30 @@ def get_movies_based_on_filter(
                 "overview": lang_info["overview"],
                 "poster_url": get_image_url(lang_info["poster_path"], 500),
                 "popularity": movie.popularity,
-                "decision": movie_decisions.get(movie.id),
+                "decision": user_movie.decision if user_movie else None,
                 "all_release_dates": all_release_dates,
             }
         )
 
-    return sorted(result, key=lambda x: x["release_date"])
+    # Get the next cursor value if there are more results
+    profiler.start_section("pagination_metadata")
+    next_release_date = None
+    next_movie_id = None
+    if has_more and result:
+        next_release_date = result[-1]["release_date"]
+        next_movie_id = result[-1]["id"]
+
+    # Stop the profiler before returning
+    profiler.stop()
+
+    return {
+        "movies": result,
+        "next_release_date": next_release_date.isoformat()
+        if next_release_date
+        else None,
+        "next_movie_id": next_movie_id,
+        "has_more": has_more,
+    }
 
 
 def _get_user_movies(
