@@ -285,7 +285,8 @@ CineTagIt.ProfileNotifications = {
     }
 };
 
-// Register the profile notifications module for initialization
-CineTagIt.registerModule("ProfileNotifications", function() {
+// Register the module's initialization function
+CineTagIt.modules = CineTagIt.modules || {};
+CineTagIt.modules.ProfileNotifications = function() {
     CineTagIt.ProfileNotifications.init();
-});
+};
