@@ -180,7 +180,7 @@ def get_movies_based_on_filter(
             UserMovie,
             db.and_(UserMovie.movie_id == Movie.id, UserMovie.user_id == user.id),
         )
-        .filter(MovieRegionInfo.release_date > datetime.now().date())
+        .filter(MovieRegionInfo.release_date >= datetime.now().date())
     )
 
     # Apply pagination filter
