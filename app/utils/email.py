@@ -15,10 +15,6 @@ _logger = logging.getLogger(__name__)
 
 
 def send_email(to: str, subject: str | list, body: str) -> bool:
-    if current_app.config_class != "production":
-        _logger.info("Silently skipping mail sending on DEV site")
-        return True
-
     sender = current_app.config["MAIL_DEFAULT_SENDER"]
     sender_name = current_app.config.get("MAIL_DEFAULT_SENDER_NAME")
     if sender_name:
