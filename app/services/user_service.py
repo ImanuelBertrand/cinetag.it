@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
-from app.extensions import db, bcrypt, cache
+from app.extensions import db, bcrypt
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo
@@ -151,21 +151,18 @@ def get_movies_based_on_filter(
     region = user.region or current_app.config.DEFAULT_REGION
     language = user.language or current_app.config.DEFAULT_LANGUAGE
 
-    def fmt_date(date):
-        return format_date(date, locale=language) if date else None
+    formatted_dates = {}
 
-    # Cache regions data
-    profiler.start_section("cache_retrieval")
-    tmdb_regions_dict = cache.get("tmdb_regions_dict")
-    if not tmdb_regions_dict:
-        tmdb_regions = TmdbRegion.query.all()
-        tmdb_regions_dict = {r.code: r for r in tmdb_regions}
-        # Cache for 1 hour
-        cache.set("tmdb_regions_dict", tmdb_regions_dict, timeout=3600)
+    def fmt_date(date: datetime.date):
+        if not date:
+            return None
 
-    # Use a single query with joins instead of multiple queries
+        cache_key = str(date)
+        if cache_key not in formatted_dates:
+            formatted_dates[cache_key] = format_date(date, locale=language)
 
-    ##############################################
+        return formatted_dates[cache_key]
+
     profiler.start_section("query_building")
     query = (
         db.session.query(Movie, MovieRegionInfo, UserMovie)
@@ -251,9 +248,11 @@ def get_movies_based_on_filter(
             )
         )
     )
-    movie_regions_dict = defaultdict(list)
+    movie_regions_dict = defaultdict(set)
+    used_regions = set()
     for movie_region in movie_regions_query.all():
-        movie_regions_dict[movie_region.movie_id] += [movie_region]
+        movie_regions_dict[movie_region.movie_id].add(movie_region)
+        used_regions.add(movie_region.region)
 
     # preload all necessary movie languages
     movie_languages_query = (
@@ -272,7 +271,18 @@ def get_movies_based_on_filter(
     for mov_lang in movie_languages_query.all():
         movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
 
-    profiler.start_section("movie_processing")
+    tmdb_regions: List[TmdbRegion] = TmdbRegion.query.filter(
+        TmdbRegion.code.in_(used_regions)
+    ).all()
+    tmdb_regions_dict: Dict[str, Dict[str, Any]] = {
+        r.code: r.to_dict() for r in tmdb_regions
+    }
+    region_flag_dict = {
+        r.code: get_region_flag(r.code)
+        for r in tmdb_regions
+        if get_region_flag(r.code)
+    }
+
     result = []
     for movie_tuple in results:
         movie, main_region_info, user_movie = movie_tuple
@@ -290,10 +300,10 @@ def get_movies_based_on_filter(
         all_release_dates = [
             {
                 "region": ri.region,
-                "region_info": tmdb_regions_dict.get(ri.region).to_dict(),
+                "region_info": tmdb_regions_dict.get(ri.region),
                 "date": ri.release_date,
                 "date_pretty": fmt_date(ri.release_date),
-                "flag": get_region_flag(ri.region),
+                "flag": region_flag_dict.get(ri.region),
             }
             for ri in movie_regions_dict[movie.id]
         ]
