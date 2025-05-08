@@ -31,7 +31,7 @@ class TmdbRegion(db.Model):
             updated = True
         return updated
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "code": self.code,
