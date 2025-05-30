@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 from app.extensions import db
 
 
