@@ -35,9 +35,7 @@ def register_user(data):
     email = data.get("email")
     password = data.get("password")
 
-    if User.query.filter(
-        (User.username == username) | (User.email == email)
-    ).first():
+    if User.query.filter((User.username == username) | (User.email == email)).first():
         raise UserFeedbackError("Username or email already exists.")
 
     hashed_password = generate_password_hash(password)
@@ -70,9 +68,7 @@ def generate_confirmation_token(user):
 
 def confirm_user_email(token):
     try:
-        data = jwt.decode(
-            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user = User.query.get(data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
@@ -93,9 +89,7 @@ def hash_password(password: str) -> str:
 
 def reset_user_password(token, new_password):
     try:
-        data = jwt.decode(
-            token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user_id = data.get("reset_password")
         reset_token = data.get("token")
         if not user_id or not reset_token:
@@ -140,6 +134,7 @@ def get_movies_based_on_filter(
     mode: str,
     need_imdb: bool = False,
     need_poster: bool = False,
+    name_filter: str = None,
     min_release_date=None,
     min_movie_id=None,
     limit: int = 20,
@@ -195,13 +190,29 @@ def get_movies_based_on_filter(
         )
         query = query.filter(MovieRegionInfo.release_date >= min_release_date)
     elif min_release_date or min_movie_id:
-        raise ValueError(
-            "min_release_date and min_movie_id can only be used together"
-        )
+        raise ValueError("min_release_date and min_movie_id can only be used together")
 
     # Apply other filters
     if need_imdb:
         query = query.filter(Movie.imdb_id.isnot(None))
+
+    # Apply name filter to the SQL query
+    if name_filter and name_filter.strip():
+        name_filter_value = f"%{name_filter.lower()}%"
+        query = query.join(
+            MovieLangInfo,
+            db.and_(
+                MovieLangInfo.movie_id == Movie.id,
+                MovieLangInfo.language == language,
+            ),
+            isouter=True,
+        )
+        query = query.filter(
+            db.or_(
+                func.lower(MovieLangInfo.title).like(name_filter_value),
+                func.lower(Movie.original_title).like(name_filter_value),
+            )
+        )
 
     # Apply mode filters
     if mode != "all":
@@ -288,9 +299,7 @@ def get_movies_based_on_filter(
         movie, main_region_info, user_movie = movie_tuple
 
         # Get language info
-        lang_info = movie.get_localized_data(
-            language, movie_languages_dict[movie.id]
-        )
+        lang_info = movie.get_localized_data(language, movie_languages_dict[movie.id])
         if not lang_info:
             continue
 
@@ -336,9 +345,9 @@ def get_movies_based_on_filter(
 
     return {
         "movies": result,
-        "next_release_date": next_release_date.isoformat()
-        if next_release_date
-        else None,
+        "next_release_date": (
+            next_release_date.isoformat() if next_release_date else None
+        ),
         "next_movie_id": next_movie_id,
         "has_more": has_more,
     }
@@ -406,9 +415,7 @@ def fetch_user_events(
         if not lang_info or not region_info:
             continue
 
-        start_datetime = datetime.combine(
-            region_info.release_date, datetime.min.time()
-        )
+        start_datetime = datetime.combine(region_info.release_date, datetime.min.time())
 
         movie = Movie.query.get(user_movie.movie_id)
 
@@ -512,8 +519,6 @@ def queue_confirmation_mail(user: User):
     # If so, check how often to avoid abuse
     for seconds, limit in rate_limits.items():
         if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
-            raise UserFeedbackError(
-                "Too many confirmation mails sent to this address."
-            )
+            raise UserFeedbackError("Too many confirmation mails sent to this address.")
 
     queue_email(user, "confirm")

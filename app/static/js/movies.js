@@ -26,7 +26,10 @@ CineTagIt.Movies = {
                 nextMovieId: null,
                 hasMore: false,
                 isLoading: false,
-                movies: []
+                movies: [],
+                filters: {
+                    name: ''
+                }
             });
 
             this.fetchMovies(container);
@@ -41,6 +44,20 @@ CineTagIt.Movies = {
                 this.handleDecision(event);
             }
         });
+
+        // Add event listeners for filters
+        const nameFilter = document.getElementById('name-filter');
+
+        if (nameFilter) {
+            // Debounce function to delay filtering while typing
+            let nameFilterTimeout;
+            nameFilter.addEventListener('input', () => {
+                clearTimeout(nameFilterTimeout);
+                nameFilterTimeout = setTimeout(() => {
+                    this.applyFilters();
+                }, 500); // 500ms delay
+            });
+        }
     },
 
     /**
@@ -89,6 +106,13 @@ CineTagIt.Movies = {
 
             if (minMovieId) {
                 params.append('min_movie_id', minMovieId);
+            }
+
+            // Add filter parameters
+            const filters = state.filters || {name: ''};
+
+            if (filters.name) {
+                params.append('name', filters.name);
             }
 
             // Add params to URL if any exist
@@ -269,9 +293,33 @@ CineTagIt.Movies = {
     },
 
     /**
-     * Handle the decision for a movie
-     * @param {Event} event - The click event
+     * Apply filters to all movie containers
      */
+    applyFilters: function () {
+        // Get filter values
+        const nameFilter = document.getElementById('name-filter')?.value || '';
+
+        // Update all containers with new filters
+        document.querySelectorAll(".movie-container").forEach(container => {
+            const state = this.containerState.get(container);
+            if (state) {
+                // Update filter state
+                state.filters = {
+                    name: nameFilter
+                };
+
+                // Reset pagination
+                state.nextReleaseDate = null;
+                state.nextMovieId = null;
+                state.hasMore = false;
+                state.isLoading = false;
+
+                // Fetch movies with new filters
+                this.fetchMovies(container);
+            }
+        });
+    },
+
     handleDecision: function (event) {
         const movieId = event.target.getAttribute('data-movie-id');
         const movieElement = document.getElementById(`movie-${movieId}`);

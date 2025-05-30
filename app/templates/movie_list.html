@@ -20,6 +20,13 @@
 
 {% block content %}
     <h2>{{ title }}</h2>
+
+    <div class="movie-filters">
+        <div class="filter-group">
+            <input type="text" id="name-filter" placeholder="Filter by name..." class="form-control">
+        </div>
+    </div>
+
     <div class="movie-container movie-grid movie-grid-{{ filter_mode }}" data-filter-mode="{{ filter_mode }}">
         <!-- Movies will be dynamically loaded here -->
     </div>

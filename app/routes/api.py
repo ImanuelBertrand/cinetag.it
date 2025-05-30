@@ -86,8 +86,10 @@ def get_movies_api(filter_mode):
     user = get_current_user()
 
     try:
+        # Get filter parameters
         need_imdb = True  # TODO toggle in user settings
         need_poster = True  # TODO toggle in user settings
+        name_filter = request.args.get("name", "")
 
         # Get pagination parameters
         min_release_date = request.args.get("min_release_date")
@@ -110,6 +112,7 @@ def get_movies_api(filter_mode):
             filter_mode,
             need_imdb,
             need_poster,
+            name_filter=name_filter,
             min_release_date=min_release_date,
             min_movie_id=min_movie_id,
             limit=limit,
