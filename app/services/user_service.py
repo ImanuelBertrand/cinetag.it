@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
-from app.extensions import db, bcrypt
+from app.extensions import db, bcrypt, cache
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo
@@ -126,6 +126,19 @@ def get_user_movie_ids(user: User, decision: str = None):
         user_movies_query = user_movies_query.filter_by(decision=decision)
 
     return user_movies_query
+
+
+@cache.cached(timeout=86400)
+def get_all_tmdb_regions_data_dict() -> Dict[str, Dict[str, Any]]:
+    return {region.code: region.to_dict() for region in TmdbRegion.query.all()}
+
+
+@cache.cached(timeout=86400)
+def get_all_region_flags() -> Dict[str, str]:
+    return {
+        region.code: get_region_flag(region.code)
+        for region in TmdbRegion.query.all()
+    }
 
 
 @profile_function
@@ -282,15 +295,8 @@ def get_movies_based_on_filter(
     for mov_lang in movie_languages_query.all():
         movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
 
-    tmdb_regions: List[TmdbRegion] = TmdbRegion.query.filter(
-        TmdbRegion.code.in_(used_regions)
-    ).all()
-    tmdb_regions_dict: Dict[str, Dict[str, Any]] = {
-        r.code: r.to_dict() for r in tmdb_regions
-    }
-    region_flag_dict = {
-        r.code: get_region_flag(r.code) for r in tmdb_regions if get_region_flag(r.code)
-    }
+    tmdb_regions_dict = get_all_tmdb_regions_data_dict()
+    region_flag_dict = get_all_region_flags()
 
     result = []
     for movie_tuple in results:
