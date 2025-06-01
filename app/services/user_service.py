@@ -289,9 +289,7 @@ def get_movies_based_on_filter(
         r.code: r.to_dict() for r in tmdb_regions
     }
     region_flag_dict = {
-        r.code: get_region_flag(r.code)
-        for r in tmdb_regions
-        if get_region_flag(r.code)
+        r.code: get_region_flag(r.code) for r in tmdb_regions if get_region_flag(r.code)
     }
 
     result = []
