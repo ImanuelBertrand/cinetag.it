@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import defaultdict
 from functools import wraps
 
 _logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class Profiler:
         self.name = name
         self.log_level = log_level
         self.start_time = None
-        self.sections = {}
+        self.sections = defaultdict(float)
         self.current_section = None
         self.section_start_time = None
         self.is_running = False
@@ -111,6 +112,6 @@ class Profiler:
             return self
 
         duration = time.time() - self.section_start_time
-        self.sections[self.current_section] = duration
+        self.sections[self.current_section] += duration
         self.current_section = None
         return self
