@@ -28,7 +28,7 @@ def test_registration_flow(client, app) -> None:
         import time
 
         registration_data = {
-            "name": "New User",
+            "display_name": "New User",
             "email": "newuser@example.com",
             "password": "securepassword123",
             "website": "",  # Honeypot
@@ -47,7 +47,7 @@ def test_registration_flow(client, app) -> None:
     with app.app_context():
         user = User.query.filter_by(new_email="newuser@example.com").first()
         assert user is not None
-        assert user.name == "New User"
+        assert user.display_name == "New User"
         assert user.email is None  # Not confirmed yet
         assert bcrypt.check_password_hash(user.password, "securepassword123")
 
@@ -55,7 +55,7 @@ def test_registration_flow(client, app) -> None:
 def test_registration_honeypot(client, app) -> None:
     """Test that the honeypot field blocks registration."""
     registration_data = {
-        "name": "Bot User",
+        "display_name": "Bot User",
         "email": "bot@example.com",
         "password": "somepassword",
         "website": "http://evil.com",  # Honeypot filled
@@ -77,7 +77,7 @@ def test_login_logout_flow(client, app) -> None:
     # 1. Create a user first
     with app.app_context():
         hashed_pw = bcrypt.generate_password_hash("password123").decode("utf-8")
-        user = User(name="Login User", email="login@example.com", password=hashed_pw)
+        user = User(display_name="Login User", email="login@example.com", password=hashed_pw)
         db.session.add(user)
         db.session.commit()
 
@@ -106,7 +106,7 @@ def test_email_confirmation(client, app) -> None:
     """Test the email confirmation process."""
     # 1. Create a user with a new_email
     with app.app_context():
-        user = User(name="Confirm User", new_email="confirm@example.com")
+        user = User(display_name="Confirm User", new_email="confirm@example.com")
         db.session.add(user)
         db.session.commit()
         user_id = user.id
@@ -138,7 +138,7 @@ def test_password_reset_flow(client, app) -> None:
     # 1. Create a user
     with app.app_context():
         user = User(
-            name="Reset User",
+            display_name="Reset User",
             email="reset@example.com",
             password="oldpassword",  # noqa: S106
         )

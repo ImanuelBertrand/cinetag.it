@@ -36,6 +36,14 @@
         </div>
     </div>
     <div class="dropdown hoverable">
+        <a href="#" class="dropbtn">Friends</a>
+        <div class="dropdown-content">
+            <a href="{{ url_for('html.friends_list') }}">My Friends</a>
+            <a href="{{ url_for('html.friend_requests') }}">Friend Requests</a>
+            <a href="{{ url_for('html.add_friend') }}">Add Friend</a>
+        </div>
+    </div>
+    <div class="dropdown hoverable">
         <a href="#" class="dropbtn">About</a>
         <div class="dropdown-content">
             <a href="{{ url_for('html.why') }}">Why?</a>

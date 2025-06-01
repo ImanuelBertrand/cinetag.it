@@ -12,6 +12,8 @@ from app.cli import register_cli
 from app.config import config_by_name
 from app.extensions import init_extensions
 from app.models.allowed_refresh_token import AllowedRefreshToken  # noqa F401
+from app.models.friend_request import FriendRequest  # noqa F401
+from app.models.friendship import Friendship  # noqa F401
 from app.models.misc_data import MiscData  # noqa F401
 from app.models.movie import Movie  # noqa F401
 from app.models.movie_language_info import MovieLanguageInfo  # noqa F401
@@ -27,6 +29,7 @@ from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
 from app.routes.api import api as api_blueprint
+from app.routes.friend_api import friend_api as friend_api_blueprint
 from app.routes.html import html as html_blueprint
 from app.scheduler import setup_cron_jobs
 from app.utils.auth import authenticate_request
@@ -87,6 +90,7 @@ def create_app(config_name, start_scheduler=False):
 
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")
+    app.register_blueprint(friend_api_blueprint, url_prefix="/api/friends")
 
     if start_scheduler:
         _logger.info("Starting scheduler in server mode")

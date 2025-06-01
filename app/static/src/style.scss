@@ -672,6 +672,134 @@ ul.release-list li {
   }
 }
 
+/* Friends List Styles */
+.friends-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.friend-card,
+.request-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  background-color: $gunmetal-gray;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.friend-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: $neon-blue;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  color: white;
+  font-weight: bold;
+}
+
+.friend-info,
+.request-info {
+  flex-grow: 1;
+}
+
+.friend-name {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.friend-since,
+.request-date {
+  font-size: 0.9em;
+  color: darken($steel-gray, 20%);
+}
+
+.friend-actions,
+.request-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Friend Requests Styles */
+.request-card {
+  border-left: 4px solid $neon-blue;
+}
+
+/* Add Friend Styles */
+.friend-code-container {
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.friend-code {
+  padding: 10px;
+  background-color: $gunmetal-gray;
+  border-radius: 4px;
+  margin-right: 10px;
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+.section {
+  margin-bottom: 30px;
+}
+
+/* Friends Filter Styles */
+.friends-filter-select {
+  width: 100%;
+  max-width: 400px;
+}
+
+.filter-section {
+  margin-bottom: 10px;
+}
+
+.filter-option {
+  margin-bottom: 20px;
+}
+
+/* Friend Rating Indicators on Movie Cards */
+.friend-rating {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.friend-rating .rating-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.all-approve .rating-icon {
+  background-color: #4caf50;
+}
+
+.all-maybe .rating-icon {
+  background-color: #ffc107;
+}
+
+.mixed-rating .rating-icon {
+  background: linear-gradient(135deg, #4caf50 50%, #ffc107 50%);
+}
+
+.rating-count {
+  color: white;
+  font-size: 12px;
+}
+
 .movie-filters {
   display: flex;
   flex-wrap: wrap;

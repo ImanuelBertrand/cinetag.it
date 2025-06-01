@@ -18,6 +18,10 @@ CineTagIt.Movies = {
   init: function () {
     const movieContainers = document.querySelectorAll(".movie-container");
 
+    // Get friend_id from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const friendId = urlParams.get("friend_id");
+
     // Fetch movies for each container
     movieContainers.forEach((container) => {
       // Initialize state for this container
@@ -29,6 +33,7 @@ CineTagIt.Movies = {
         movies: [],
         filters: {
           name: "",
+          friendId: friendId,
         },
       });
 
@@ -109,10 +114,14 @@ CineTagIt.Movies = {
       }
 
       // Add filter parameters
-      const filters = state.filters || { name: "" };
+      const filters = state.filters || { name: "", friendId: null };
 
       if (filters.name) {
         params.append("name", filters.name);
+      }
+
+      if (filters.friendId) {
+        params.append("friend_id", filters.friendId);
       }
 
       // Add params to URL if any exist
@@ -120,14 +129,30 @@ CineTagIt.Movies = {
         url += `?${params.toString()}`;
       }
 
+      console.log(`Fetching movies from ${url}`);
       const response = await fetch(url);
       const data = await response.json();
+      console.log("API response:", data);
 
       if (data.success) {
         // Update state with new pagination data
         state.nextReleaseDate = data.next_release_date;
         state.nextMovieId = data.next_movie_id;
         state.hasMore = data.has_more;
+
+        // Update friend filter UI if friend info is available
+        if (data.friend && state.filters.friendId) {
+          // Look for the friend filter span in the filter bar first, then anywhere in the document
+          const filterBar = document.querySelector(".movie-filters");
+          let friendFilterSpan = filterBar ? filterBar.querySelector(".friend-filter span") : null;
+          if (!friendFilterSpan) {
+            friendFilterSpan = document.querySelector(".friend-filter span");
+          }
+
+          if (friendFilterSpan) {
+            friendFilterSpan.textContent = `Showing movies approved by ${data.friend.name}`;
+          }
+        }
 
         // If this is the first load, replace the container content
         // Otherwise, append the new movies
@@ -142,7 +167,18 @@ CineTagIt.Movies = {
       } else {
         if (!minReleaseDate && !minMovieId) {
           // Only show error on initial load
-          movieContainer.innerHTML = `<p>${data.error || "Error fetching movies."}</p>`;
+          // Create an error message element instead of using innerHTML
+          const errorMessage = document.createElement("p");
+          errorMessage.textContent = data.error || "Error fetching movies.";
+
+          // Clear the container first
+          movieContainer.innerHTML = "";
+
+          // Add the error message
+          movieContainer.appendChild(errorMessage);
+
+          // Log the error for debugging
+          console.error("API returned error:", data.error);
         }
       }
 
@@ -151,7 +187,18 @@ CineTagIt.Movies = {
       console.error("Error fetching movies:", error);
       if (!minReleaseDate && !minMovieId) {
         // Only show error on initial load
-        movieContainer.innerHTML = `<p>Error fetching movies. Please try again later.</p>`;
+        // Create an error message element instead of using innerHTML
+        const errorMessage = document.createElement("p");
+        errorMessage.textContent = "Error fetching movies. Please try again later.";
+
+        // Clear the container first
+        movieContainer.innerHTML = "";
+
+        // Add the error message
+        movieContainer.appendChild(errorMessage);
+
+        // Log the detailed error for debugging
+        console.error("Fetch error details:", error);
       }
 
       const state = this.containerState.get(movieContainer);
@@ -189,6 +236,60 @@ CineTagIt.Movies = {
    * @param {boolean} append - Whether to append or replace the content
    */
   renderMovies: function (movieContainer, movies, append = false) {
+    console.log(`renderMovies called with ${movies.length} movies, append=${append}`);
+
+    // Check if we need to display a friend filter
+    let state = this.containerState.get(movieContainer);
+    console.log("Current state:", state);
+
+    if (state && state.filters.friendId && !append) {
+      console.log(`Friend filter needed for friend_id=${state.filters.friendId}`);
+
+      // Check if we already have friend info from the API response
+      const friendFilterDiv = document.querySelector(".friend-filter");
+      console.log("Existing friend filter:", friendFilterDiv);
+
+      if (!friendFilterDiv) {
+        console.log("Creating new friend filter");
+
+        // Create friend filter UI
+        const friendFilterContainer = document.createElement("div");
+        friendFilterContainer.className = "friend-filter";
+
+        // We'll update this with the friend's name when we get the API response
+        friendFilterContainer.innerHTML = `
+                    <span>Showing movies approved by friend</span>
+                    <button class="remove-friend-filter">×</button>
+                `;
+
+        // Add click handler to remove filter
+        friendFilterContainer
+          .querySelector(".remove-friend-filter")
+          .addEventListener("click", () => {
+            // Remove friend_id from URL and reload
+            const url = new URL(window.location);
+            url.searchParams.delete("friend_id");
+            window.location.href = url.toString();
+          });
+
+        // Insert into the filter bar
+        const filterBar = document.querySelector(".movie-filters");
+        console.log("Filter bar element:", filterBar);
+
+        if (filterBar) {
+          console.log("Adding friend filter to filter bar");
+          // Create a filter group for the friend filter
+          const filterGroup = document.createElement("div");
+          filterGroup.className = "filter-group";
+          filterGroup.appendChild(friendFilterContainer);
+          filterBar.appendChild(filterGroup);
+        } else {
+          console.log("Filter bar not found, adding friend filter before movie container");
+          // Fallback: insert before the movie container
+          movieContainer.parentNode.insertBefore(friendFilterContainer, movieContainer);
+        }
+      }
+    }
     const moviesHtml = movies
       .map((movie) => {
         const decisionClass = movie.decision ? `decided decided-${movie.decision}` : "";
@@ -230,7 +331,7 @@ CineTagIt.Movies = {
     }
 
     // Add a "Load More" button if there are more movies to load
-    const state = this.containerState.get(movieContainer);
+    state = this.containerState.get(movieContainer);
 
     // Remove any existing loading indicators
     const existingIndicator = movieContainer.querySelector(".loading-indicator");
@@ -260,7 +361,15 @@ CineTagIt.Movies = {
 
       // If no movies were found, show a message
       if (state.movies.length === 0) {
-        movieContainer.innerHTML = "<p>No movies found.</p>";
+        // Create a message element instead of using innerHTML to avoid overwriting the friend filter
+        const noMoviesMessage = document.createElement("p");
+        noMoviesMessage.textContent = "No movies found.";
+
+        // Clear the container first
+        movieContainer.innerHTML = "";
+
+        // Add the message
+        movieContainer.appendChild(noMoviesMessage);
       }
     }
   },
@@ -303,6 +412,10 @@ CineTagIt.Movies = {
     // Get filter values
     const nameFilter = document.getElementById("name-filter")?.value || "";
 
+    // Get friend_id from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const friendId = urlParams.get("friend_id");
+
     // Update all containers with new filters
     document.querySelectorAll(".movie-container").forEach((container) => {
       const state = this.containerState.get(container);
@@ -310,6 +423,7 @@ CineTagIt.Movies = {
         // Update filter state
         state.filters = {
           name: nameFilter,
+          friendId: friendId,
         };
 
         // Reset pagination

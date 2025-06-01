@@ -12,6 +12,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 
 from app.errors import UserFeedbackError
 from app.extensions import bcrypt, cache, db
+from app.models.friendship import Friendship
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo
@@ -147,6 +148,7 @@ def _build_movies_query(
     need_imdb: bool,
     name_filter: str | None,
     mode: str,
+    friend_id: int | None = None,
 ):
     query = (
         db.session.query(Movie, MovieRegionInfo, UserMovie)
@@ -163,6 +165,27 @@ def _build_movies_query(
         )
         .filter(MovieRegionInfo.release_date >= datetime.now(UTC).date())
     )
+
+    # Check if friend_id is provided and valid
+    friend_user_movie_alias = None
+    if friend_id:
+        # Verify that the friendship exists
+        friendship = Friendship.get_friendship(user.id, friend_id)
+        if not friendship:
+            raise UserFeedbackError("Friend not found or friendship does not exist.")
+
+        # Create an alias for the friend's UserMovie table
+        friend_user_movie_alias = db.aliased(UserMovie)
+
+    # Join with friend's UserMovie table if friend_id is provided
+    if friend_id and friend_user_movie_alias:
+        query = query.outerjoin(
+            friend_user_movie_alias,
+            db.and_(
+                friend_user_movie_alias.movie_id == Movie.id,
+                friend_user_movie_alias.user_id == friend_id,
+            ),
+        )
 
     # Apply pagination filter
     if min_release_date and min_movie_id:
@@ -203,16 +226,25 @@ def _build_movies_query(
             )
         )
 
-    # Apply mode filters
-    if mode != "all":
-        if mode == "approved":
-            query = query.filter(UserMovie.decision == "approve")
-        elif mode == "disapproved":
-            query = query.filter(UserMovie.decision == "disapprove")
-        elif mode == "maybe":
-            query = query.filter(UserMovie.decision == "maybe")
-        elif mode == "pending":
-            query = query.filter(UserMovie.movie_id.is_(None))
+    # Apply friend filter if friend_id is provided
+    if friend_id and friend_user_movie_alias:
+        # Only show movies that the friend has approved
+        query = query.filter(friend_user_movie_alias.decision == "approve")
+        # Log the query for debugging
+        _logger.info("Applied friend filter for friend_id=%s", friend_id)
+    else:
+        # Apply mode filters only if not using friend filter
+        # When using friend filter, we want to show all movies the friend has approved
+        if mode != "all":
+            if mode == "approved":
+                query = query.filter(UserMovie.decision == "approve")
+            elif mode == "disapproved":
+                query = query.filter(UserMovie.decision == "disapprove")
+            elif mode == "maybe":
+                query = query.filter(UserMovie.decision == "maybe")
+            elif mode == "pending":
+                query = query.filter(UserMovie.movie_id.is_(None))
+
     return query
 
 
@@ -324,6 +356,7 @@ def get_movies_based_on_filter(
     min_release_date=None,
     min_movie_id=None,
     limit: int = 20,
+    friend_id: int | None = None,
 ) -> dict[str, Any]:
     profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
     profiler.start()
@@ -354,6 +387,7 @@ def get_movies_based_on_filter(
         need_imdb,
         name_filter,
         mode,
+        friend_id,
     )
 
     # Order by release date for consistent pagination
@@ -403,7 +437,7 @@ def get_movies_based_on_filter(
     # Stop the profiler before returning
     profiler.stop()
 
-    return {
+    response = {
         "movies": result,
         "next_release_date": (
             next_release_date.isoformat() if next_release_date else None
@@ -411,6 +445,17 @@ def get_movies_based_on_filter(
         "next_movie_id": next_movie_id,
         "has_more": has_more,
     }
+
+    # Add friend information if friend_id was provided
+    if friend_id:
+        friend = db.session.get(User, friend_id)
+        if friend:
+            response["friend"] = {
+                "id": friend.id,
+                "name": friend.display_name or "Friend",
+            }
+
+    return response
 
 
 def _get_user_movies(

@@ -65,7 +65,7 @@ def test_user(app):
 
         unique_id = str(uuid.uuid4())[:8]
         user = User(
-            name="Test User",
+            display_name="Test User",
             email=f"test{unique_id}@example.com",
             region="US",
             language="en",

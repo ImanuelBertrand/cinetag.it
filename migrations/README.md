@@ -52,6 +52,15 @@ The initial migration creates all the core tables for the CineTagIt application:
 13. `user_email_queue` - For queuing emails to be sent to users
 14. `sent_confirmation_mails` - For tracking sent confirmation emails
 
+### Friends Feature Migration (`01_add_friends_feature.py`)
+
+The second migration adds support for the friends feature:
+
+1. Adds `display_name` and `friend_code` columns to the `users` table
+2. Creates the `friend_requests` table for managing friend requests
+3. Creates the `friendships` table for storing established friendships
+4. Generates friend codes for existing users with email addresses
+
 ## Important Notes
 
 - Always back up your database before running migrations in production

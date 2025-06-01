@@ -169,7 +169,6 @@ def register_post(user: User):
         return None
 
     user.new_email = email
-    user.name = data.get("name")
     user.password = hash_password(password)
     queue_confirmation_mail(user)
 
@@ -451,7 +450,7 @@ def profile():
         db.session.commit()
 
     form_data = defaultdict(str)
-    form_data["name"] = user.name or ""
+    form_data["display_name"] = user.display_name or ""
     form_data["language"] = user.language or ""
     form_data["region"] = user.region or ""
     form_data["email"] = user.email or ""
@@ -765,6 +764,24 @@ def get_movie_details(movie_id):
         _logger.exception("Error fetching movie details.")
         flash("Error fetching movie details.", "danger")
         return redirect(url_for("html.profile"))
+
+
+@html.route("/friends", methods=["GET"])
+def friends_list():
+    get_current_user()
+    return render_template("friends_list.html")
+
+
+@html.route("/friends/requests", methods=["GET"])
+def friend_requests():
+    get_current_user()
+    return render_template("friend_requests.html")
+
+
+@html.route("/friends/add", methods=["GET"])
+def add_friend():
+    get_current_user()
+    return render_template("add_friend.html")
 
 
 @html.route("/release-dates", methods=["GET"])

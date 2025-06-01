@@ -85,11 +85,19 @@ def get_movies_api(filter_mode):
         need_imdb = True  # TODO toggle in user settings
         need_poster = True  # TODO toggle in user settings
         name_filter = request.args.get("name", "")
+        friend_id = request.args.get("friend_id")
 
         # Get pagination parameters
         min_release_date = request.args.get("min_release_date")
         min_movie_id = request.args.get("min_movie_id")
         limit = int(request.args.get("limit", 50))
+
+        # Convert friend_id to int if provided
+        if friend_id:
+            try:
+                friend_id = int(friend_id)
+            except ValueError:
+                return jsonify({"success": False, "error": "Invalid friend ID."})
 
         # Convert min_release_date to datetime if provided
         min_release_date_val: date | None = None
@@ -115,17 +123,23 @@ def get_movies_api(filter_mode):
             min_release_date=min_release_date_val,
             min_movie_id=min_movie_id_val,
             limit=limit,
+            friend_id=friend_id,
         )
 
-        result = jsonify(
-            {
-                "success": True,
-                "movies": result["movies"],
-                "next_release_date": result["next_release_date"],
-                "next_movie_id": result["next_movie_id"],
-                "has_more": result["has_more"],
-            }
-        )
+        # Prepare response
+        response = {
+            "success": True,
+            "movies": result["movies"],
+            "next_release_date": result["next_release_date"],
+            "next_movie_id": result["next_movie_id"],
+            "has_more": result["has_more"],
+        }
+
+        # Add friend information if available
+        if "friend" in result:
+            response["friend"] = result["friend"]
+
+        result = jsonify(response)
     except UserFeedbackError as e:
         return jsonify({"success": False, "error": str(e)})
     except Exception:

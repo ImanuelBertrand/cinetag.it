@@ -1,0 +1,15 @@
+{% extends "_base.html" %}
+
+{% block title %}My Friends{% endblock %}
+
+{% block content %}
+<h2>My Friends</h2>
+
+<div class="friends-container">
+    <div id="friends-list-container">
+        <p>Loading friends list...</p>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/friends.js') }}"></script>
+{% endblock %}

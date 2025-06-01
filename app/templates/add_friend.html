@@ -1,0 +1,33 @@
+{% extends "_base.html" %}
+
+{% block title %}Add Friend{% endblock %}
+
+{% block content %}
+<h2>Add Friend</h2>
+
+<div class="friends-container">
+    <div id="add-friend-container">
+        <div class="section">
+            <h3>Your Friend Code</h3>
+            <p>Share this code with friends who want to add you:</p>
+            <div class="friend-code-container">
+                <div id="friend-code" class="friend-code">Loading...</div>
+                <button id="copy-friend-code" class="copy-button" data-clipboard-target="#friend-code">Copy</button>
+                <button id="reset-friend-code" class="post-button" data-url="/api/friends/code/reset">Reset Code</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Add a Friend</h3>
+            <p>Enter your friend's code to send them a friend request:</p>
+            <div class="form-row">
+                <label for="friend-code-input">Friend Code:</label>
+                <input type="text" id="friend-code-input" placeholder="e.g., happy-dog-jumps-fence">
+            </div>
+            <button id="send-request-button">Send Friend Request</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/friends.js') }}"></script>
+{% endblock %}
