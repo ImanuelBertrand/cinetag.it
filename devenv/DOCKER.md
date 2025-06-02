@@ -1,8 +1,8 @@
-# Docker Setup for CineTagIt
+# Docker Setup for cinetagit
 
-This file provides instructions for setting up and using the Docker environment for CineTagIt.
+This file provides instructions for setting up and using the Docker environment for cinetagit.
 
-This directory contains the Docker setup for the CineTagIt application. It includes:
+This directory contains the Docker setup for the cinetagit application. It includes:
 
 - A docker-compose.yml file for orchestrating the services
 - A Dockerfile for building the application image
@@ -41,9 +41,9 @@ cd devenv
 
 Both methods will start all the services in detached mode.
 
-### 2. Initialize the database
+### 2. Initialize the database with migrations
 
-You can initialize the database in one of two ways:
+You can initialize the database using migrations in one of two ways:
 
 From the project root directory:
 ```bash
@@ -56,13 +56,33 @@ cd devenv
 ./docker-init-db.sh
 ```
 
-This will create all the necessary database tables.
+This will run all database migrations to create and update the necessary database tables. The migration-based approach ensures that your database schema is always up-to-date with the latest changes.
 
-### 3. Access the application
+### 3. Working with migrations
+
+cinetagit now uses Flask-Migrate (based on Alembic) for database migrations. A new script has been added to help you work with migrations:
+
+```bash
+# Apply all migrations (same as docker-init-db.sh)
+./devenv/docker-migrate.sh
+
+# Create a new migration
+./devenv/docker-migrate.sh migrate -m "Description of changes"
+
+# Show migration history
+./devenv/docker-migrate.sh history
+
+# Downgrade to the previous version
+./devenv/docker-migrate.sh downgrade
+```
+
+This script allows you to run any Flask migration command inside the Docker container.
+
+### 4. Access the application
 
 The application will be available at http://localhost:5000
 
-### 4. Access MailHog
+### 5. Access MailHog
 
 MailHog provides a web interface for viewing emails sent by the application. It's available at http://localhost:8025
 
@@ -101,7 +121,7 @@ The Docker environment uses a specific configuration file located at `devenv/doc
 
 ## Known Issues
 
-- The database will be empty after initialization. You'll need to run migrations to set up the database schema and add initial data.
+- None currently. The database is automatically initialized with the correct schema using migrations.
 
 ## Troubleshooting
 
@@ -111,36 +131,36 @@ If you encounter any issues with the Docker setup, try the following:
 
    From the devenv directory:
    ```bash
-   docker-compose -p CineTagIt logs app
-   docker-compose -p CineTagIt logs db
-   docker-compose -p CineTagIt logs redis
-   docker-compose -p CineTagIt logs mailhog
+   docker-compose -p cinetagit logs app
+   docker-compose -p cinetagit logs db
+   docker-compose -p cinetagit logs redis
+   docker-compose -p cinetagit logs mailhog
    ```
 
 2. Restart the services:
 
    From the devenv directory:
    ```bash
-   docker-compose -p CineTagIt restart
+   docker-compose -p cinetagit restart
    ```
 
 3. Rebuild the services:
 
    From the devenv directory:
    ```bash
-   docker-compose -p CineTagIt build
+   docker-compose -p cinetagit build
    ```
 
 4. Remove the volumes and start from scratch:
 
    ```bash
    # From the devenv directory:
-   docker-compose -p CineTagIt down -v
+   docker-compose -p cinetagit down -v
    ./docker-start.sh
    ./docker-init-db.sh
 
    # Or from the project root:
-   cd devenv && docker-compose -p CineTagIt down -v
+   cd devenv && docker-compose -p cinetagit down -v
    ./devenv/docker-start.sh
    ./devenv/docker-init-db.sh
    ```

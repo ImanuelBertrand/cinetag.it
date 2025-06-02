@@ -2,12 +2,11 @@
 
 # Start the Docker containers
 echo "Starting Docker containers..."
-cd $(dirname "$0")
-docker-compose -p CineTagIt up -d
+docker-compose -p cinetagit up -d
 
 # Print information about the running containers
 echo "Docker containers are running:"
-docker-compose -p CineTagIt ps
+docker-compose -p cinetagit ps
 
 echo "You can access the application at http://localhost:5000"
 echo "You can access the MailHog UI at http://localhost:8025"

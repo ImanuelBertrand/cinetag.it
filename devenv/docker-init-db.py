@@ -1,6 +1,6 @@
 """
 Initialize the database for the Docker environment.
-This script creates all the tables in the database using SQLAlchemy's create_all() method.
+This script runs database migrations using Flask-Migrate to set up or update the database schema.
 """
 
 import os
@@ -10,11 +10,11 @@ os.environ["CONFIG_FILE"] = "../devenv/docker-config.yaml"
 
 # Import the application
 from app.create_app import create_app
-from app.extensions import db
+from flask_migrate import upgrade
 
 
 def init_db():
-    """Initialize the database by creating all tables."""
+    """Initialize the database by running migrations."""
     print("Initializing database...")
 
     # Create the Flask application with the development configuration
@@ -22,9 +22,9 @@ def init_db():
 
     # Push an application context
     with app.app_context():
-        # Create all tables
-        db.create_all()
-        print("Database tables created successfully.")
+        # Run database migrations
+        upgrade()
+        print("Database migrations applied successfully.")
 
 
 if __name__ == "__main__":

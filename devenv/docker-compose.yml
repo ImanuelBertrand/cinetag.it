@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    container_name: CineTagIt-dev-env
+    container_name: cinetagit-dev-env
     build:
       context: ..
       dockerfile: devenv/Dockerfile
@@ -24,7 +24,7 @@ services:
         condition: service_started
 
   db:
-    container_name: CineTagIt-db
+    container_name: cinetagit-db
     image: mariadb:11
     ports:
       - "3306:3306"
@@ -42,7 +42,7 @@ services:
       retries: 5
 
   redis:
-    container_name: CineTagIt-redis
+    container_name: cinetagit-redis
     image: redis:6.2-alpine
     ports:
       - "6379:6379"
@@ -50,7 +50,7 @@ services:
       - redis_data:/data
 
   mailhog:
-    container_name: CineTagIt-mailhog
+    container_name: cinetagit-mailhog
     image: mailhog/mailhog
     ports:
       - "8025:8025"  # Web UI
