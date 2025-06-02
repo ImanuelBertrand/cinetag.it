@@ -64,4 +64,14 @@ class ProductionConfig(Config):
     DEBUG = False
 
 
-config_by_name = {"development": DevelopmentConfig, "production": ProductionConfig}
+class TestingConfig(Config):
+    JWT_COOKIE_SECURE = False
+    DEBUG = True
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # Disable scheduler for testing
+    SCHEDULER_API_ENABLED = False
+    SCHEDULER_ENABLED = False
+
+
+config_by_name = {"development": DevelopmentConfig, "production": ProductionConfig, "testing": TestingConfig}

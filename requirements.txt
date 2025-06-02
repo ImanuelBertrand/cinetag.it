@@ -24,6 +24,7 @@ natsort
 pillow
 py-vapid
 pywebpush
+pytest
 requests
 uuid
 werkzeug

@@ -18,7 +18,17 @@ from app.utils.notifications import (
 )
 
 _logger = logging.getLogger(__name__)
-atexit.register(scheduler.shutdown)
+
+
+def shutdown_scheduler_if_running():
+    if scheduler.running:
+        scheduler.shutdown()
+        _logger.info("Scheduler shut down successfully")
+    else:
+        _logger.info("Scheduler is not running")
+
+
+atexit.register(shutdown_scheduler_if_running)
 
 
 def run_with_context(func):
@@ -27,6 +37,14 @@ def run_with_context(func):
 
 
 def setup_cron_jobs():
+    # Check if scheduler is enabled in config
+    if (
+        hasattr(scheduler.app, "config")
+        and scheduler.app.config.get("SCHEDULER_ENABLED", True) is False
+    ):
+        _logger.info("Scheduler is disabled in config, skipping cron job setup")
+        return
+
     job_definitions = {
         "update_regions": {
             "func": update_regions,
@@ -73,4 +91,6 @@ def setup_cron_jobs():
             **job_definition["options"],
         )
 
-    scheduler.start()
+    # Only start the scheduler if it's not already running
+    if not scheduler.running:
+        scheduler.start()
