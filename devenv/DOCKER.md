@@ -103,6 +103,50 @@ cd devenv
 
 This will stop all the services.
 
+## Deleting All Docker Containers
+
+If you need to completely remove all Docker containers for the CineTagIt project, you can use the provided script:
+
+From the project root directory:
+```bash
+./devenv/docker-delete-containers.sh
+```
+
+Or by changing to the devenv directory first:
+```bash
+cd devenv
+./docker-delete-containers.sh
+```
+
+This script will:
+1. Stop all running containers
+2. Remove all containers associated with the CineTagIt project
+
+Use this when you want to clean up your Docker environment completely.
+
+## Running Tests
+
+You can run the tests in the Docker environment using the provided script:
+
+From the project root directory:
+```bash
+./devenv/docker-run-tests.sh
+```
+
+Or by changing to the devenv directory first:
+```bash
+cd devenv
+./docker-run-tests.sh
+```
+
+This script will:
+1. Rebuild the Docker image to ensure all dependencies are installed
+2. Start the Docker environment
+3. Run the tests inside the Docker container
+4. Stop the Docker environment
+
+For more information about the tests and how to run specific tests, see the [tests/README.md](../tests/README.md) file.
+
 ## Configuration
 
 1. Copy the template configuration file:

@@ -1,9 +1,11 @@
 """
 Initialize the database for the Docker environment.
-This script runs database migrations using Flask-Migrate to set up or update the database schema.
+This script creates all the tables in the database using SQLAlchemy's create_all() method.
+It also creates the testing database if it doesn't exist.
 """
 
 import os
+import pymysql
 
 # Set the CONFIG_FILE environment variable to use the Docker configuration
 os.environ["CONFIG_FILE"] = "../devenv/docker-config.yaml"
@@ -25,6 +27,28 @@ def init_db():
         # Run database migrations
         upgrade()
         print("Database migrations applied successfully.")
+
+    # Create the testing database if it doesn't exist
+    print("Checking if testing database exists...")
+    try:
+        # Connect to the MariaDB server without specifying a database
+        conn = pymysql.connect(host="db", user="cinetagit", password="password")
+
+        with conn.cursor() as cursor:
+            # Check if the testing database exists
+            cursor.execute("SHOW DATABASES LIKE 'cinetagit_test'")
+            result = cursor.fetchone()
+
+            if not result:
+                print("Creating testing database...")
+                cursor.execute("CREATE DATABASE cinetagit_test")
+                print("Testing database created successfully.")
+            else:
+                print("Testing database already exists.")
+
+        conn.close()
+    except Exception as e:
+        print(f"Error checking/creating testing database: {e}")
 
 
 if __name__ == "__main__":
