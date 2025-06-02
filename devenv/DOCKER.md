@@ -78,11 +78,26 @@ cinetagit now uses Flask-Migrate (based on Alembic) for database migrations. A n
 
 This script allows you to run any Flask migration command inside the Docker container.
 
-### 4. Access the application
+### 4. Creating clean migrations
+
+To create a clean migration that accurately captures only the changes you've made to your models, you can use the `docker-create-migration.sh` script:
+
+```bash
+./devenv/docker-create-migration.sh "Description of changes"
+```
+
+This script will:
+1. Reset the database (removing volumes)
+2. Recreate a fresh database with existing migrations
+3. Create a new migration based on the difference between current models and the fresh DB
+
+This approach ensures that your migration scripts only contain the changes you've made to your models since the last migration, avoiding any inconsistencies that might exist in your development database.
+
+### 5. Access the application
 
 The application will be available at http://localhost:5000
 
-### 5. Access MailHog
+### 6. Access MailHog
 
 MailHog provides a web interface for viewing emails sent by the application. It's available at http://localhost:8025
 
@@ -123,6 +138,43 @@ This script will:
 2. Remove all containers associated with the CineTagIt project
 
 Use this when you want to clean up your Docker environment completely.
+
+## Resetting the Docker Environment
+
+If you need to completely reset the Docker environment, including removing volumes and optionally images, you can use the `docker-reset.sh` script:
+
+From the project root directory:
+```bash
+./devenv/docker-reset.sh [OPTIONS]
+```
+
+Or by changing to the devenv directory first:
+```bash
+cd devenv
+./docker-reset.sh [OPTIONS]
+```
+
+This script supports the following options:
+- `--remove-images`: Also remove all locally built images
+- `--restart`: Restart the Docker environment after reset
+- `--help`: Show help message
+
+Examples:
+```bash
+# Basic reset (removes containers, networks, and volumes)
+./devenv/docker-reset.sh
+
+# Reset and also remove locally built images
+./devenv/docker-reset.sh --remove-images
+
+# Reset and then restart the environment
+./devenv/docker-reset.sh --restart
+
+# Reset, remove images, and restart
+./devenv/docker-reset.sh --remove-images --restart
+```
+
+This script is more comprehensive than `docker-delete-containers.sh` as it also removes volumes, ensuring that all persistent data is cleared. Use this when you want to start with a completely clean environment.
 
 ## Running Tests
 

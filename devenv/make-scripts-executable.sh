@@ -6,5 +6,6 @@ chmod +x docker-start.sh
 chmod +x docker-stop.sh
 chmod +x docker-init-db.sh
 chmod +x docker-migrate.sh
+chmod +x docker-create-migration.sh
 
 echo "Shell scripts are now executable."

@@ -20,6 +20,12 @@ docker-compose -p cinetagit build app
 echo "=== Starting Docker environment ==="
 ./docker-start.sh
 
+echo "=== Initializing main database ==="
+./docker-init-db.sh
+
+echo "=== Initializing test database ==="
+./docker-init-test-db.sh
+
 echo "=== Running tests ==="
 # Run pytest inside the Docker container
 # The -v flag makes pytest output verbose
