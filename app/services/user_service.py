@@ -128,16 +128,16 @@ def get_user_movie_ids(user: User, decision: str = None):
     return user_movies_query
 
 
-@cache.cached(timeout=86400)
+@cache.cached(timeout=86400, key_prefix="get_all_tmdb_regions_data_dict")
 def get_all_tmdb_regions_data_dict() -> Dict[str, Dict[str, Any]]:
     return {region.code: region.to_dict() for region in TmdbRegion.query.all()}
 
 
-@cache.cached(timeout=86400)
+@cache.cached(timeout=86400, key_prefix="get_all_region_flags")
 def get_all_region_flags() -> Dict[str, str]:
     return {
-        region.code: get_region_flag(region.code)
-        for region in TmdbRegion.query.all()
+        region_code: get_region_flag(region_code)
+        for region_code in get_all_tmdb_regions_data_dict()
     }
 
 
