@@ -47,7 +47,7 @@ PUBLIC_ENDPOINTS = {
 }
 
 
-def create_app(config_name):
+def create_app(config_name, start_scheduler=False):
     app = Flask(__name__, template_folder="templates", static_folder="static")
     config_class = config_by_name[config_name]
     config_instance = config_class()
@@ -102,9 +102,7 @@ def create_app(config_name):
                 if user:
                     g.current_user = user
                 else:
-                    _logger.warning(
-                        f"Access token identity {user_id} not found in DB."
-                    )
+                    _logger.warning(f"Access token identity {user_id} not found in DB.")
         except jwt.ExpiredSignatureError:
             pass  # Access token expired, fallback to the refresh token logic below
         except jwt.InvalidTokenError as e:
@@ -241,7 +239,11 @@ def create_app(config_name):
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")
 
-    setup_cron_jobs()
+    if start_scheduler:
+        _logger.info("Starting scheduler in server mode")
+        setup_cron_jobs()
+    else:
+        _logger.info("Skipping scheduler initialization (not in server mode)")
 
     @app.context_processor
     def inject_context():

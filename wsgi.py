@@ -23,7 +23,8 @@ logging.getLogger(__name__).info(f"Starting application in {config_name} mode")
 
 
 # Create an instance of the Flask application
-application = create_app(config_name)
+# Only start the scheduler when running as a server, not for CLI commands like 'flask db stamp head'
+application = create_app(config_name, start_scheduler=True)
 
 if __name__ == "__main__":
     # In development mode, bind to all interfaces (0.0.0.0)
