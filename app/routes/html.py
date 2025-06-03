@@ -182,6 +182,12 @@ def merge_temporary_user():
 
     temp_user = User.query.get(temp_user)
 
+    if temp_user.email:
+        # temporary users should not be able to have email associated
+        _logger.error(":%s has email: %s", user.email, temp_user.email)
+        flash("Temporary user has email associated.", "danger")
+        return redirect(url_for("html.profile"))
+
     if merge:
         user_movies = {movie.movie_id: movie for movie in user.user_movies}
         for temp_movie in temp_user.user_movies:
@@ -420,9 +426,7 @@ def profile_notifications_post(user):
             "Please enter a comma-separated list of numbers in the 'days' field."
         )
 
-    email_channels = NotificationChannel.query.filter_by(
-        user_id=user.id, mode="email"
-    )
+    email_channels = NotificationChannel.query.filter_by(user_id=user.id, mode="email")
     if email_channels.count() > 0:
         email_channel = email_channels[0]
     else:
