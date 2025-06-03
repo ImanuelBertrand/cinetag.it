@@ -15,7 +15,7 @@ SCRIPT_DIR=$(dirname "$0")
 cd "$SCRIPT_DIR"
 
 echo "=== Rebuilding Docker image ==="
-docker-compose -p cinetagit build app
+./docker-reset.sh
 
 echo "=== Starting Docker environment ==="
 ./docker-start.sh

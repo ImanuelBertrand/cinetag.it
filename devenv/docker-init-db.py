@@ -4,6 +4,10 @@ This script creates all the tables in the database using SQLAlchemy's create_all
 """
 
 import os
+import sys
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set the CONFIG_FILE environment variable to use the Docker configuration
 os.environ["CONFIG_FILE"] = "/app/devenv/docker-config.yaml"
