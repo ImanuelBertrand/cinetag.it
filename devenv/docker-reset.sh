@@ -48,14 +48,14 @@ done
 echo "=== Stopping and removing containers, networks, and volumes ==="
 if [ "$REMOVE_IMAGES" = true ]; then
   echo "Also removing locally built images..."
-  docker-compose -p cinetagit down -v --rmi local
+  docker compose -p cinetagit down -v --rmi local
 else
-  docker-compose -p cinetagit down -v
+  docker compose -p cinetagit down -v
 fi
 
 # Remove any orphaned containers
 echo "=== Removing any orphaned containers ==="
-docker-compose -p cinetagit down --remove-orphans
+docker compose -p cinetagit down --remove-orphans
 
 echo "=== Docker environment has been completely reset ==="
 

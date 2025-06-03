@@ -14,6 +14,6 @@ shift
 ARGS="$@"
 
 echo "Running Flask migration command: $COMMAND $ARGS"
-cd $(dirname "$0") && docker-compose -p cinetagit exec app flask db $COMMAND $ARGS
+cd $(dirname "$0") && docker compose -p cinetagit exec app flask db $COMMAND $ARGS
 
 echo "Migration command complete."

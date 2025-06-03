@@ -13,11 +13,11 @@ SCRIPT_DIR=$(dirname "$0")
 cd "$SCRIPT_DIR"
 
 echo "=== Stopping and removing Docker containers ==="
-# Stop and remove containers, networks, and images created by docker-compose
-docker-compose -p cinetagit down
+# Stop and remove containers, networks, and images created by docker compose
+docker compose -p cinetagit down
 
 echo "=== Checking for any remaining containers ==="
-# Get all containers with the project name (in case any weren't removed by docker-compose down)
+# Get all containers with the project name (in case any weren't removed by docker compose down)
 REMAINING_CONTAINERS=$(docker ps -a --filter "name=CineTagIt" -q)
 
 # If there are any remaining containers, remove them

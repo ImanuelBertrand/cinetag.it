@@ -22,7 +22,7 @@ fi
 MIGRATION_MESSAGE="$1"
 
 echo "=== Stopping containers and removing volumes ==="
-docker-compose -p cinetagit down -v
+docker compose -p cinetagit down -v
 
 echo "=== Starting Docker environment ==="
 ./docker-start.sh

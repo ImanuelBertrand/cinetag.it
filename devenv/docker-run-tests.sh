@@ -32,7 +32,7 @@ echo "=== Running tests ==="
 # The -s flag allows print statements to be displayed
 # The --no-header flag suppresses the pytest header
 # The --no-summary flag suppresses the pytest summary
-docker-compose -p cinetagit exec -e FLASK_ENV=testing -e CONFIG_FILE=/app/devenv/docker-config-test.yaml app python -m pytest -v tests/
+docker compose -p cinetagit exec -e FLASK_ENV=testing -e CONFIG_FILE=/app/devenv/docker-config-test.yaml app python -m pytest -v tests/
 
 # Capture the exit code of the tests
 TEST_EXIT_CODE=$?

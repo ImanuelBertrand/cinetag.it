@@ -4,11 +4,11 @@ cd $(dirname "$0")
 
 # Start the Docker containers
 echo "Starting Docker containers..."
-docker-compose -p cinetagit up -d
+docker compose -p cinetagit up -d
 
 # Print information about the running containers
 echo "Docker containers are running:"
-docker-compose -p cinetagit ps
+docker compose -p cinetagit ps
 
 ./docker-init-db.sh
 

@@ -4,7 +4,7 @@ This file provides instructions for setting up and using the Docker environment 
 
 This directory contains the Docker setup for the cinetagit application. It includes:
 
-- A docker-compose.yml file for orchestrating the services
+- A docker compose.yml file for orchestrating the services
 - A Dockerfile for building the application image
 - Configuration files and scripts for initializing and managing the Docker environment
 
@@ -227,36 +227,36 @@ If you encounter any issues with the Docker setup, try the following:
 
    From the devenv directory:
    ```bash
-   docker-compose -p cinetagit logs app
-   docker-compose -p cinetagit logs db
-   docker-compose -p cinetagit logs redis
-   docker-compose -p cinetagit logs mailhog
+   docker compose -p cinetagit logs app
+   docker compose -p cinetagit logs db
+   docker compose -p cinetagit logs redis
+   docker compose -p cinetagit logs mailhog
    ```
 
 2. Restart the services:
 
    From the devenv directory:
    ```bash
-   docker-compose -p cinetagit restart
+   docker compose -p cinetagit restart
    ```
 
 3. Rebuild the services:
 
    From the devenv directory:
    ```bash
-   docker-compose -p cinetagit build
+   docker compose -p cinetagit build
    ```
 
 4. Remove the volumes and start from scratch:
 
    ```bash
    # From the devenv directory:
-   docker-compose -p cinetagit down -v
+   docker compose -p cinetagit down -v
    ./docker-start.sh
    ./docker-init-db.sh
 
    # Or from the project root:
-   cd devenv && docker-compose -p cinetagit down -v
+   cd devenv && docker compose -p cinetagit down -v
    ./devenv/docker-start.sh
    ./devenv/docker-init-db.sh
    ```
