@@ -18,9 +18,7 @@ class TmdbLanguage(db.Model):
         return TmdbLanguage(
             code=data["iso_639_1"],
             english_name=data["english_name"],
-            name=data["name"]
-            if data["name"] and data["name"].replace("?", "")
-            else "",
+            name=data["name"] if data["name"] and data["name"].replace("?", "") else "",
         )
 
     def update_from_tmdb(self, data) -> bool:
@@ -28,9 +26,7 @@ class TmdbLanguage(db.Model):
         if self.english_name != data["english_name"]:
             self.english_name = data["english_name"]
             updated = True
-        name = (
-            data["name"] if data["name"] and data["name"].replace("?", "") else ""
-        )
+        name = data["name"] if data["name"] and data["name"].replace("?", "") else ""
         if self.name != name:
             self.name = name
             updated = True

@@ -16,9 +16,7 @@ class MovieLanguageInfo(db.Model):
     movie = db.relationship("Movie", back_populates="language_infos")
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "movie_id", "language", name="movie_language_info_idx"
-        ),
+        db.UniqueConstraint("movie_id", "language", name="movie_language_info_idx"),
     )
 
     def __repr__(self):

@@ -72,13 +72,9 @@ class AllowedRefreshToken(db.Model):
         # Convert UNIX timestamp to timezone-aware datetime
         expires_dt = datetime.fromtimestamp(expires_at_timestamp, tz=timezone.utc)
 
-        new_token = AllowedRefreshToken(
-            jti=jti, user_id=user_id, expires_at=expires_dt
-        )
+        new_token = AllowedRefreshToken(jti=jti, user_id=user_id, expires_at=expires_dt)
         db.session.add(new_token)
-        _logger.debug(
-            f"Added refresh token {jti} for user {user_id} to allowlist."
-        )
+        _logger.debug(f"Added refresh token {jti} for user {user_id} to allowlist.")
         # Note: Commit should happen as part
         # of the transaction where the token is issued.
 
@@ -97,12 +93,8 @@ class AllowedRefreshToken(db.Model):
     @staticmethod
     def revoke_all_for_user(user_id: int):
         """Revokes all refresh tokens for a specific user."""
-        deleted_count = AllowedRefreshToken.query.filter_by(
-            user_id=user_id
-        ).delete()
-        _logger.info(
-            f"Revoked {deleted_count} refresh token(s) for user {user_id}."
-        )
+        deleted_count = AllowedRefreshToken.query.filter_by(user_id=user_id).delete()
+        _logger.info(f"Revoked {deleted_count} refresh token(s) for user {user_id}.")
         # Note: Commit should happen as part
         # of the transaction (e.g., password change).
         return deleted_count > 0

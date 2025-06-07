@@ -31,9 +31,7 @@ def review_movie():
     if decision not in ["approve", "disapprove", "maybe", "remove"]:
         return jsonify({"error": "Invalid decision value."}), 400
 
-    user_movie = UserMovie.query.filter_by(
-        user_id=user.id, movie_id=movie_id
-    ).first()
+    user_movie = UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
 
     if decision == "remove":
         if user_movie:
@@ -98,9 +96,7 @@ def get_movies_api(filter_mode):
 
         # Convert min_release_date to datetime if provided
         if min_release_date:
-            min_release_date = datetime.strptime(
-                min_release_date, "%Y-%m-%d"
-            ).date()
+            min_release_date = datetime.strptime(min_release_date, "%Y-%m-%d").date()
 
         # Convert min_movie_id to int if provided
         if min_movie_id:
@@ -190,9 +186,7 @@ def not_found(error):
 def get_vapid_public_key():
     """Get the VAPID public key for push notifications"""
     try:
-        return jsonify(
-            {"success": True, "publicKey": get_vapid_public_key_for_js()}
-        )
+        return jsonify({"success": True, "publicKey": get_vapid_public_key_for_js()})
     except Exception as e:
         _logger.exception(f"Error getting VAPID public key: {e}")
         return (
