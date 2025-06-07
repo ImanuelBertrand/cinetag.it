@@ -322,7 +322,7 @@ def fetch_theatrical_releases(movie: Movie) -> List[Dict[str, Any]]:
     filtered_regions = []
     for region_data in fetch_release_dates(movie.id):
         region_data["release_dates"] = [
-            release for release in movie["release_dates"] if release["type"] == 3
+            release for release in region_data["release_dates"] if release["type"] == 3
         ]
         if region_data["release_dates"]:
             filtered_regions.append(region_data)
