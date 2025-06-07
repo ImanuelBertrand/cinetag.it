@@ -323,7 +323,7 @@ def fetch_theatrical_releases(movie: Movie) -> List[Dict[str, Any]]:
 
 
 def update_movie_regions(movie: Movie) -> None:
-    release_data = fetch_theatrical_releases(movie.id)
+    release_data = fetch_theatrical_releases(movie)
     if not release_data:
         MovieRegionInfo.query.filter_by(movie_id=movie.id).delete()
         return
