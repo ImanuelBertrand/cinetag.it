@@ -55,6 +55,11 @@ def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None
         _logger.error(
             "TMDb API request failed with status code %s", response.status_code
         )
+
+        debug_headers = headers
+        if "Authorization" in debug_headers:
+            debug_headers["Authorization"] = "[REDACTED]"
+
         _logger.error(
             "Request was: GET %s with params %s and headers %s",
             url,
