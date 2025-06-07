@@ -371,6 +371,15 @@ def update_movie_regions(movie: Movie) -> None:
         if region_info.update_from_tmdb(date):
             db.session.add(region_info)
 
+    # Delete non-fake region infos that are no longer in the theatrical releases
+    region_infos_to_delete = [
+        info
+        for info in existing_region_infos
+        if not info.is_fake and info.region not in best_release_dates
+    ]
+    for region_info in region_infos_to_delete:
+        db.session.delete(region_info)
+
     # Create fake objects for regions that are missing in the DB
     original_release_date = min(best_release_dates.values())
     all_regions = TmdbRegion.query.all()
