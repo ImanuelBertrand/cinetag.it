@@ -319,7 +319,15 @@ def update_movie_posters(movie: Movie):
 
 
 def fetch_theatrical_releases(movie: Movie) -> List[Dict[str, Any]]:
-    return [data for data in fetch_release_dates(movie.id) if data["type"] == 3]
+    filtered_regions = []
+    for region_data in fetch_release_dates(movie.id):
+        region_data["release_dates"] = [
+            release for release in movie["release_dates"] if release["type"] == 3
+        ]
+        if region_data["release_dates"]:
+            filtered_regions.append(region_data)
+
+    return filtered_regions
 
 
 def update_movie_regions(movie: Movie) -> None:
