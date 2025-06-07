@@ -318,8 +318,12 @@ def update_movie_posters(movie: Movie):
         db.session.add(lang_info)
 
 
-def update_movie_regions(movie: Movie):
-    release_data = fetch_release_dates(movie.id)
+def fetch_theatrical_releases(movie: Movie) -> List[Dict[str, Any]]:
+    return [data for data in fetch_release_dates(movie.id) if data["type"] == 3]
+
+
+def update_movie_regions(movie: Movie) -> None:
+    release_data = fetch_theatrical_releases(movie.id)
     if not release_data:
         MovieRegionInfo.query.filter_by(movie_id=movie.id).delete()
         return
