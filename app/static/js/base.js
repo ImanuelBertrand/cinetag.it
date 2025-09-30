@@ -353,6 +353,13 @@ CineTagIt.init = function() {
         console.error("Service Worker registration failed:", error);
     });
 
+    // Setup magic fields
+    const magicFields = document.querySelectorAll('input[name="form_state"]');
+    for (let i = 0; i < magicFields.length; i++) {
+        const field = magicFields[i];
+        field.value = 'initializing'; // magic value for backend
+    }
+
     // Initialize UI components
     CineTagIt.UI.initMobileMenu();
     CineTagIt.UI.initHoverWithTouchSupport();

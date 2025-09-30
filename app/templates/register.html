@@ -4,8 +4,28 @@
 
 {% block content %}
     <h2>Register</h2>
-    <form method="POST" action="{{ url_for('html.register') }}">
+    <form method="POST" action="{{ url_for('html.register') }}" novalidate>
         <input type="hidden" name="csrf_token">
+
+        {# Honeypot field: visually hidden, out of SRs and tab order #}
+        <div class="form-row" aria-hidden="true" style="position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;">
+            <label for="website">Website</label>
+            <input
+                type="text"
+                id="website"
+                name="website"
+                tabindex="-1"
+                autocomplete="off"
+                inputmode="text"
+            >
+        </div>
+
+        {# Render timestamp to detect too-fast submissions #}
+        <input type="hidden" name="form_rendered_at" value="{{ form_data.form_rendered_at }}">
+
+        {# JS challenge: will be set to magic value 'initializing' by JS #}
+        <input type="hidden" name="form_state" id="form_state" value="ready">
+
         <div class="form-row">
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" required>

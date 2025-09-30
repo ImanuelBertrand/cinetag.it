@@ -91,6 +91,36 @@ def register_post(user: User):
         A redirect response or None if there was an error
     """
     data = request.form
+
+    # --- Honeypot: hidden field bots may fill ---
+    hp_value = (data.get("website") or "").strip()
+    if hp_value:
+        # Quietly pretend success but do nothing.
+        _logger.info("Honeypot field filled, request ignored")
+        flash("Thanks! Please check your email to confirm.", "success")
+        return redirect(url_for("html.profile"))
+
+    # --- Time-based check: too fast submission or too old form (using old data?) ---
+    try:
+        form_ts = int(data.get("form_rendered_at", "0"))
+    except ValueError:
+        form_ts = 0
+
+    now = int(datetime.utcnow().timestamp())
+    min_seconds = 3  # adjust as desired
+    if form_ts and (now - form_ts) < min_seconds:
+        flash("Please take a moment to complete the form.", "danger")
+        return None
+
+    if form_ts and (now - form_ts) > 86400:
+        flash("Something went wrong. Please try again.", "danger")
+        return None
+
+    # --- JavaScript challenge: ensure a minimal JS executed ---
+    if (data.get("form_state") or "0") != "initializing":
+        flash("Something went wrong. Please try again.", "danger")
+        return None
+
     email = data.get("email")
 
     # e-mail sanity check
@@ -156,6 +186,9 @@ def register():
         register_result = register_post(user)
         if register_result:
             return register_result
+    else:
+        # Provide a render timestamp for the template (UTC seconds)
+        form_data["form_rendered_at"] = str(int(datetime.utcnow().timestamp()))
 
     return render_template("register.html", form_data=form_data)
 
