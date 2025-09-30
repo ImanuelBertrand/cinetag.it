@@ -16,6 +16,8 @@ from app.utils.notifications import (
     cron_send_notifications,
     cron_setup_notifications,
 )
+from app.models.allowed_refresh_token import AllowedRefreshToken
+from app.services.maintenance_service import purge_abandoned_guests
 
 _logger = logging.getLogger(__name__)
 
@@ -34,6 +36,24 @@ atexit.register(shutdown_scheduler_if_running)
 def run_with_context(func):
     with scheduler.app.app_context():
         func()
+
+
+def job_cleanup_expired_refresh_tokens():
+    # Best-effort; no exception should crash scheduler
+    try:
+        AllowedRefreshToken.cleanup_expired_tokens()
+    except Exception:
+        pass
+
+
+def job_purge_abandoned_guests():
+    try:
+        # Allow configuration override;
+        # default 21 days to be safer than refresh lifetime
+        days = scheduler.app.config.get("GUEST_RETENTION_DAYS", 21)
+        purge_abandoned_guests(retention_days=days, dry_run=False)
+    except Exception:
+        pass
 
 
 def setup_cron_jobs():
@@ -77,6 +97,14 @@ def setup_cron_jobs():
         "setup_notifications": {
             "func": cron_setup_notifications,
             "options": {"hours": 1},
+        },
+        "cleanup_expired_refresh_tokens": {
+            "func": job_cleanup_expired_refresh_tokens,
+            "options": {"hours": 24},
+        },
+        "purge_abandoned_guests": {
+            "func": job_purge_abandoned_guests,
+            "options": {"hours": 24},
         },
     }
     for job_id, job_definition in job_definitions.items():

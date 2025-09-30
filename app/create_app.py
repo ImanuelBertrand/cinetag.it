@@ -29,6 +29,7 @@ from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
 from app.scheduler import setup_cron_jobs
+from app.cli import register_cli
 from app.utils.auth import (
     verify_refresh_token_and_get_identity,
     generate_new_tokens,
@@ -55,6 +56,9 @@ def create_app(config_name, start_scheduler=False):
     config_class.init_app(app)
 
     init_extensions(app)
+
+    # Register CLI commands
+    register_cli(app)
 
     # === Request Hooks (New Auth Logic) ===
     @app.before_request
