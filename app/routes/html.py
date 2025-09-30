@@ -616,7 +616,7 @@ def reset_password(token):
         except UserFeedbackError as e:
             flash(str(e), "danger")
             return redirect(url_for("html.reset_password", token=token))
-        except Exception as e:
+        except Exception:
             _logger.exception("Error resetting password.")
             flash("Error resetting password.", "danger")
             return redirect(url_for("html.reset_password", token=token))
@@ -690,7 +690,7 @@ def get_user_release_dates():
     except UserFeedbackError as e:
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
-    except Exception as e:
+    except Exception:
         _logger.exception("Error fetching release dates.")
         flash("Error fetching release dates.", "danger")
         return redirect(url_for("html.profile"))
@@ -709,7 +709,7 @@ def get_user_calendar():
     except UserFeedbackError as e:
         flash(str(e), "danger")
         return redirect(url_for("html.profile"))
-    except Exception as e:
+    except Exception:
         _logger.exception("Error fetching calendar.")
         flash("Error fetching calendar.", "danger")
         return redirect(url_for("html.profile"))
