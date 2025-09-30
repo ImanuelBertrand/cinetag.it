@@ -28,20 +28,17 @@ def test_fetch_new_languages(app):
         ]
 
         # Set up the mocks
-        with patch(
-            "app.utils.tmdb.fetch_languages", return_value=mock_languages
-        ), patch("app.models.tmdb_language.TmdbLanguage.query") as mock_query, patch(
-            "app.models.tmdb_language.TmdbLanguage.create_from_tmdb"
-        ) as mock_create, patch(
-            "app.extensions.db.session.bulk_save_objects"
-        ) as mock_bulk_save, patch(
-            "app.extensions.db.session.delete"
-        ) as mock_delete, patch(
-            "app.extensions.db.session.add"
-        ) as mock_add, patch(
-            "app.extensions.db.session.commit"
-        ) as mock_commit:
-
+        with (
+            patch("app.utils.tmdb.fetch_languages", return_value=mock_languages),
+            patch("app.models.tmdb_language.TmdbLanguage.query") as mock_query,
+            patch(
+                "app.models.tmdb_language.TmdbLanguage.create_from_tmdb"
+            ) as mock_create,
+            patch("app.extensions.db.session.bulk_save_objects") as mock_bulk_save,
+            patch("app.extensions.db.session.delete") as mock_delete,
+            patch("app.extensions.db.session.add") as mock_add,
+            patch("app.extensions.db.session.commit") as mock_commit,
+        ):
             # Configure the mocks
             mock_query.all.return_value = mock_db_languages
             # Set update_from_tmdb to return False to avoid calling add
@@ -65,10 +62,13 @@ def test_update_regions(app):
     """Test that update_regions correctly updates region information."""
     with app.app_context():
         # Mock the necessary functions
-        with patch("app.services.tmdb_service.fetch_new_regions") as mock_fetch, patch(
-            "app.services.tmdb_service.calculate_region_sort_orders"
-        ) as mock_calculate, patch("app.extensions.db.session.commit") as mock_commit:
-
+        with (
+            patch("app.services.tmdb_service.fetch_new_regions") as mock_fetch,
+            patch(
+                "app.services.tmdb_service.calculate_region_sort_orders"
+            ) as mock_calculate,
+            patch("app.extensions.db.session.commit") as mock_commit,
+        ):
             # Call the function
             update_regions()
 
@@ -114,22 +114,22 @@ def test_save_movie_list(app):
         mock_existing_lang_info.update_from_tmdb.return_value = True
 
         # Set up the mocks
-        with patch("app.models.movie.Movie.query") as mock_movie_query, patch(
-            "app.services.tmdb_service.get_lang_infos"
-        ) as mock_get_lang_infos, patch(
-            "app.services.tmdb_service.get_region_infos"
-        ) as mock_get_region_infos, patch(
-            "app.models.movie.Movie.create_from_tmdb"
-        ) as mock_create_movie, patch(
-            "app.models.movie_region_info.MovieRegionInfo.create_from_tmdb"
-        ) as mock_create_region, patch(
-            "app.models.movie_language_info.MovieLanguageInfo.create_from_tmdb"
-        ) as mock_create_lang, patch(
-            "app.extensions.db.session.bulk_save_objects"
-        ) as mock_bulk_save, patch(
-            "app.extensions.db.session.add"
-        ) as mock_add:
-
+        with (
+            patch("app.models.movie.Movie.query") as mock_movie_query,
+            patch("app.services.tmdb_service.get_lang_infos") as mock_get_lang_infos,
+            patch(
+                "app.services.tmdb_service.get_region_infos"
+            ) as mock_get_region_infos,
+            patch("app.models.movie.Movie.create_from_tmdb") as mock_create_movie,
+            patch(
+                "app.models.movie_region_info.MovieRegionInfo.create_from_tmdb"
+            ) as mock_create_region,
+            patch(
+                "app.models.movie_language_info.MovieLanguageInfo.create_from_tmdb"
+            ) as mock_create_lang,
+            patch("app.extensions.db.session.bulk_save_objects") as mock_bulk_save,
+            patch("app.extensions.db.session.add") as mock_add,
+        ):
             # Configure the mocks
             mock_movie_query.filter.return_value.all.return_value = [
                 mock_existing_movie
@@ -168,16 +168,12 @@ def test_sync_upcoming_movies(app):
     """Test that sync_upcoming_movies correctly syncs upcoming movies."""
     with app.app_context():
         # Mock the necessary functions
-        with patch(
-            "app.services.tmdb_service.fetch_upcoming_movies"
-        ) as mock_fetch, patch(
-            "app.services.tmdb_service.save_movie_list"
-        ) as mock_save, patch(
-            "app.models.misc_data.MiscData.save"
-        ) as mock_misc_save, patch(
-            "app.extensions.db.session.commit"
-        ) as mock_commit:
-
+        with (
+            patch("app.services.tmdb_service.fetch_upcoming_movies") as mock_fetch,
+            patch("app.services.tmdb_service.save_movie_list") as mock_save,
+            patch("app.models.misc_data.MiscData.save") as mock_misc_save,
+            patch("app.extensions.db.session.commit") as mock_commit,
+        ):
             # Configure the mocks
             mock_fetch.return_value = [
                 {"id": 1, "original_title": "Movie 1"},

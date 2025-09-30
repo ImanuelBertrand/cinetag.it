@@ -116,7 +116,7 @@ def test_movies(app, test_user):
                 language="en",
                 title=title,
                 overview=f"Overview for {title}",
-                poster_path=f"/path/to/poster/{i+1}.jpg",
+                poster_path=f"/path/to/poster/{i + 1}.jpg",
             )
             db.session.add(lang_info)
 

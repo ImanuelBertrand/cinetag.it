@@ -763,9 +763,9 @@ def get_ics_calendar(calendar_hash):
         # Create the response
         response = make_response(ics_data)
         response.headers["Content-Type"] = "text/calendar"
-        response.headers[
-            "Content-Disposition"
-        ] = f"attachment; filename={calendar_type}_movies.ics"
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename={calendar_type}_movies.ics"
+        )
 
         return response
     except Exception as e:

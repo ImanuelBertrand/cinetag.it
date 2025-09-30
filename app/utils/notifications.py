@@ -68,9 +68,7 @@ def cron_send_notifications():
                 db.session.commit()
                 sent_notifications[notification.user_id].add(notification.movie_id)
         except Exception as e:
-            _logger.exception(
-                f"Failed to send notification {notification.id}: {e}"
-            )
+            _logger.exception(f"Failed to send notification {notification.id}: {e}")
 
 
 def send_notification(notification: Notification):
@@ -136,9 +134,7 @@ def send_push_notification(notification: Notification):
     # Get the channel and check if it has subscription data
     channel = notification.channel
     if not channel or not channel.notification_data:
-        _logger.error(
-            f"No subscription data found for notification {notification.id}"
-        )
+        _logger.error(f"No subscription data found for notification {notification.id}")
         return False
 
     notification_content = get_push_notification_content(notification)
@@ -152,8 +148,7 @@ def send_push_notification(notification: Notification):
         return send_web_push(subscription_info, notification_content)
     except WebPushSubscriptionExpiredError:
         _logger.warning(
-            f"Push subscription expired for channel {channel.id}, "
-            f"disabling channel"
+            f"Push subscription expired for channel {channel.id}, disabling channel"
         )
         # Disable the notification channel
         channel.enabled = False

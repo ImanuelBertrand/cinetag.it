@@ -1,10 +1,11 @@
 """Create initial tables
 
 Revision ID: 00_create_initial_tables
-Revises: 
+Revises:
 Create Date: 2025-05-29 14:00:00.000000
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 

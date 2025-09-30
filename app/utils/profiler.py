@@ -56,9 +56,7 @@ class Profiler:
     def stop(self):
         """Stop the profiler and log the results."""
         if not self.is_running:
-            _logger.warning(
-                f"Profiler {self.name} was stopped without being started"
-            )
+            _logger.warning(f"Profiler {self.name} was stopped without being started")
             return self
 
         if self.current_section:
@@ -67,9 +65,7 @@ class Profiler:
         total_time = time.time() - self.start_time
 
         # Create a summary of the profiling results
-        summary = [
-            f"Profiling results for {self.name} (total: {total_time:.4f}s):"
-        ]
+        summary = [f"Profiling results for {self.name} (total: {total_time:.4f}s):"]
         for section, duration in self.sections.items():
             percentage = (duration / total_time) * 100
             summary.append(f"  - {section}: {duration:.4f}s ({percentage:.1f}%)")
@@ -87,8 +83,7 @@ class Profiler:
         """Start timing a new section."""
         if not self.is_running:
             _logger.warning(
-                f"Cannot start section {name} - "
-                f"profiler {self.name} is not running"
+                f"Cannot start section {name} - profiler {self.name} is not running"
             )
             return self
 

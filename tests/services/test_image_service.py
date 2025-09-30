@@ -31,9 +31,10 @@ def test_get_image_base_path_creates_directory(app):
         app.config["POSTER_DIR"] = "/test/path"
 
         # Mock os.path.exists to return False and check if os.makedirs is called
-        with patch("os.path.exists", return_value=False) as mock_exists, patch(
-            "os.makedirs"
-        ) as mock_makedirs:
+        with (
+            patch("os.path.exists", return_value=False) as mock_exists,
+            patch("os.makedirs") as mock_makedirs,
+        ):
             path = get_image_base_path()
             assert path == "/test/path"
             mock_exists.assert_called_once_with("/test/path")
@@ -93,19 +94,19 @@ def test_fetch_image(app):
         app.config["TMDB_IMAGE_BASE_URL"] = "https://image.tmdb.org/t/p"
 
         # Mock the necessary functions
-        with patch(
-            "app.services.image_service.get_image_base_path", return_value="/test/path"
-        ), patch(
-            "app.services.image_service.get_tmdb_image_url",
-            return_value="https://image.tmdb.org/t/p/test/image.jpg",
-        ), patch(
-            "requests.get"
-        ) as mock_get, patch(
-            "os.makedirs"
-        ) as mock_makedirs, patch(
-            "builtins.open", mock_open()
-        ) as mock_file:
-
+        with (
+            patch(
+                "app.services.image_service.get_image_base_path",
+                return_value="/test/path",
+            ),
+            patch(
+                "app.services.image_service.get_tmdb_image_url",
+                return_value="https://image.tmdb.org/t/p/test/image.jpg",
+            ),
+            patch("requests.get") as mock_get,
+            patch("os.makedirs") as mock_makedirs,
+            patch("builtins.open", mock_open()) as mock_file,
+        ):
             # Configure the mock response
             mock_response = MagicMock()
             mock_response.status_code = 200
@@ -132,7 +133,6 @@ def test_resize_image():
     """Test that resize_image resizes an image correctly."""
     # Mock the necessary functions
     with patch("PIL.Image.open") as mock_open, patch("os.makedirs") as mock_makedirs:
-
         # Configure the mock image
         mock_image = MagicMock()
         mock_open.return_value = mock_image
@@ -156,12 +156,17 @@ def test_get_image_contents_resized_exists(app):
         app.config["POSTER_DIR"] = "/test/path"
 
         # Mock the necessary functions
-        with patch(
-            "app.services.image_service.get_image_base_path", return_value="/test/path"
-        ), patch("os.path.exists", return_value=True), patch("os.makedirs"), patch(
-            "builtins.open", mock_open(read_data=b"resized image content")
-        ) as mock_file:
-
+        with (
+            patch(
+                "app.services.image_service.get_image_base_path",
+                return_value="/test/path",
+            ),
+            patch("os.path.exists", return_value=True),
+            patch("os.makedirs"),
+            patch(
+                "builtins.open", mock_open(read_data=b"resized image content")
+            ) as mock_file,
+        ):
             content = get_image_contents("test/image.jpg", 500)
 
             assert content == b"resized image content"
@@ -175,16 +180,18 @@ def test_get_image_contents_original_exists(app):
         app.config["POSTER_DIR"] = "/test/path"
 
         # Mock the necessary functions
-        with patch(
-            "app.services.image_service.get_image_base_path", return_value="/test/path"
-        ), patch("os.path.exists", side_effect=[False, True]), patch(
-            "app.services.image_service.resize_image"
-        ) as mock_resize, patch(
-            "os.makedirs"
-        ), patch(
-            "builtins.open", mock_open(read_data=b"original image content")
-        ) as mock_file:
-
+        with (
+            patch(
+                "app.services.image_service.get_image_base_path",
+                return_value="/test/path",
+            ),
+            patch("os.path.exists", side_effect=[False, True]),
+            patch("app.services.image_service.resize_image") as mock_resize,
+            patch("os.makedirs"),
+            patch(
+                "builtins.open", mock_open(read_data=b"original image content")
+            ) as mock_file,
+        ):
             content = get_image_contents("test/image.jpg", 500)
 
             assert content == b"original image content"
@@ -202,18 +209,19 @@ def test_get_image_contents_fetch_needed(app):
         app.config["POSTER_DIR"] = "/test/path"
 
         # Mock the necessary functions
-        with patch(
-            "app.services.image_service.get_image_base_path", return_value="/test/path"
-        ), patch("os.path.exists", side_effect=[False, False]), patch(
-            "app.services.image_service.fetch_image"
-        ) as mock_fetch, patch(
-            "app.services.image_service.resize_image"
-        ) as mock_resize, patch(
-            "os.makedirs"
-        ), patch(
-            "builtins.open", mock_open(read_data=b"fetched image content")
-        ) as mock_file:
-
+        with (
+            patch(
+                "app.services.image_service.get_image_base_path",
+                return_value="/test/path",
+            ),
+            patch("os.path.exists", side_effect=[False, False]),
+            patch("app.services.image_service.fetch_image") as mock_fetch,
+            patch("app.services.image_service.resize_image") as mock_resize,
+            patch("os.makedirs"),
+            patch(
+                "builtins.open", mock_open(read_data=b"fetched image content")
+            ) as mock_file,
+        ):
             content = get_image_contents("test/image.jpg", 500)
 
             assert content == b"fetched image content"

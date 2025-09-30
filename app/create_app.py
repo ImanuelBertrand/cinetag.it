@@ -176,8 +176,7 @@ def create_app(config_name, start_scheduler=False):
                 _logger.warning(f"Refresh token verification failed: {e}")
             except Exception as e:
                 _logger.warning(
-                    "Refresh token verification failed: "
-                    f"{e}\n{traceback.format_exc()}"
+                    f"Refresh token verification failed: {e}\n{traceback.format_exc()}"
                 )
 
         if g.current_user:
@@ -190,8 +189,7 @@ def create_app(config_name, start_scheduler=False):
                 temp_user = create_temporary_user()
             if not temp_user:
                 raise Exception(
-                    "Failed to create guest user object, "
-                    f"result is falsy: {temp_user}"
+                    f"Failed to create guest user object, result is falsy: {temp_user}"
                 )
             (
                 g.new_access_token,

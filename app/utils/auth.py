@@ -70,8 +70,7 @@ def verify_refresh_token_and_get_identity(
 
         # 3. If decoding passed and JTI is allowed, return the user identity
         _logger.debug(
-            f"Refresh token verified successfully "
-            f"for JTI '{jti}', user {identity}."
+            f"Refresh token verified successfully for JTI '{jti}', user {identity}."
         )
         return int(identity), jti
 
@@ -100,9 +99,7 @@ def verify_refresh_token_and_get_identity(
             exc_info=True,
         )
         # Wrap unexpected errors in InvalidTokenError for consistent handling
-        raise jwt.InvalidTokenError(
-            f"Refresh token verification failed: {e}"
-        ) from e
+        raise jwt.InvalidTokenError(f"Refresh token verification failed: {e}") from e
 
 
 def create_temporary_user():
@@ -115,9 +112,7 @@ def create_temporary_user():
         _logger.debug(f"Created temporary user {user.id}")
         return user
     except Exception as e:
-        _logger.error(
-            f"Failed to create temporary user: {e}\n{traceback.format_exc()}"
-        )
+        _logger.error(f"Failed to create temporary user: {e}\n{traceback.format_exc()}")
         # Ensure rollback in case of error during commit
         db.session.rollback()
         return None
