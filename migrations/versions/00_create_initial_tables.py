@@ -288,7 +288,8 @@ def upgrade():
 
 
 def downgrade():
-    # Drop tables in reverse order of creation to avoid foreign key constraint violations
+    # Drop tables in reverse order of creation
+    # to avoid foreign key constraint violations
     op.drop_table("sent_confirmation_mails")
     op.drop_table("user_email_queue")
     op.drop_table("tmdb_regions")

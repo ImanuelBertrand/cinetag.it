@@ -16,7 +16,8 @@ def app():
     """Create and configure a Flask app for testing."""
     app = create_app("testing")
 
-    # Check if we're running in Docker by looking for the CONFIG_FILE environment variable
+    # Check if we're running in Docker by looking for the
+    # CONFIG_FILE environment variable
     import os
 
     if not os.environ.get(

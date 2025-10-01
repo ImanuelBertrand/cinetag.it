@@ -1,6 +1,7 @@
 """
 Initialize the database for the Docker environment.
-This script creates all the tables in the database using SQLAlchemy's create_all() method.
+This script creates all the tables in the database
+using SQLAlchemy's create_all() method.
 """
 
 import os

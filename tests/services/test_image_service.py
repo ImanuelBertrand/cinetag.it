@@ -150,7 +150,8 @@ def test_resize_image():
 
 
 def test_get_image_contents_resized_exists(app):
-    """Test that get_image_contents returns the correct image contents when resized image exists."""
+    """Test that get_image_contents returns the correct image contents
+     when resized image exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -174,7 +175,8 @@ def test_get_image_contents_resized_exists(app):
 
 
 def test_get_image_contents_original_exists(app):
-    """Test that get_image_contents returns the correct image contents when only original image exists."""
+    """Test that get_image_contents returns the correct image contents
+    when only original image exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -203,7 +205,8 @@ def test_get_image_contents_original_exists(app):
 
 
 def test_get_image_contents_fetch_needed(app):
-    """Test that get_image_contents fetches and resizes the image when neither exists."""
+    """Test that get_image_contents fetches
+    and resizes the image when neither exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"

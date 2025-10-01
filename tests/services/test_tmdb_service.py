@@ -156,7 +156,8 @@ def test_save_movie_list(app):
             # Region info for Movie 2 should be created
             mock_create_region.assert_called_once()
 
-            # Language info for Movie 2 should be created, and for Movie 1 should be updated
+            # Language info for Movie 2 should be created,
+            # and for Movie 1 should be updated
             mock_add.assert_any_call(mock_existing_lang_info)
             mock_create_lang.assert_called_once()
 
