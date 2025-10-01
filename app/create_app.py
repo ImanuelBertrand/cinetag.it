@@ -92,7 +92,7 @@ def create_app(config_name, start_scheduler=False):
             return None
 
         # 2. Check for Bot
-        if CrawlerDetect(request.headers).isCrawler():
+        if CrawlerDetect(user_agent=request.headers.get("User-Agent")).isCrawler():
             _logger.info("Bot detected, skipping auth.")
             return None
 
