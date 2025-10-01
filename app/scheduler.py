@@ -43,7 +43,7 @@ def job_cleanup_expired_refresh_tokens():
     try:
         AllowedRefreshToken.cleanup_expired_tokens()
     except Exception:
-        pass
+        _logger.exception("Error cleaning expired tokens")
 
 
 def job_purge_abandoned_guests():
@@ -53,10 +53,10 @@ def job_purge_abandoned_guests():
         days = scheduler.app.config.get("GUEST_RETENTION_DAYS", 21)
         purge_abandoned_guests(retention_days=days, dry_run=False)
     except Exception:
-        pass
+        _logger.exception("Error purging abandoned guests")
 
 
-def job_purge_empty_guests_with_tokens():
+def job_purge_empty_guests():
     try:
         # Separate retention window for empty guests that still have tokens
         days = scheduler.app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
@@ -67,7 +67,7 @@ def job_purge_empty_guests_with_tokens():
 
         purge_inactive_empty_guests_with_tokens(retention_days=days, dry_run=False)
     except Exception:
-        pass
+        _logger.exception("Error purging empty guests")
 
 
 def setup_cron_jobs():
@@ -121,7 +121,7 @@ def setup_cron_jobs():
             "options": {"hours": 24},
         },
         "purge_empty_guests_with_tokens": {
-            "func": job_purge_empty_guests_with_tokens,
+            "func": job_purge_empty_guests,
             "options": {"hours": 24},
         },
     }
