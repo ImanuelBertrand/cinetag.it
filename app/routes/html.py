@@ -341,12 +341,12 @@ def profile_post(user, form_data):
     # e-mail sanity check
     if has_new_mail and not _validate_email(data.get("email")):
         flash("Invalid email.", "danger")
-        return None
+        return
 
     # password sanity check
     if has_new_pw and not _validate_password(data.get("new_password")):
         flash("Password must be at least 8 characters.", "danger")
-        return None
+        return
 
     # Set new credentials
     if has_new_pw and has_new_mail:

@@ -50,7 +50,7 @@ class Movie(db.Model):
         fields = ["title", "overview", "tagline", "runtime", "poster_path"]
         fallbacks = {"title": self.original_title, "runtime": self.runtime}
 
-        data = {
+        return {
             field: next(
                 (
                     getattr(info_source, field)
@@ -62,7 +62,6 @@ class Movie(db.Model):
             for field in fields
         }
 
-        return data
 
     def update_from_tmdb(self, data: dict) -> bool:
         updated = False

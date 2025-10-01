@@ -31,7 +31,7 @@ def send_email(to: str, subject: str | list, body: str) -> bool:
 
 
 def generate_confirmation_token(user):
-    token = jwt.encode(
+    return jwt.encode(
         {
             "confirmation": user.id,
             "new_mail": user.new_email,
@@ -40,7 +40,6 @@ def generate_confirmation_token(user):
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
     )
-    return token
 
 
 def send_confirmation_email(user):

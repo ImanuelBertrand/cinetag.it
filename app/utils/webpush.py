@@ -23,9 +23,8 @@ def get_vapid_key_path() -> str:
 
     # Use instance directory for storing key
     instance_path = current_app.instance_path
-    private_key_path = os.path.join(instance_path, "vapid.private.pem")
+    return os.path.join(instance_path, "vapid.private.pem")
 
-    return private_key_path
 
 
 def get_public_key_b64(vapid_instance: Vapid) -> str:

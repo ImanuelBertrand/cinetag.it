@@ -163,11 +163,10 @@ def create_app(config_name, start_scheduler=False):
                             f"User {user.id} authenticated via refresh token."
                         )
                         return None  # Authenticated via refresh, proceed
-                    else:
-                        _logger.warning(
-                            f"User identity {refreshed_user_id} "
-                            f"from valid refresh token not found in DB."
-                        )
+                    _logger.warning(
+                        f"User identity {refreshed_user_id} "
+                        f"from valid refresh token not found in DB."
+                    )
                         # Fall through to invalid token handling
                 else:
                     _logger.warning(

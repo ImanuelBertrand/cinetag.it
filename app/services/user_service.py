@@ -58,12 +58,11 @@ def authenticate_user(data) -> User:
 
 
 def generate_confirmation_token(user):
-    token = jwt.encode(
+    return jwt.encode(
         {"confirm": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
     )
-    return token
 
 
 def confirm_user_email(token):
