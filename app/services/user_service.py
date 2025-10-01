@@ -264,7 +264,7 @@ def get_movies_based_on_filter(
         db.session.query(MovieRegionInfo)
         .join(Movie, Movie.id == MovieRegionInfo.movie_id)
         .filter(MovieRegionInfo.movie_id.in_(movie_ids))
-        .filter(MovieRegionInfo.is_fake == False)
+        .filter(not MovieRegionInfo.is_fake)
         .filter(
             db.or_(
                 MovieRegionInfo.region == region,

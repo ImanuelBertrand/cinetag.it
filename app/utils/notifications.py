@@ -38,7 +38,7 @@ def cron_send_notifications():
         .filter(
             Notification.is_sent.is_(False),
             Notification.scheduled_at <= datetime.utcnow(),
-            NotificationChannel.enabled == True,
+            NotificationChannel.enabled == 1,
         )
         .order_by(Notification.scheduled_at.asc())
         .all()
