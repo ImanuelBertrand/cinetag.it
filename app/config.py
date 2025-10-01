@@ -30,7 +30,7 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
     SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-jwt-secret-key")
-    JWT_TOKEN_LOCATION = ["headers", "cookies"]
+    JWT_TOKEN_LOCATION = ("headers", "cookies")
     JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
     JWT_ACCESS_COOKIE_PATH = "/"
     JWT_ACCESS_TOKEN_EXPIRES = 3600
