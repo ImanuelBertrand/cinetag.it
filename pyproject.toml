@@ -9,13 +9,13 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
-  "B",      # flake8-bugbear
-  "E",      # Error
-  "W",      # Warning
-  "F",      # Pyflakes
-  "UP",     # pyupgrade
-  "SIM222", # expr-or-true
-  "S",      # flake8-bandit
+  "B",   # flake8-bugbear
+  "E",   # Error
+  "W",   # Warning
+  "F",   # Pyflakes
+  "UP",  # pyupgrade
+  "SIM", # flake8-simplify
+  "S",   # flake8-bandit
 ]
 extend-ignore = [
   "UP031", # printf-string-formatting (high-effort fix)

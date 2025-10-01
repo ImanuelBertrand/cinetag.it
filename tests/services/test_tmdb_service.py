@@ -60,22 +60,22 @@ def test_fetch_new_languages(app):
 
 def test_update_regions(app):
     """Test that update_regions correctly updates region information."""
-    with app.app_context():
-        # Mock the necessary functions
-        with (
-            patch("app.services.tmdb_service.fetch_new_regions") as mock_fetch,
-            patch(
-                "app.services.tmdb_service.calculate_region_sort_orders"
-            ) as mock_calculate,
-            patch("app.extensions.db.session.commit") as mock_commit,
-        ):
-            # Call the function
-            update_regions()
+    # Mock the necessary functions
+    with (
+        app.app_context(),
+        patch("app.services.tmdb_service.fetch_new_regions") as mock_fetch,
+        patch(
+            "app.services.tmdb_service.calculate_region_sort_orders"
+        ) as mock_calculate,
+        patch("app.extensions.db.session.commit") as mock_commit,
+    ):
+        # Call the function
+        update_regions()
 
-            # Verify the function called the expected methods
-            mock_fetch.assert_called_once()
-            mock_calculate.assert_called_once()
-            mock_commit.assert_called_once()
+        # Verify the function called the expected methods
+        mock_fetch.assert_called_once()
+        mock_calculate.assert_called_once()
+        mock_commit.assert_called_once()
 
 
 def test_save_movie_list(app):
@@ -167,31 +167,31 @@ def test_save_movie_list(app):
 
 def test_sync_upcoming_movies(app):
     """Test that sync_upcoming_movies correctly syncs upcoming movies."""
-    with app.app_context():
-        # Mock the necessary functions
-        with (
-            patch("app.services.tmdb_service.fetch_upcoming_movies") as mock_fetch,
-            patch("app.services.tmdb_service.save_movie_list") as mock_save,
-            patch("app.models.misc_data.MiscData.save") as mock_misc_save,
-            patch("app.extensions.db.session.commit") as mock_commit,
-        ):
-            # Configure the mocks
-            mock_fetch.return_value = [
-                {"id": 1, "original_title": "Movie 1"},
-                {"id": 2, "original_title": "Movie 2"},
-            ]
+    # Mock the necessary functions
+    with (
+        app.app_context(),
+        patch("app.services.tmdb_service.fetch_upcoming_movies") as mock_fetch,
+        patch("app.services.tmdb_service.save_movie_list") as mock_save,
+        patch("app.models.misc_data.MiscData.save") as mock_misc_save,
+        patch("app.extensions.db.session.commit") as mock_commit,
+    ):
+        # Configure the mocks
+        mock_fetch.return_value = [
+            {"id": 1, "original_title": "Movie 1"},
+            {"id": 2, "original_title": "Movie 2"},
+        ]
 
-            # Call the function
-            result = sync_upcoming_movies("US", "en")
+        # Call the function
+        result = sync_upcoming_movies("US", "en")
 
-            # Verify the function called the expected methods
-            mock_fetch.assert_called_once_with("US", "en")
-            mock_save.assert_called_once_with(mock_fetch.return_value, "US", "en")
-            mock_misc_save.assert_called_once()
-            mock_commit.assert_called_once()
+        # Verify the function called the expected methods
+        mock_fetch.assert_called_once_with("US", "en")
+        mock_save.assert_called_once_with(mock_fetch.return_value, "US", "en")
+        mock_misc_save.assert_called_once()
+        mock_commit.assert_called_once()
 
-            # Verify the result
-            assert result == [1, 2]
+        # Verify the result
+        assert result == [1, 2]
 
 
 def test_sort_objects(app):

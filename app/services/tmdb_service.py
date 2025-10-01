@@ -494,13 +494,11 @@ def refresh_outdated_movies():
 
 def refresh_movie_information(movies: list[Movie]):
     _logger.info("Checking %s movies for updated information", len(movies))
-    c = 0
-    for movie in movies:
+    for c, movie in enumerate(movies):
         try:
             check_movie_information(movie)
         except Exception:
             _logger.exception("Exception while checking movie information of %s", movie)
-        c += 1
         if c % 10 == 0:
             db.session.commit()
     db.session.commit()
