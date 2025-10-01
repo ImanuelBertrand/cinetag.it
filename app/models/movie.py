@@ -1,5 +1,3 @@
-from typing import Dict
-
 from app.extensions import db
 from app.models.movie_language_info import MovieLanguageInfo
 
@@ -36,8 +34,8 @@ class Movie(db.Model):
         return f"<Movie {self.id} ({self.original_title})>"
 
     def get_localized_data(
-        self, lang: str, language_infos: "Dict[str, MovieLanguageInfo]" = None
-    ) -> Dict[str, str]:
+        self, lang: str, language_infos: "dict[str, MovieLanguageInfo]" = None
+    ) -> dict[str, str]:
         if language_infos is None:
             language_infos = {
                 lang_info.language: lang_info for lang_info in self.language_infos

@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+exclude = [
+  ".git",
+  "__pycache__",
+  "venv_*",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",      # Error
+  "W",      # Warning
+  "F",      # Pyflakes
+  "UP",     # pyupgrade
+  "SIM222", # expr-or-true
+  "B005",   # strip-with-multi-characters
+  "B007",   # unused-loop-control-variable
+  "B904",   # raise-without-from-inside-except
+  "S608",   # hardcoded-sql-expression
+  "S704",   # unsafe-markup-use
+]
+extend-ignore = [
+  "UP031", # printf-string-formatting (high-effort fix)
+  "UP008", # super-call-with-parameters (high-effort fix)
+  "UP037", # Remove quotes from type annotation (not worth it, leads to inconsistent code)
+]
+
+[tool.ruff.format]

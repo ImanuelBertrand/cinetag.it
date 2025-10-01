@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
-from typing import List, Dict
 
 from icalendar import Calendar, Event
 
 
-def create_ics_file(events: List[Dict], calendar_name: str) -> bytes:
+def create_ics_file(events: list[dict], calendar_name: str) -> bytes:
     """
     Create an ICS calendar file from a list of events.
 

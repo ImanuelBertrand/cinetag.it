@@ -2,7 +2,6 @@ import base64
 import json
 import logging
 import os
-from typing import Dict, Optional
 
 from cryptography.hazmat.primitives import serialization
 from flask import current_app
@@ -89,7 +88,7 @@ def get_vapid_public_key_for_js() -> str:
 
 
 def send_web_push(
-    subscription_info: Dict, data: Dict, vapid_claims: Optional[Dict] = None
+    subscription_info: dict, data: dict, vapid_claims: dict | None = None
 ) -> bool:
     """
     Send a Web Push notification.

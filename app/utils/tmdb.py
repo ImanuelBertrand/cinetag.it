@@ -1,7 +1,8 @@
 import logging
 import os
 from datetime import datetime, date
-from typing import List, Callable, Any, Dict
+from typing import Any
+from collections.abc import Callable
 
 import requests
 from flask import current_app
@@ -40,7 +41,7 @@ def get_tmdb_url(path: str) -> str:
     return f"{get_base_url()}/{path.lstrip('/')}"
 
 
-def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None):
+def _get(url: str, params: dict[str, str] = None, headers: dict[str, str] = None):
     if not params:
         params = {}
     if not headers:
@@ -75,7 +76,7 @@ def _get(url: str, params: Dict[str, str] = None, headers: Dict[str, str] = None
     return response
 
 
-def _get_json(url: str, params: Dict[str, str] = None):
+def _get_json(url: str, params: dict[str, str] = None):
     return _get(url, params=params).json()
 
 
@@ -100,7 +101,7 @@ def _cached_tmdb_call(
     return data
 
 
-def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
+def uncached_fetch_upcoming_movies(region: str, language: str) -> list[dict]:
     params = {
         "region": region,
         "language": language,
@@ -121,7 +122,7 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> List[dict]:
     return list(all_movies.values())
 
 
-def uncached_fetch_movie_changes(start_date: str, end_date: str) -> List[int]:
+def uncached_fetch_movie_changes(start_date: str, end_date: str) -> list[int]:
     params = {
         "start_date": start_date,
         "end_date": end_date,
@@ -143,7 +144,7 @@ def uncached_fetch_movie_changes(start_date: str, end_date: str) -> List[int]:
     return list(all_movies)
 
 
-def fetch_upcoming_movies(region: str, language: str) -> List[dict]:
+def fetch_upcoming_movies(region: str, language: str) -> list[dict]:
     """
     Fetch a list of upcoming movies from TMDb for a specific region
     using the discover endpoint.
@@ -171,7 +172,7 @@ def fetch_movie_details(movie_id: int, language: str) -> dict:
     )
 
 
-def fetch_languages() -> List[dict]:
+def fetch_languages() -> list[dict]:
     return _cached_tmdb_call(
         "languages",
         DEFAULT_TTL,
@@ -180,7 +181,7 @@ def fetch_languages() -> List[dict]:
     )
 
 
-def fetch_regions() -> List[dict]:
+def fetch_regions() -> list[dict]:
     return _cached_tmdb_call(
         "regions",
         DEFAULT_TTL,
@@ -189,7 +190,7 @@ def fetch_regions() -> List[dict]:
     )
 
 
-def fetch_movie_languages(movie_id: int) -> List[dict]:
+def fetch_movie_languages(movie_id: int) -> list[dict]:
     return _cached_tmdb_call(
         f"movie_languages_{movie_id}",
         DEFAULT_TTL,
@@ -198,7 +199,7 @@ def fetch_movie_languages(movie_id: int) -> List[dict]:
     )["translations"]
 
 
-def fetch_movie_images(movie_id: int) -> Dict[str, Any]:
+def fetch_movie_images(movie_id: int) -> dict[str, Any]:
     return _cached_tmdb_call(
         f"movie_images_{movie_id}",
         DEFAULT_TTL,
@@ -207,7 +208,7 @@ def fetch_movie_images(movie_id: int) -> Dict[str, Any]:
     )
 
 
-def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
+def fetch_release_dates(movie_id: int) -> list[dict[str, Any]]:
     return _cached_tmdb_call(
         f"movie_release_dates_{movie_id}",
         DEFAULT_TTL,
@@ -218,7 +219,7 @@ def fetch_release_dates(movie_id: int) -> List[Dict[str, Any]]:
 
 def fetch_changed_movies(
     start_date: datetime | date | str, end_date: datetime | date | str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     if isinstance(start_date, (datetime, date)):
         start_date = start_date.strftime("%Y-%m-%d")
     if isinstance(end_date, (datetime, date)):

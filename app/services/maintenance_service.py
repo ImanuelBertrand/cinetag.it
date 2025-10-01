@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Dict
 
 from sqlalchemy import exists
 
@@ -10,7 +9,7 @@ from app.models.user_calendar import UserCalendar
 from app.models.allowed_refresh_token import AllowedRefreshToken
 
 
-def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> Dict:
+def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> dict:
     """
     Delete guest users (no email, no password, no new_email) who have no allowed
     refresh tokens and are older than the retention window.
@@ -54,7 +53,7 @@ def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> Di
 
 def purge_inactive_empty_guests_with_tokens(
     retention_days: int = 14, dry_run: bool = True
-) -> Dict:
+) -> dict:
     """
     Delete guest users who STILL have at least one allowed refresh token but have
     no user_movies and no calendars, and are older than the retention window.

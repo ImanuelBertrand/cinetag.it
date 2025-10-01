@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 from app.extensions import db
 
@@ -33,7 +33,7 @@ class TmdbRegion(db.Model):
             updated = True
         return updated
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "code": self.code,

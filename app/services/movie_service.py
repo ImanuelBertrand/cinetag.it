@@ -1,10 +1,8 @@
-from typing import List, Dict
-
 from app.models.movie_language_info import MovieLanguageInfo
 from app.models.movie_region_info import MovieRegionInfo
 
 
-def get_region_infos(movie_ids: List[int], region: str) -> Dict[int, MovieRegionInfo]:
+def get_region_infos(movie_ids: list[int], region: str) -> dict[int, MovieRegionInfo]:
     return {
         info.movie_id: info
         for info in MovieRegionInfo.query.filter(
@@ -14,7 +12,7 @@ def get_region_infos(movie_ids: List[int], region: str) -> Dict[int, MovieRegion
     }
 
 
-def get_lang_infos(movie_ids: List[int], language: str) -> Dict[int, MovieLanguageInfo]:
+def get_lang_infos(movie_ids: list[int], language: str) -> dict[int, MovieLanguageInfo]:
     return {
         info.movie_id: info
         for info in MovieLanguageInfo.query.filter(

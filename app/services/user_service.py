@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Any
 
 import jwt
 from babel.dates import format_date
@@ -129,12 +129,12 @@ def get_user_movie_ids(user: User, decision: str = None):
 
 
 @cache.cached(timeout=86400, key_prefix="get_all_tmdb_regions_data_dict")
-def get_all_tmdb_regions_data_dict() -> Dict[str, Dict[str, Any]]:
+def get_all_tmdb_regions_data_dict() -> dict[str, dict[str, Any]]:
     return {region.code: region.to_dict() for region in TmdbRegion.query.all()}
 
 
 @cache.cached(timeout=86400, key_prefix="get_all_region_flags")
-def get_all_region_flags() -> Dict[str, str]:
+def get_all_region_flags() -> dict[str, str]:
     return {
         region_code: get_region_flag(region_code)
         for region_code in get_all_tmdb_regions_data_dict()
@@ -151,7 +151,7 @@ def get_movies_based_on_filter(
     min_release_date=None,
     min_movie_id=None,
     limit: int = 20,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
     profiler.start()
 
@@ -358,7 +358,7 @@ def get_movies_based_on_filter(
 
 
 def _get_user_movies(
-    user, start: datetime = None, end: datetime = None, decisions: List[str] = None
+    user, start: datetime = None, end: datetime = None, decisions: list[str] = None
 ):
     if decisions is None:
         decisions = ["approve"]
@@ -388,7 +388,7 @@ def _get_user_movies(
 
 def fetch_user_events(
     user, start: datetime = None, end: datetime = None, external_urls: bool = False
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     if not user:
         raise ValueError("User not found.")
     lang = user.language or current_app.config.DEFAULT_LANGUAGE

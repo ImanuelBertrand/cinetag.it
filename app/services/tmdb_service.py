@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Any
 
 import natsort
 from flask import current_app
@@ -159,7 +159,7 @@ def update_regions():
     db.session.commit()
 
 
-def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
+def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     """
     Save a list of movies to the database.
     It will create the movie itself, but also the region and language info of the
@@ -171,7 +171,7 @@ def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
     :return:
     """
     movie_ids = [movie["id"] for movie in tmdb_movies]
-    existing_movies: Dict[int, Movie] = {
+    existing_movies: dict[int, Movie] = {
         movie.id: movie for movie in Movie.query.filter(Movie.id.in_(movie_ids)).all()
     }
     existing_lang_info = get_lang_infos(movie_ids, language)
@@ -214,7 +214,7 @@ def save_movie_list(tmdb_movies: List[dict], region: str, language: str):
         db.session.bulk_save_objects(language_info_to_add)
 
 
-def sync_upcoming_movies(region: str, language: str = None) -> List[int]:
+def sync_upcoming_movies(region: str, language: str = None) -> list[int]:
     """
     Fetch upcoming movies from TMDb and ensure they are stored in the database.
     """
@@ -318,7 +318,7 @@ def update_movie_posters(movie: Movie):
         db.session.add(lang_info)
 
 
-def fetch_theatrical_releases(movie: Movie) -> List[Dict[str, Any]]:
+def fetch_theatrical_releases(movie: Movie) -> list[dict[str, Any]]:
     filtered_regions = []
     for region_data in fetch_release_dates(movie.id):
         region_data["release_dates"] = [
@@ -492,7 +492,7 @@ def refresh_outdated_movies():
     refresh_movie_information(outdated_movies)
 
 
-def refresh_movie_information(movies: List[Movie]):
+def refresh_movie_information(movies: list[Movie]):
     _logger.info("Checking %s movies for updated information", len(movies))
     c = 0
     for movie in movies:

@@ -10,7 +10,7 @@ class Config:
         self.load_config(config_file)
 
     def load_config(self, config_file):
-        with open(config_file, "r") as file:
+        with open(config_file) as file:
             config_data = yaml.safe_load(file)
         if config_data:
             for key, value in config_data.items():

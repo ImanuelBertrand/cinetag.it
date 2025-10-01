@@ -1,6 +1,5 @@
 import logging
 import traceback
-from typing import Tuple
 
 import jwt
 import uuid
@@ -23,7 +22,7 @@ def decode_refresh_token(encoded_token: str) -> dict:
 
 def verify_refresh_token_and_get_identity(
     encoded_token: str,
-) -> Tuple[int, str] | None:
+) -> tuple[int, str] | None:
     """
     Verifies the refresh token's signature, expiry using PyJWT, and checks
     if its JTI is present in the AllowedRefreshToken database table (allowlist).
@@ -120,7 +119,7 @@ def create_temporary_user():
 
 def generate_new_tokens(
     identity: int, old_jti_to_revoke: str | None = None
-) -> Tuple[str | None, str | None]:
+) -> tuple[str | None, str | None]:
     """
     Generates new access and refresh tokens, adding the refresh token's
     JTI to the allowlist atomically. Returns (None, None) on failure.

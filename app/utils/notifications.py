@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, date
-from typing import Dict
 
 from app.exceptions import WebPushSubscriptionExpiredError
 from app.extensions import db
@@ -92,7 +91,7 @@ def send_notification(notification: Notification):
 
 def get_push_notification_content(
     notification: Notification,
-) -> Dict[str, str] | None:
+) -> dict[str, str] | None:
     # Get the movie data
     movie_data = notification.movie.get_localized_data(
         notification.user.language or "en"
