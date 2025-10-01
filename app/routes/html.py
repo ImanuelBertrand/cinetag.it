@@ -789,7 +789,7 @@ def get_poster(width, filename):
         return response
 
     def get_mime_type(filename: str) -> str:
-        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+        if filename.endswith((".jpg", ".jpeg")):
             return "image/jpeg"
         if filename.endswith(".png"):
             return "image/png"
