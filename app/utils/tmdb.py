@@ -49,7 +49,9 @@ def _get(url: str, params: dict[str, str] = None, headers: dict[str, str] = None
 
     headers["Authorization"] = f"Bearer {get_tmdb_api_token()}"
 
-    response = requests.get(get_tmdb_url(url), params=params, headers=headers)
+    response = requests.get(
+        get_tmdb_url(url), params=params, headers=headers, timeout=5
+    )
     _logger.debug("Response %s for GET %s", response.status_code, url)
 
     if response.status_code != 200:

@@ -23,7 +23,7 @@ def get_tmdb_image_url(remote_filename: str) -> str:
 def fetch_image(remote_filename: str, size: str = "original"):
     target_filename = f"{get_image_base_path()}/{size}/{remote_filename}"
     remote_url = get_tmdb_image_url(remote_filename)
-    response = requests.get(remote_url)
+    response = requests.get(remote_url, timeout=10)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch image from {remote_url}")
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
