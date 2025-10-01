@@ -25,8 +25,8 @@ def send_email(to: str, subject: str | list, body: str) -> bool:
         msg = Message(subject, recipients=to, body=body, sender=sender)
         mail.send(msg)
         return True
-    except Exception as e:
-        _logger.error(f"Error sending email: {e}")
+    except Exception:
+        _logger.exception("Error sending email")
         return False
 
 
@@ -115,4 +115,4 @@ def send_queued_emails():
         except Exception as e:
             _logger.exception(f"Error sending mail: {e}")
             db.session.rollback()
-            _logger.error(f"Error sending mail: {e}")
+            _logger.exception(f"Error sending mail: {e}")

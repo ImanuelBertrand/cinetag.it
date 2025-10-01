@@ -113,11 +113,10 @@ def create_app(config_name, start_scheduler=False):
             _logger.warning(
                 f"Invalid access token encountered for endpoint {endpoint}: {e}"
             )
-        except Exception as e:
+        except Exception:
             # Catch other potential verification errors
-            _logger.error(
-                "Error verifying JWT access token for endpoint "
-                f"{endpoint}: {e}\n{traceback.format_exc()}"
+            _logger.exception(
+                f"Error verifying JWT access token for endpoint {endpoint}"
             )
 
         refresh_token_cookie = request.cookies.get("refresh_token_cookie")
@@ -225,7 +224,7 @@ def create_app(config_name, start_scheduler=False):
                     set_refresh_cookies(response, new_refresh_tkn, r_max_age)
 
         except Exception as e:
-            _logger.error(
+            _logger.exception(
                 f"Error setting new token cookies: {e}\n{traceback.format_exc()}"
             )
         finally:

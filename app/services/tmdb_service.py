@@ -434,10 +434,10 @@ def check_movie_information(movie: Movie):
         db.session.add(movie)
     except TMDbAPIError as e:
         if e.status_code == 404:
-            _logger.error("Movie %s not found on TMDb", movie)
+            _logger.exception("Movie %s not found on TMDb", movie)
             db.session.delete(movie)
         else:
-            _logger.error("Error updating movie information for %s: %s", movie, e)
+            _logger.exception("Error updating movie information for %s", movie)
     except Exception:
         _logger.exception("Error updating movie information for %s", movie)
 

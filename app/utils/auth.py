@@ -110,8 +110,8 @@ def create_temporary_user():
         db.session.commit()
         _logger.debug(f"Created temporary user {user.id}")
         return user
-    except Exception as e:
-        _logger.error(f"Failed to create temporary user: {e}\n{traceback.format_exc()}")
+    except Exception:
+        _logger.exception("Failed to create temporary user")
         # Ensure rollback in case of error during commit
         db.session.rollback()
         return None

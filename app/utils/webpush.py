@@ -41,16 +41,16 @@ def create_vapid() -> Vapid:
     if private_key:
         try:
             return Vapid.from_string(private_key)
-        except Exception as e:
-            _logger.error(f"Error loading VAPID key from environment: {e}")
+        except Exception:
+            _logger.exception("Error loading VAPID key from environment")
             # Continue below
 
     private_key = current_app.config.get("VAPID_PRIVATE_KEY")
     if private_key:
         try:
             return Vapid.from_string(private_key)
-        except Exception as e:
-            _logger.error(f"Error loading VAPID key from config: {e}")
+        except Exception:
+            _logger.exception("Error loading VAPID key from config")
             # Continue below
 
     private_key_path = get_vapid_key_path()
@@ -120,8 +120,8 @@ def send_web_push(
             ) from None
 
         # Handle other errors
-        _logger.error(f"WebPushException: {e}")
+        _logger.exception("WebPushException")
         return False
-    except Exception as e:
-        _logger.error(f"Error sending push notification: {e}")
+    except Exception:
+        _logger.exception("Error sending push notification")
         return False
