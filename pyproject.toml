@@ -25,11 +25,12 @@ select = [
   "SIM", # flake8-simplify
   "TC",  # flake8-type-checking
   "TID", # flake8-tidy-imports
+  "TRY", # tryceratops
 ]
 extend-ignore = [
-  "UP031", # printf-string-formatting (high-effort fix)
-  "UP008", # super-call-with-parameters (high-effort fix)
-  "UP037", # Remove quotes from type annotation (not worth it, leads to inconsistent code)
+    "TRY002",
+    "TRY003",
+    "TRY301",
 ]
 
 per-file-ignores = { "test_*" = ["S101"] }

@@ -67,13 +67,7 @@ def verify_refresh_token_and_get_identity(
                 "Refresh token is not allowed (revoked or invalid)."
             )
 
-        # 3. If decoding passed and JTI is allowed, return the user identity
-        _logger.debug(
-            f"Refresh token verified successfully for JTI '{jti}', user {identity}."
-        )
-        return int(identity), jti
-
-    except jwt.ExpiredSignatureError as e:
+    except jwt.ExpiredSignatureError:
         # Log expiry specifically
         payload_info = jwt.decode(
             encoded_token, options={"verify_signature": False, "verify_exp": False}
@@ -84,12 +78,12 @@ def verify_refresh_token_and_get_identity(
             f"User: {payload_info.get('sub', 'N/A')}"
         )
 
-        raise e
+        raise
 
     except jwt.InvalidTokenError as e:
         # Catch other decoding errors or the explicit raises from above
         _logger.warning(f"Invalid refresh token encountered: {e}")
-        raise e  # Re-raise the original exception
+        raise  # Re-raise the original exception
 
     except Exception as e:
         # Catch unexpected errors
@@ -99,6 +93,12 @@ def verify_refresh_token_and_get_identity(
         )
         # Wrap unexpected errors in InvalidTokenError for consistent handling
         raise jwt.InvalidTokenError(f"Refresh token verification failed: {e}") from e
+    else:
+        # 3. If decoding passed and JTI is allowed, return the user identity
+        _logger.debug(
+            f"Refresh token verified successfully for JTI '{jti}', user {identity}."
+        )
+        return int(identity), jti
 
 
 def create_temporary_user():
@@ -108,13 +108,14 @@ def create_temporary_user():
         user = User()
         db.session.add(user)
         db.session.commit()
-        _logger.debug(f"Created temporary user {user.id}")
-        return user
     except Exception:
         _logger.exception("Failed to create temporary user")
         # Ensure rollback in case of error during commit
         db.session.rollback()
         return None
+    else:
+        _logger.debug(f"Created temporary user {user.id}")
+        return user
 
 
 def generate_new_tokens(
@@ -171,7 +172,6 @@ def generate_new_tokens(
             f"Successfully generated tokens and "
             f"added refresh JTI {jti} for user {identity}."
         )
-        return access_token, refresh_token
 
     except Exception as e:
         # If any step failed, roll back the DB session
@@ -181,6 +181,8 @@ def generate_new_tokens(
             f"{identity}: {e}\n{traceback.format_exc()}",
             exc_info=True,
         )
+    else:
+        return access_token, refresh_token
 
         # Return None for both on any failure
         return None, None

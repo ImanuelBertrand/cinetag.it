@@ -66,8 +66,8 @@ def cron_send_notifications():
                 db.session.add(notification)
                 db.session.commit()
                 sent_notifications[notification.user_id].add(notification.movie_id)
-        except Exception as e:
-            _logger.exception(f"Failed to send notification {notification.id}: {e}")
+        except Exception:
+            _logger.exception(f"Failed to send notification {notification.id}")
 
 
 def send_notification(notification: Notification):
@@ -84,8 +84,8 @@ def send_notification(notification: Notification):
 
     try:
         return mode_methods[mode](notification)
-    except Exception as e:
-        _logger.exception(f"Error sending notification {notification.id}: {e}")
+    except Exception:
+        _logger.exception(f"Error sending notification {notification.id}")
         return False
 
 
@@ -154,8 +154,8 @@ def send_push_notification(notification: Notification):
         db.session.add(channel)
         db.session.commit()
         return False
-    except Exception as e:
-        _logger.exception(f"Error sending push notification: {e}")
+    except Exception:
+        _logger.exception("Error sending push notification")
         return False
 
 

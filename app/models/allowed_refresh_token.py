@@ -109,14 +109,16 @@ class AllowedRefreshToken(db.Model):
                 AllowedRefreshToken.expires_at < now
             ).delete()
             db.session.commit()  # Commit the cleanup transaction immediately
-            if expired_count > 0:
-                _logger.info(
-                    f"Cleaned up {expired_count} expired refresh token entries."
-                )
-            return expired_count
+
         except Exception as e:
             _logger.error(
                 f"Error during expired refresh token cleanup: {e}", exc_info=True
             )
             db.session.rollback()
             return 0
+        else:
+            if expired_count > 0:
+                _logger.info(
+                    f"Cleaned up {expired_count} expired refresh token entries."
+                )
+            return expired_count

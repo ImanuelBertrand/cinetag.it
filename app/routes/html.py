@@ -767,10 +767,11 @@ def get_ics_calendar(calendar_hash):
             f"attachment; filename={calendar_type}_movies.ics"
         )
 
-        return response
-    except Exception as e:
-        _logger.exception(f"Error generating ICS calendar: {e}")
+    except Exception:
+        _logger.exception("Error generating ICS calendar")
         return "Error generating calendar", 500
+    else:
+        return response
 
 
 @html.route("/poster/<int:width>/<filename>")

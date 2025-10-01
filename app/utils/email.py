@@ -24,10 +24,11 @@ def send_email(to: str, subject: str | list, body: str) -> bool:
             to = [to]
         msg = Message(subject, recipients=to, body=body, sender=sender)
         mail.send(msg)
-        return True
     except Exception:
         _logger.exception("Error sending email")
         return False
+    else:
+        return True
 
 
 def generate_confirmation_token(user):
@@ -112,7 +113,7 @@ def send_queued_emails():
             for item in items:
                 db.session.delete(item)
             db.session.commit()
-        except Exception as e:
-            _logger.exception(f"Error sending mail: {e}")
+        except Exception:
+            _logger.exception("Error sending mail")
             db.session.rollback()
-            _logger.exception(f"Error sending mail: {e}")
+            _logger.exception("Error sending mail")

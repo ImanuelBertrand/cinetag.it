@@ -114,7 +114,7 @@ def get_movies_api(filter_mode):
             limit=limit,
         )
 
-        return jsonify(
+        result = jsonify(
             {
                 "success": True,
                 "movies": result["movies"],
@@ -125,9 +125,11 @@ def get_movies_api(filter_mode):
         )
     except UserFeedbackError as e:
         return jsonify({"success": False, "error": str(e)})
-    except Exception as e:
-        _logger.exception(f"Error fetching movies: {e}")
+    except Exception:
+        _logger.exception("Error fetching movies")
         return jsonify({"success": False, "error": "Error fetching movies."})
+    else:
+        return result
 
 
 @api.route("/calendar/reset-hashes", methods=["POST"])
@@ -152,8 +154,8 @@ def reset_calendar_hashes():
                 "message": "Calendar links have been reset successfully.",
             }
         )
-    except Exception as e:
-        _logger.exception(f"Error resetting calendar hashes: {e}")
+    except Exception:
+        _logger.exception("Error resetting calendar hashes")
         return jsonify(
             {
                 "success": False,
@@ -187,8 +189,8 @@ def get_vapid_public_key():
     """Get the VAPID public key for push notifications"""
     try:
         return jsonify({"success": True, "publicKey": get_vapid_public_key_for_js()})
-    except Exception as e:
-        _logger.exception(f"Error getting VAPID public key: {e}")
+    except Exception:
+        _logger.exception("Error getting VAPID public key")
         return (
             jsonify({"success": False, "error": "Error getting VAPID public key"}),
             500,
@@ -302,9 +304,9 @@ def subscribe_push():
                 },
             }
         )
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        _logger.exception(f"Error subscribing to push notifications: {e}")
+        _logger.exception("Error subscribing to push notifications")
         return (
             jsonify(
                 {
@@ -381,9 +383,9 @@ def update_push_settings():
                 },
             }
         )
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        _logger.exception(f"Error updating push notification settings: {e}")
+        _logger.exception("Error updating push notification settings")
         return (
             jsonify(
                 {
@@ -434,9 +436,9 @@ def unsubscribe_push():
                 "message": "Successfully unsubscribed from push notifications",
             }
         )
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        _logger.exception(f"Error unsubscribing from push notifications: {e}")
+        _logger.exception("Error unsubscribing from push notifications")
         return (
             jsonify(
                 {

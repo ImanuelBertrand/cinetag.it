@@ -110,7 +110,6 @@ def send_web_push(
             vapid_private_key=get_vapid(),
             vapid_claims=vapid_claims,
         )
-        return True
     except WebPushException as e:
         # Check if subscription is expired
         if e.response and e.response.status_code == 410:
@@ -125,3 +124,5 @@ def send_web_push(
     except Exception:
         _logger.exception("Error sending push notification")
         return False
+    else:
+        return True

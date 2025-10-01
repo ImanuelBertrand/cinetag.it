@@ -197,14 +197,16 @@ def create_app(config_name, start_scheduler=False):
                 g.new_access_token,
                 g.new_refresh_token,
             ) = generate_new_tokens(temp_user.id)
-            g.current_user = temp_user
-            return None  # Proceed with guest user
-        except Exception as e:
+
+        except Exception:
             _logger.exception(
-                f"Failed to create temporary user for endpoint {endpoint}: {e}"
+                f"Failed to create temporary user for endpoint {endpoint}"
             )  # Use exception logger
             # Consider redirecting to an error page or login
             return make_response("Server error creating guest session", 500)
+        else:
+            g.current_user = temp_user
+            return None  # Proceed with guest user
 
     @app.after_request
     def manage_auth_cookies(response):
@@ -223,10 +225,8 @@ def create_app(config_name, start_scheduler=False):
                     r_max_age = app.config.get("JWT_REFRESH_TOKEN_EXPIRES")
                     set_refresh_cookies(response, new_refresh_tkn, r_max_age)
 
-        except Exception as e:
-            _logger.exception(
-                f"Error setting new token cookies: {e}\n{traceback.format_exc()}"
-            )
+        except Exception:
+            _logger.exception("Error setting new token cookies")
         finally:
             # Ensure g attributes are cleaned up even if response setting fails
             g.pop("new_access_token", None)
