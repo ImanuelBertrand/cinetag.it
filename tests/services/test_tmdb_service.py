@@ -35,7 +35,7 @@ def test_fetch_new_languages(app):
                 "app.models.tmdb_language.TmdbLanguage.create_from_tmdb"
             ) as mock_create,
             patch("app.extensions.db.session.bulk_save_objects") as mock_bulk_save,
-            patch("app.extensions.db.session.delete") as mock_delete,
+            patch("app.extensions.db.session.delete"),
             patch("app.extensions.db.session.add") as mock_add,
             patch("app.extensions.db.session.commit") as mock_commit,
         ):

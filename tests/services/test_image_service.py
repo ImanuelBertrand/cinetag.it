@@ -151,7 +151,7 @@ def test_resize_image():
 
 def test_get_image_contents_resized_exists(app):
     """Test that get_image_contents returns the correct image contents
-     when resized image exists."""
+    when resized image exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -190,9 +190,7 @@ def test_get_image_contents_original_exists(app):
             patch("os.path.exists", side_effect=[False, True]),
             patch("app.services.image_service.resize_image") as mock_resize,
             patch("os.makedirs"),
-            patch(
-                "builtins.open", mock_open(read_data=b"original image content")
-            ) as mock_file,
+            patch("builtins.open", mock_open(read_data=b"original image content")),
         ):
             content = get_image_contents("test/image.jpg", 500)
 
@@ -221,9 +219,7 @@ def test_get_image_contents_fetch_needed(app):
             patch("app.services.image_service.fetch_image") as mock_fetch,
             patch("app.services.image_service.resize_image") as mock_resize,
             patch("os.makedirs"),
-            patch(
-                "builtins.open", mock_open(read_data=b"fetched image content")
-            ) as mock_file,
+            patch("builtins.open", mock_open(read_data=b"fetched image content")),
         ):
             content = get_image_contents("test/image.jpg", 500)
 
