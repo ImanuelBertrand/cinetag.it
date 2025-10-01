@@ -56,6 +56,20 @@ def job_purge_abandoned_guests():
         pass
 
 
+def job_purge_empty_guests_with_tokens():
+    try:
+        # Separate retention window for empty guests that still have tokens
+        days = scheduler.app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
+        # import locally to avoid expanding top-level imports
+        from app.services.maintenance_service import (
+            purge_inactive_empty_guests_with_tokens,
+        )
+
+        purge_inactive_empty_guests_with_tokens(retention_days=days, dry_run=False)
+    except Exception:
+        pass
+
+
 def setup_cron_jobs():
     # Check if scheduler is enabled in config
     if (
@@ -104,6 +118,10 @@ def setup_cron_jobs():
         },
         "purge_abandoned_guests": {
             "func": job_purge_abandoned_guests,
+            "options": {"hours": 24},
+        },
+        "purge_empty_guests_with_tokens": {
+            "func": job_purge_empty_guests_with_tokens,
             "options": {"hours": 24},
         },
     }

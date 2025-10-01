@@ -24,3 +24,23 @@ def register_cli(app: Flask):
         """Remove expired refresh token allowlist entries."""
         count = AllowedRefreshToken.cleanup_expired_tokens()
         click.echo({"expired_tokens_deleted": count})
+
+    @app.cli.command("purge-empty-guests")
+    @click.option("--days", default=14, type=int, help="Retention window in days")
+    @click.option(
+        "--force",
+        is_flag=True,
+        default=False,
+        help="Actually delete (omit for dry-run)",
+    )
+    def purge_empty_guests_cmd(days: int, force: bool):
+        """Delete guest users that still have a refresh token but no data and are older than N days."""
+        # import locally to avoid modifying top-level imports further
+        from app.services.maintenance_service import (
+            purge_inactive_empty_guests_with_tokens,
+        )
+
+        result = purge_inactive_empty_guests_with_tokens(
+            retention_days=days, dry_run=not force
+        )
+        click.echo(result)
