@@ -1,5 +1,4 @@
 import logging
-import traceback
 import uuid
 
 import jwt
@@ -87,10 +86,7 @@ def verify_refresh_token_and_get_identity(
 
     except Exception as e:
         # Catch unexpected errors
-        _logger.error(
-            f"Unexpected error during refresh token verification: {e}",
-            exc_info=True,
-        )
+        _logger.exception("Unexpected error during refresh token verification")
         # Wrap unexpected errors in InvalidTokenError for consistent handling
         raise jwt.InvalidTokenError(f"Refresh token verification failed: {e}") from e
     else:
@@ -173,13 +169,11 @@ def generate_new_tokens(
             f"added refresh JTI {jti} for user {identity}."
         )
 
-    except Exception as e:
+    except Exception:
         # If any step failed, roll back the DB session
         db.session.rollback()
-        _logger.error(
-            "Failed to generate tokens or add to allowlist for identity "
-            f"{identity}: {e}\n{traceback.format_exc()}",
-            exc_info=True,
+        _logger.exception(
+            f"Failed to generate tokens or add to allowlist for identity {identity}"
         )
     else:
         return access_token, refresh_token

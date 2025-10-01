@@ -131,11 +131,9 @@ def create_app(config_name, start_scheduler=False):
                         g.new_access_token,
                         g.new_refresh_token,
                     ) = generate_new_tokens(g.current_user.id)
-                except Exception as e:
-                    _logger.error(
-                        f"Error generating tokens during refresh cookie "
-                        f"restoration: {e}\n{traceback.format_exc()}",
-                        exc_info=True,
+                except Exception:
+                    _logger.exception(
+                        "Error generating tokens during refresh cookie restoration",
                     )
                     g.new_access_token = None
                     g.new_refresh_token = None

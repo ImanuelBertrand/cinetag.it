@@ -110,10 +110,8 @@ class AllowedRefreshToken(db.Model):
             ).delete()
             db.session.commit()  # Commit the cleanup transaction immediately
 
-        except Exception as e:
-            _logger.error(
-                f"Error during expired refresh token cleanup: {e}", exc_info=True
-            )
+        except Exception:
+            _logger.exception("Error during expired refresh token cleanup")
             db.session.rollback()
             return 0
         else:

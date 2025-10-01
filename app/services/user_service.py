@@ -496,11 +496,10 @@ def get_current_user() -> User | None:
             # Handle case where g.current_user might be something unexpected
             _logger.warning("g.current_user was not a mapped User instance.")
             return None  # Treat as no user
-        except Exception as e:
-            _logger.error(
-                f"Error checking/re-attaching user session state "
-                f"for user {getattr(user, 'id', 'N/A')}: {e}",
-                exc_info=True,
+        except Exception:
+            _logger.exception(
+                "Error checking/re-attaching user session state "
+                f"for user {getattr(user, 'id', 'N/A')}"
             )
 
     return user
