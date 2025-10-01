@@ -20,7 +20,7 @@ class MiscData(db.Model):
             db.session.commit()
 
     @staticmethod
-    def get(key, default: str = None) -> str:
+    def get(key, default: str | None = None) -> str:
         data = MiscData.query.filter_by(key=key).first()
         return data.value if data else default
 

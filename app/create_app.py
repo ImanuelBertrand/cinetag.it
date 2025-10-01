@@ -25,7 +25,7 @@ from app.models.notification_channel import NotificationChannel  # noqa F401
 from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F401
 from app.models.tmdb_language import TmdbLanguage  # noqa F401
 from app.models.tmdb_region import TmdbRegion  # noqa F401
-from app.models.user import User  # noqa F401
+from app.models.user import User
 from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
@@ -167,7 +167,7 @@ def create_app(config_name, start_scheduler=False):
                         f"User identity {refreshed_user_id} "
                         f"from valid refresh token not found in DB."
                     )
-                        # Fall through to invalid token handling
+                # Fall through to invalid token handling
                 else:
                     _logger.warning(
                         "Refresh token deemed invalid by verification helper "

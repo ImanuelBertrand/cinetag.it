@@ -38,7 +38,7 @@ class Movie(db.Model):
         return f"<Movie {self.id} ({self.original_title})>"
 
     def get_localized_data(
-        self, lang: str, language_infos: "dict[str, MovieLanguageInfo]" = None
+        self, lang: str, language_infos: "dict[str, MovieLanguageInfo] | None" = None
     ) -> dict[str, str]:
         if language_infos is None:
             language_infos = {
@@ -61,7 +61,6 @@ class Movie(db.Model):
             )
             for field in fields
         }
-
 
     def update_from_tmdb(self, data: dict) -> bool:
         updated = False

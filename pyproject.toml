@@ -20,6 +20,7 @@ select = [
   "PIE", # flake8-pie
   "UP",  # pyupgrade
   "RET", # flake8-return
+  "RUF", # flake8-return
   "S",   # flake8-bandit
   "SIM", # flake8-simplify
   "TC",  # flake8-type-checking

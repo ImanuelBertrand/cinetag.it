@@ -24,7 +24,7 @@ class MovieLanguageInfo(db.Model):
 
     @staticmethod
     def create_from_tmdb(
-        movie_id: int, data: dict, language: str = None
+        movie_id: int, data: dict, language: str | None = None
     ) -> "MovieLanguageInfo":
         if language is not None:
             data = {"iso_639_1": language, "data": data}

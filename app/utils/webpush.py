@@ -26,7 +26,6 @@ def get_vapid_key_path() -> str:
     return os.path.join(instance_path, "vapid.private.pem")
 
 
-
 def get_public_key_b64(vapid_instance: Vapid) -> str:
     """Helper to extract URL-safe Base64 public key from Vapid object."""
     public_key_bytes = vapid_instance.public_key.public_bytes(

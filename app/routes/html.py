@@ -779,7 +779,7 @@ def get_poster(width, filename):
         file_contents: bytes,
         mimetype: str,
         as_attachment: bool = False,
-        filename: str = None,
+        filename: str | None = None,
     ):
         response = make_response(file_contents)
         response.mimetype = mimetype

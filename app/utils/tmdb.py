@@ -41,7 +41,11 @@ def get_tmdb_url(path: str) -> str:
     return f"{get_base_url()}/{path.lstrip('/')}"
 
 
-def _get(url: str, params: dict[str, str] = None, headers: dict[str, str] = None):
+def _get(
+    url: str,
+    params: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
+):
     if not params:
         params = {}
     if not headers:
@@ -78,7 +82,7 @@ def _get(url: str, params: dict[str, str] = None, headers: dict[str, str] = None
     return response
 
 
-def _get_json(url: str, params: dict[str, str] = None):
+def _get_json(url: str, params: dict[str, str] | None = None):
     return _get(url, params=params).json()
 
 

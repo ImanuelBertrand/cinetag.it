@@ -118,7 +118,7 @@ def get_region_flag(region: str) -> str | None:
     return first_flag_char + second_flag_char
 
 
-def get_user_movie_ids(user: User, decision: str = None):
+def get_user_movie_ids(user: User, decision: str | None = None):
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
 
     if decision is not None:
@@ -146,7 +146,7 @@ def get_movies_based_on_filter(
     mode: str,
     need_imdb: bool = False,
     need_poster: bool = False,
-    name_filter: str = None,
+    name_filter: str | None = None,
     min_release_date=None,
     min_movie_id=None,
     limit: int = 20,
@@ -357,7 +357,10 @@ def get_movies_based_on_filter(
 
 
 def _get_user_movies(
-    user, start: datetime = None, end: datetime = None, decisions: list[str] = None
+    user,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    decisions: list[str] | None = None,
 ):
     if decisions is None:
         decisions = ["approve"]
@@ -386,7 +389,10 @@ def _get_user_movies(
 
 
 def fetch_user_events(
-    user, start: datetime = None, end: datetime = None, external_urls: bool = False
+    user,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    external_urls: bool = False,
 ) -> list[dict[str, str]]:
     if not user:
         raise ValueError("User not found.")

@@ -214,7 +214,7 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
         db.session.bulk_save_objects(language_info_to_add)
 
 
-def sync_upcoming_movies(region: str, language: str = None) -> list[int]:
+def sync_upcoming_movies(region: str, language: str | None = None) -> list[int]:
     """
     Fetch upcoming movies from TMDb and ensure they are stored in the database.
     """
