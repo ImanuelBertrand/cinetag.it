@@ -3,15 +3,16 @@ import traceback
 
 import jwt
 from crawlerdetect import CrawlerDetect
-from flask import Flask, g, request, make_response
+from flask import Flask, g, make_response, request
 from flask_jwt_extended import (
-    verify_jwt_in_request,
     get_jwt_identity,
     set_access_cookies,
     set_refresh_cookies,
     unset_jwt_cookies,
+    verify_jwt_in_request,
 )
 
+from app.cli import register_cli
 from app.config import config_by_name
 from app.extensions import init_extensions
 from app.models.allowed_refresh_token import AllowedRefreshToken  # noqa F401
@@ -29,11 +30,10 @@ from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
 from app.scheduler import setup_cron_jobs
-from app.cli import register_cli
 from app.utils.auth import (
-    verify_refresh_token_and_get_identity,
-    generate_new_tokens,
     create_temporary_user,
+    generate_new_tokens,
+    verify_refresh_token_and_get_identity,
 )
 
 _logger = logging.getLogger(__name__)
@@ -235,8 +235,8 @@ def create_app(config_name, start_scheduler=False):
             g.pop("new_refresh_token", None)
         return response
 
-    from app.routes.html import html as html_blueprint
     from app.routes.api import api as api_blueprint
+    from app.routes.html import html as html_blueprint
 
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")

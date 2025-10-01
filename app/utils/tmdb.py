@@ -1,8 +1,8 @@
 import logging
 import os
-from datetime import datetime, date
-from typing import Any
 from collections.abc import Callable
+from datetime import date, datetime
+from typing import Any
 
 import requests
 from flask import current_app

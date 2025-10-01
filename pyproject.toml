@@ -13,9 +13,10 @@ select = [
   "E",   # Error
   "W",   # Warning
   "F",   # Pyflakes
+  "I",   # isort
   "UP",  # pyupgrade
-  "SIM", # flake8-simplify
   "S",   # flake8-bandit
+  "SIM", # flake8-simplify
 ]
 extend-ignore = [
   "UP031", # printf-string-formatting (high-effort fix)

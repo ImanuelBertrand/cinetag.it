@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
 from app.exceptions import UserFeedbackError
 from app.extensions import db
@@ -9,8 +9,8 @@ from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
 from app.services.user_service import (
     fetch_user_events,
-    get_movies_based_on_filter,
     get_current_user,
+    get_movies_based_on_filter,
 )
 from app.utils.notifications import setup_notifications
 from app.utils.webpush import get_vapid_public_key_for_js

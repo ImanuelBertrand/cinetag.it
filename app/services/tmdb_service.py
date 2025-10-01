@@ -17,14 +17,14 @@ from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.services.movie_service import get_lang_infos, get_region_infos
 from app.utils.tmdb import (
-    fetch_languages,
-    fetch_regions,
-    fetch_upcoming_movies,
-    fetch_movie_languages,
-    fetch_movie_images,
-    fetch_release_dates,
     fetch_changed_movies,
+    fetch_languages,
     fetch_movie_details,
+    fetch_movie_images,
+    fetch_movie_languages,
+    fetch_regions,
+    fetch_release_dates,
+    fetch_upcoming_movies,
 )
 
 _logger = logging.getLogger(__name__)

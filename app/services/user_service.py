@@ -5,14 +5,14 @@ from typing import Any
 
 import jwt
 from babel.dates import format_date
-from flask import current_app, url_for, g
+from flask import current_app, g, url_for
 from flask_sqlalchemy.session import Session
 from sqlalchemy import func
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
-from app.extensions import db, bcrypt, cache
+from app.extensions import bcrypt, cache, db
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
 from app.models.movie_region_info import MovieRegionInfo

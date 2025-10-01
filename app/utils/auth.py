@@ -1,8 +1,8 @@
 import logging
 import traceback
+import uuid
 
 import jwt
-import uuid
 from flask import current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
 

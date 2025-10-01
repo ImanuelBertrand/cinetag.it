@@ -1,11 +1,11 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from app.services.tmdb_service import (
+    _sort_objects,
     fetch_new_languages,
-    update_regions,
     save_movie_list,
     sync_upcoming_movies,
-    _sort_objects,
+    update_regions,
 )
 
 

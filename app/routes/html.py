@@ -6,22 +6,22 @@ from datetime import datetime, timedelta
 from babel.dates import format_date
 from flask import (
     Blueprint,
+    current_app,
+    flash,
+    g,
+    make_response,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
-    flash,
-    make_response,
-    current_app,
-    g,
     send_from_directory,
+    url_for,
 )
 from flask_jwt_extended import (
     unset_jwt_cookies,
 )
 
 from app.exceptions import UserFeedbackError
-from app.extensions import db, bcrypt
+from app.extensions import bcrypt, db
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification_channel import NotificationChannel
@@ -31,13 +31,13 @@ from app.models.user import User
 from app.models.user_calendar import UserCalendar
 from app.services.image_service import get_image_contents, get_image_url
 from app.services.user_service import (
-    fetch_user_events,
-    confirm_user_email,
     authenticate_user,
-    reset_user_password,
+    confirm_user_email,
+    fetch_user_events,
+    get_current_user,
     hash_password,
     queue_confirmation_mail,
-    get_current_user,
+    reset_user_password,
 )
 from app.utils.auth import generate_new_tokens
 from app.utils.email import queue_email

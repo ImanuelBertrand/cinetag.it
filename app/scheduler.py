@@ -4,20 +4,20 @@ from datetime import datetime
 from functools import partial
 
 from app.extensions import scheduler
+from app.models.allowed_refresh_token import AllowedRefreshToken
+from app.services.maintenance_service import purge_abandoned_guests
 from app.services.tmdb_service import (
-    update_regions,
-    update_languages,
-    update_all_upcoming_movies,
-    refresh_outdated_movies,
     refresh_changed_movies,
+    refresh_outdated_movies,
+    update_all_upcoming_movies,
+    update_languages,
+    update_regions,
 )
 from app.utils.email import send_queued_emails
 from app.utils.notifications import (
     cron_send_notifications,
     cron_setup_notifications,
 )
-from app.models.allowed_refresh_token import AllowedRefreshToken
-from app.services.maintenance_service import purge_abandoned_guests
 
 _logger = logging.getLogger(__name__)
 

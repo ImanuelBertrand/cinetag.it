@@ -6,7 +6,7 @@ import os
 from cryptography.hazmat.primitives import serialization
 from flask import current_app
 from py_vapid import Vapid
-from pywebpush import webpush, WebPushException
+from pywebpush import WebPushException, webpush
 
 from app.exceptions import WebPushSubscriptionExpiredError
 

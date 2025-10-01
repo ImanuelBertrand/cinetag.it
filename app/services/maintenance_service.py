@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from sqlalchemy import exists
 
 from app.extensions import db
-from app.models.user import User
-from app.models.user_movie import UserMovie
-from app.models.user_calendar import UserCalendar
 from app.models.allowed_refresh_token import AllowedRefreshToken
+from app.models.user import User
+from app.models.user_calendar import UserCalendar
+from app.models.user_movie import UserMovie
 
 
 def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> dict:

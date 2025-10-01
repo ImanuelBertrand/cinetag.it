@@ -1,8 +1,8 @@
 import os
 
 import requests
-from PIL import Image
 from flask import current_app
+from PIL import Image
 
 
 def get_image_base_path() -> str:

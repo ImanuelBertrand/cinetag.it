@@ -4,7 +4,7 @@ import pymysql
 from apscheduler.executors.pool import ThreadPoolExecutor
 from flask import request
 from flask_apscheduler import APScheduler
-from flask_assets import Environment, Bundle
+from flask_assets import Bundle, Environment
 from flask_babel import Babel
 from flask_bcrypt import Bcrypt
 from flask_caching import Cache

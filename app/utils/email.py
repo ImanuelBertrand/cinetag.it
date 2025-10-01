@@ -7,7 +7,7 @@ import jwt
 from flask import current_app, url_for
 from flask_mail import Message
 
-from app.extensions import mail, db
+from app.extensions import db, mail
 from app.models.send_confirmation_mails import SentConfirmationMails
 from app.models.user_email import UserEmailQueue
 

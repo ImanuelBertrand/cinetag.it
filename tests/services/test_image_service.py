@@ -1,14 +1,14 @@
 import os
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import MagicMock, mock_open, patch
 
 from app.services.image_service import (
+    fetch_image,
     get_image_base_path,
+    get_image_contents,
+    get_image_url,
     get_tmdb_image_base_url,
     get_tmdb_image_url,
-    get_image_url,
-    fetch_image,
     resize_image,
-    get_image_contents,
 )
 
 

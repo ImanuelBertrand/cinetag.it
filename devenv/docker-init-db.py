@@ -14,8 +14,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["CONFIG_FILE"] = "/app/devenv/docker-config.yaml"
 
 # Import the application
-from app.create_app import create_app
 from flask_migrate import upgrade
+
+from app.create_app import create_app
 
 
 def init_db():

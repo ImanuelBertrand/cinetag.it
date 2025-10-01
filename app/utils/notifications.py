@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 
 from app.exceptions import WebPushSubscriptionExpiredError
 from app.extensions import db

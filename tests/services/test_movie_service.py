@@ -1,6 +1,6 @@
 from app.models.movie_language_info import MovieLanguageInfo
 from app.models.movie_region_info import MovieRegionInfo
-from app.services.movie_service import get_region_infos, get_lang_infos
+from app.services.movie_service import get_lang_infos, get_region_infos
 
 
 def test_get_region_infos(app, test_movies):
