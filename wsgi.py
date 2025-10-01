@@ -30,5 +30,9 @@ application = create_app(config_name, start_scheduler=True)
 if __name__ == "__main__":
     # In development mode, bind to all interfaces (0.0.0.0)
     # In production mode, bind only to localhost (127.0.0.1) for security
-    host = "0.0.0.0" if config_name == "development" else "127.0.0.1"
+    if config_name == "development":
+        host = "0.0.0.0"  # noqa: S104
+    else:
+        host = "127.0.0.1"
+
     application.run(host=host)
