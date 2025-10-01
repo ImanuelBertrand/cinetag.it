@@ -119,7 +119,7 @@ def send_web_push(
             raise WebPushSubscriptionExpiredError(
                 "Push subscription has expired or been unsubscribed",
                 subscription_info=subscription_info,
-            )
+            ) from None
 
         # Handle other errors
         _logger.error(f"WebPushException: {e}")

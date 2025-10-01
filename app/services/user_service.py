@@ -78,9 +78,9 @@ def confirm_user_email(token):
         user.new_email = None
         db.session.commit()
     except jwt.ExpiredSignatureError:
-        raise UserFeedbackError("The confirmation link has expired.")
+        raise UserFeedbackError("The confirmation link has expired.") from None
     except jwt.InvalidTokenError:
-        raise UserFeedbackError("Invalid token.")
+        raise UserFeedbackError("Invalid token.") from None
 
 
 def hash_password(password: str) -> str:
@@ -105,9 +105,9 @@ def reset_user_password(token, new_password):
         db.session.add(user)
         db.session.commit()
     except jwt.ExpiredSignatureError:
-        raise UserFeedbackError("The reset link has expired.")
+        raise UserFeedbackError("The reset link has expired.") from None
     except jwt.InvalidTokenError:
-        raise UserFeedbackError("Invalid token.")
+        raise UserFeedbackError("Invalid token.") from None
 
 
 def get_region_flag(region: str) -> str | None:
