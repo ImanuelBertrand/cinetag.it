@@ -624,8 +624,34 @@ ul.release-list li {
     max-width: 100%;
   }
 
+  .tagline {
+    font-size: 1.2em;
+    color: $steel-gray;
+    margin: 0.5em 0 1.5em;
+    max-width: 30em;
+  }
+
   .plot {
     max-width: 30em;
+    margin-bottom: 1.5em;
+  }
+
+  .release-dates {
+    margin-top: 1.5em;
+    max-width: 30em;
+
+    h4 {
+      margin-bottom: 0.5em;
+    }
+
+    ul {
+      list-style-type: none;
+      padding-left: 1em;
+
+      li {
+        margin-bottom: 0.3em;
+      }
+    }
   }
 }
 

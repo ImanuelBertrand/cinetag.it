@@ -654,6 +654,42 @@ def get_movie_details(movie_id):
         region_info = MovieRegionInfo.query.filter_by(
             movie_id=movie_id, region=user.region
         ).first()
+
+        # Get all region infos for the movie to display different release dates
+        all_region_infos = MovieRegionInfo.query.filter_by(movie_id=movie_id).all()
+        region_release_dates = {}
+        region_names = {reg.code: reg.english_name for reg in TmdbRegion.query.all()}
+        for ri in all_region_infos:
+            ri: MovieRegionInfo
+            if ri.is_fake:
+                continue
+            region_display = region_names.get(ri.region, ri.region)
+            region_release_dates[region_display] = format_date(
+                ri.release_date, locale=language
+            )
+
+        # Get original language name
+        original_language_obj = TmdbLanguage.query.filter_by(
+            code=movie.original_language
+        ).first()
+        original_language_name = (
+            original_language_obj.english_name
+            if original_language_obj
+            else movie.original_language
+        )
+
+        # Parse origin countries
+        origin_countries = []
+        if movie.origin_country:
+            country_codes = movie.origin_country.split(",")
+            countries = TmdbRegion.query.filter(TmdbRegion.code.in_(country_codes))
+            country_names = {
+                country.code: country.english_name for country in countries
+            }
+
+            for code in country_codes:
+                origin_countries.append(country_names.get(code, code))
+
         movie_data = {
             "id": movie.id,
             "title": lang_info["title"],
@@ -665,6 +701,11 @@ def get_movie_details(movie_id):
                 else None
             ),
             "imdb_id": movie.imdb_id,
+            "tagline": lang_info["tagline"],
+            "runtime": lang_info["runtime"],
+            "original_language": original_language_name,
+            "origin_countries": origin_countries,
+            "region_release_dates": region_release_dates,
         }
         if not movie:
             flash("Movie not found.", "danger")

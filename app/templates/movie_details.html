@@ -6,11 +6,38 @@
     <h2>{{ movie.title }}</h2>
     <div class="movie-details">
         <img class="poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}"/>
+
+        {% if movie["tagline"] %}
+            <div class="tagline"><em>{{ movie["tagline"] }}</em></div>
+        {% endif %}
+
         <div class="plot">{{ movie["overview"] }}</div>
+
         <p>Release Date: {{ movie["release_date"] }}</p>
+
         {% if movie["runtime"] %}
             <p>Runtime: {{ movie["runtime"] }} minutes</p>
         {% endif %}
+
+        {% if movie["original_language"] %}
+            <p>Original Language: {{ movie["original_language"] }}</p>
+        {% endif %}
+
+        {% if movie["origin_countries"] %}
+            <p>Origin Countries: {{ movie["origin_countries"]|join(", ") }}</p>
+        {% endif %}
+
+        {% if movie["region_release_dates"] %}
+            <div class="release-dates">
+                <h4>Release Dates:</h4>
+                <ul>
+                    {% for region, date in movie["region_release_dates"].items() %}
+                        <li>{{ region }}: {{ date }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         {% if movie["imdb_id"] %}
             <p><a href="https://www.imdb.com/title/{{ movie['imdb_id'] }}" target="_blank">IMDB</a></p>
         {% endif %}
