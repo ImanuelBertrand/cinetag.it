@@ -58,8 +58,10 @@ def verify_refresh_token_and_get_identity(
         # This requires the DB session to be active
         if not AllowedRefreshToken.is_token_allowed(jti, identity):
             _logger.warning(
-                f"Refresh token JTI '{jti}' for user {identity} not "
-                "found in allowlist (revoked or invalid)."
+                "Refresh token JTI '%s' for user %s not "
+                "found in allowlist (revoked or invalid).",
+                jti,
+                identity,
             )
             # Treat non-existence in allowlist as an invalid token scenario.
             raise jwt.InvalidTokenError(
@@ -72,16 +74,16 @@ def verify_refresh_token_and_get_identity(
             encoded_token, options={"verify_signature": False, "verify_exp": False}
         )
         _logger.info(
-            f"Refresh token has expired (signature level). "
-            f"JTI: {payload_info.get('jti', 'N/A')}, "
-            f"User: {payload_info.get('sub', 'N/A')}"
+            "Refresh token has expired (signature level). JTI: %s, User: %s",
+            payload_info.get("jti", "N/A"),
+            payload_info.get("sub", "N/A"),
         )
 
         raise
 
     except jwt.InvalidTokenError as e:
         # Catch other decoding errors or the explicit raises from above
-        _logger.warning(f"Invalid refresh token encountered: {e}")
+        _logger.warning("Invalid refresh token encountered: %s", e)
         raise  # Re-raise the original exception
 
     except Exception as e:
@@ -92,7 +94,7 @@ def verify_refresh_token_and_get_identity(
     else:
         # 3. If decoding passed and JTI is allowed, return the user identity
         _logger.debug(
-            f"Refresh token verified successfully for JTI '{jti}', user {identity}."
+            "Refresh token verified successfully for JTI '%s', user %s.", jti, identity
         )
         return int(identity), jti
 
@@ -110,7 +112,7 @@ def create_temporary_user():
         db.session.rollback()
         return None
     else:
-        _logger.debug(f"Created temporary user {user.id}")
+        _logger.debug("Created temporary user %s", user.id)
         return user
 
 
@@ -127,8 +129,10 @@ def generate_new_tokens(
             jti=old_jti_to_revoke
         ):
             _logger.warning(
-                f"Old refresh token JTI {old_jti_to_revoke} "
-                f"not found for revocation during rotation (user {identity})."
+                "Old refresh token JTI %s not found "
+                "for revocation during rotation (user %s).",
+                old_jti_to_revoke,
+                identity,
             )
 
         # 2. Generate JTI first
@@ -165,15 +169,16 @@ def generate_new_tokens(
         db.session.commit()
 
         _logger.debug(
-            f"Successfully generated tokens and "
-            f"added refresh JTI {jti} for user {identity}."
+            "Successfully generated tokens and added refresh JTI %s for user %s.",
+            jti,
+            identity,
         )
 
     except Exception:
         # If any step failed, roll back the DB session
         db.session.rollback()
         _logger.exception(
-            f"Failed to generate tokens or add to allowlist for identity {identity}"
+            "Failed to generate tokens or add to allowlist for identity %s", identity
         )
     else:
         return access_token, refresh_token

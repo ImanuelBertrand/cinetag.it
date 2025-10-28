@@ -18,7 +18,7 @@ def profile_function(func):
         end_time = time.time()
         execution_time = end_time - start_time
         _logger.info(
-            f"Function {func.__name__} executed in {execution_time:.4f} seconds"
+            "Function %s executed in %.4f seconds", func.__name__, execution_time
         )
         return result
 
@@ -56,7 +56,7 @@ class Profiler:
     def stop(self):
         """Stop the profiler and log the results."""
         if not self.is_running:
-            _logger.warning(f"Profiler {self.name} was stopped without being started")
+            _logger.warning("Profiler %s was stopped without being started", self.name)
             return self
 
         if self.current_section:
@@ -83,7 +83,7 @@ class Profiler:
         """Start timing a new section."""
         if not self.is_running:
             _logger.warning(
-                f"Cannot start section {name} - profiler {self.name} is not running"
+                "Cannot start section %s - profiler %s is not running", name, self.name
             )
             return self
 
@@ -101,8 +101,9 @@ class Profiler:
 
         if not self.is_running:
             _logger.warning(
-                f"Cannot end section {self.current_section} - "
-                f"profiler {self.name} is not running"
+                "Cannot end section %s - profiler %s is not running",
+                self.current_section,
+                self.name,
             )
             return self
 

@@ -485,8 +485,9 @@ def get_current_user() -> User | None:
             # If not attached to any session OR attached to a different session
             if not object_session or object_session is not db.session:
                 _logger.debug(
-                    f"User {getattr(user, 'id', 'N/A')} found in g "
-                    "but potentially detached. Merging into current session."
+                    "User %s found in g but potentially detached. "
+                    "Merging into current session.",
+                    getattr(user, "id", "N/A"),
                 )
                 # Merge the instance back into the current session.
                 # If the instance has been modified, this might raise issues,
@@ -498,8 +499,8 @@ def get_current_user() -> User | None:
             return None  # Treat as no user
         except Exception:
             _logger.exception(
-                "Error checking/re-attaching user session state "
-                f"for user {getattr(user, 'id', 'N/A')}"
+                "Error checking/re-attaching user session state for user %s",
+                getattr(user, "id", "N/A"),
             )
 
     return user

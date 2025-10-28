@@ -19,7 +19,7 @@ logging.basicConfig(
     encoding="utf-8",
 )
 
-logging.getLogger(__name__).info(f"Starting application in {config_name} mode")
+logging.getLogger(__name__).info("Starting application in %s mode", config_name)
 
 
 # Create an instance of the Flask application

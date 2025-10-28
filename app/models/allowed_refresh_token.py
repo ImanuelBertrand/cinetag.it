@@ -74,7 +74,7 @@ class AllowedRefreshToken(db.Model):
 
         new_token = AllowedRefreshToken(jti=jti, user_id=user_id, expires_at=expires_dt)
         db.session.add(new_token)
-        _logger.debug(f"Added refresh token {jti} for user {user_id} to allowlist.")
+        _logger.debug("Added refresh token %s for user %s to allowlist."), jti, user_id
         # Note: Commit should happen as part
         # of the transaction where the token is issued.
 
@@ -85,7 +85,7 @@ class AllowedRefreshToken(db.Model):
         if token_entry:
             db.session.delete(token_entry)
             _logger.debug(
-                f"Revoked refresh token {jti} for user {token_entry.user_id}."
+                "Revoked refresh token %s for user %s.", jti, token_entry.user_id
             )
             return True
         return False
@@ -94,7 +94,7 @@ class AllowedRefreshToken(db.Model):
     def revoke_all_for_user(user_id: int):
         """Revokes all refresh tokens for a specific user."""
         deleted_count = AllowedRefreshToken.query.filter_by(user_id=user_id).delete()
-        _logger.info(f"Revoked {deleted_count} refresh token(s) for user {user_id}.")
+        _logger.info("Revoked %s refresh token(s) for user %s.", deleted_count, user_id)
         # Note: Commit should happen as part
         # of the transaction (e.g., password change).
         return deleted_count > 0
@@ -117,6 +117,6 @@ class AllowedRefreshToken(db.Model):
         else:
             if expired_count > 0:
                 _logger.info(
-                    f"Cleaned up {expired_count} expired refresh token entries."
+                    "Cleaned up %s expired refresh token entries.", expired_count
                 )
             return expired_count

@@ -106,17 +106,19 @@ def create_app(config_name, start_scheduler=False):
                 if user:
                     g.current_user = user
                 else:
-                    _logger.warning(f"Access token identity {user_id} not found in DB.")
+                    _logger.warning(
+                        "Access token identity %s not found in DB.", user_id
+                    )
         except jwt.ExpiredSignatureError:
             pass  # Access token expired, fallback to the refresh token logic below
         except jwt.InvalidTokenError as e:
             _logger.warning(
-                f"Invalid access token encountered for endpoint {endpoint}: {e}"
+                "Invalid access token encountered for endpoint %s: %s", endpoint, e
             )
         except Exception:
             # Catch other potential verification errors
             _logger.exception(
-                f"Error verifying JWT access token for endpoint {endpoint}"
+                "Error verifying JWT access token for endpoint %s", endpoint
             )
 
         refresh_token_cookie = request.cookies.get("refresh_token_cookie")
@@ -125,7 +127,7 @@ def create_app(config_name, start_scheduler=False):
             # Migrate users only having a valid
             # access token to the refresh token logic
             if not refresh_token_cookie:
-                _logger.debug(f"Migrating user {g.current_user} to refresh tokens")
+                _logger.debug("Migrating user %s to refresh tokens", g.current_user)
                 try:
                     (
                         g.new_access_token,
@@ -157,12 +159,12 @@ def create_app(config_name, start_scheduler=False):
                         ) = generate_new_tokens(refreshed_user_id, old_jti)
                         g.current_user = user
                         _logger.debug(
-                            f"User {user.id} authenticated via refresh token."
+                            "User %s authenticated via refresh token.", user.id
                         )
                         return None  # Authenticated via refresh, proceed
                     _logger.warning(
-                        f"User identity {refreshed_user_id} "
-                        f"from valid refresh token not found in DB."
+                        "User identity %s from valid refresh token not found in DB.",
+                        refreshed_user_id,
                     )
                 # Fall through to invalid token handling
                 else:
@@ -173,10 +175,12 @@ def create_app(config_name, start_scheduler=False):
                     # Fall through to invalid token handling
 
             except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-                _logger.warning(f"Refresh token verification failed: {e}")
+                _logger.warning("Refresh token verification failed: %s", e)
             except Exception as e:
                 _logger.warning(
-                    f"Refresh token verification failed: {e}\n{traceback.format_exc()}"
+                    "Refresh token verification failed: %s\n%s",
+                    e,
+                    traceback.format_exc(),
                 )
 
         if g.current_user:
@@ -198,7 +202,7 @@ def create_app(config_name, start_scheduler=False):
 
         except Exception:
             _logger.exception(
-                f"Failed to create temporary user for endpoint {endpoint}"
+                "Failed to create temporary user for endpoint %s", endpoint
             )  # Use exception logger
             # Consider redirecting to an error page or login
             return make_response("Server error creating guest session", 500)

@@ -25,8 +25,9 @@ def cron_setup_notifications():
                 is_sent=False,  # if the channel is re-enabled, so we don't resend
             ).delete()
             _logger.info(
-                f"Deleted {deleted_notifications} notifications "
-                f"for disabled channel {channel.id}"
+                "Deleted %s notifications for disabled channel %s",
+                deleted_notifications,
+                channel.id,
             )
             db.session.add(channel)
             db.session.commit()
@@ -43,7 +44,7 @@ def cron_send_notifications():
         .order_by(Notification.scheduled_at.asc())
         .all()
     )
-    _logger.info(f"Sending {len(scheduled_notifications)} notifications")
+    _logger.info("Sending %s notifications", len(scheduled_notifications))
 
     sent_notifications = defaultdict(set)
     for notification in scheduled_notifications:
@@ -67,7 +68,7 @@ def cron_send_notifications():
                 db.session.commit()
                 sent_notifications[notification.user_id].add(notification.movie_id)
         except Exception:
-            _logger.exception(f"Failed to send notification {notification.id}")
+            _logger.exception("Failed to send notification %s", notification.id)
 
 
 def send_notification(notification: Notification):
@@ -79,13 +80,13 @@ def send_notification(notification: Notification):
     mode = notification.channel.mode
 
     if mode not in mode_methods:
-        _logger.error(f"Unknown notification type: {notification.mode}")
+        _logger.error("Unknown notification type: %s", notification.mode)
         return False
 
     try:
         return mode_methods[mode](notification)
     except Exception:
-        _logger.exception(f"Error sending notification {notification.id}")
+        _logger.exception("Error sending notification %s", notification.id)
         return False
 
 
@@ -101,7 +102,7 @@ def get_push_notification_content(
     ).first()
 
     if not movie_region_info:
-        _logger.error(f"No region info found for movie {notification.movie_id}")
+        _logger.error("No region info found for movie %s", notification.movie_id)
         return None
 
     movie_title = movie_data["title"]
@@ -128,17 +129,17 @@ def send_push_notification(notification: Notification):
     """
     from app.utils.webpush import send_web_push
 
-    _logger.info(f"Sending push notification for {notification.id}")
+    _logger.info("Sending push notification for %s", notification.id)
 
     # Get the channel and check if it has subscription data
     channel = notification.channel
     if not channel or not channel.notification_data:
-        _logger.error(f"No subscription data found for notification {notification.id}")
+        _logger.error("No subscription data found for notification %s", notification.id)
         return False
 
     notification_content = get_push_notification_content(notification)
     if notification_content is None:
-        _logger.error(f"Failed to get notification data for {notification.id}")
+        _logger.error("Failed to get notification data for %s", notification.id)
         return False
 
     # Send the push notification
@@ -147,7 +148,7 @@ def send_push_notification(notification: Notification):
         return send_web_push(subscription_info, notification_content)
     except WebPushSubscriptionExpiredError:
         _logger.warning(
-            f"Push subscription expired for channel {channel.id}, disabling channel"
+            "Push subscription expired for channel %s, disabling channel", channel.id
         )
         # Disable the notification channel
         channel.enabled = False
@@ -173,7 +174,7 @@ def send_email_notification(notification: Notification):
         f"coming up in {days_till_release} days."
     )
     subject = f"Upcoming movie ({days_till_release} days): {movie_title}"
-    _logger.info(f"Email notification for {notification.id} to {user_mail}")
+    _logger.info("Email notification for %s to %s", notification.id, user_mail)
     return send_email(user_mail, subject, body)
 
 

@@ -45,7 +45,9 @@ def generate_confirmation_token(user):
 
 def send_confirmation_email(user):
     if not user.new_email:
-        _logger.error(f"Can't send confirmation email for user {user.id}: no new email")
+        _logger.error(
+            "Can't send confirmation email for user %s: no new email", user.id
+        )
         return
     token = generate_confirmation_token(user)
     confirm_url = url_for("html.confirm_email", token=token, _external=True)
@@ -108,7 +110,7 @@ def send_queued_emails():
             elif mail_type == "reset":
                 send_password_reset_email(user)
             else:
-                _logger.error(f"Unknown mail type: {mail_type}")
+                _logger.error("Unknown mail type: %s", mail_type)
 
             for item in items:
                 db.session.delete(item)

@@ -57,7 +57,7 @@ def create_vapid() -> Vapid:
     if os.path.exists(private_key_path):
         return Vapid.from_file(private_key_path)
 
-    _logger.info(f"Generating new VAPID key and saving to {private_key_path}")
+    _logger.info("Generating new VAPID key and saving to %s", private_key_path)
     vapid = Vapid()
     vapid.generate_keys()
     vapid.save_key(private_key_path)

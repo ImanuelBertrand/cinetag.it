@@ -15,7 +15,7 @@ select = [
   "C4",  # flake8-comprehensions
 # "C90", # mccabe # TODO
   "F",   # Pyflakes
-# "G",   # flake8-logging-format # TODO
+  "G",   # flake8-logging-format
   "I",   # isort
   "PIE", # flake8-pie
   "UP",  # pyupgrade
