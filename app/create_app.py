@@ -1,15 +1,10 @@
 import logging
-import traceback
 
-import jwt
-from crawlerdetect import CrawlerDetect
-from flask import Flask, g, make_response, request
+from flask import Flask, g
 from flask_jwt_extended import (
-    get_jwt_identity,
     set_access_cookies,
     set_refresh_cookies,
     unset_jwt_cookies,
-    verify_jwt_in_request,
 )
 
 from app.cli import register_cli
@@ -25,27 +20,14 @@ from app.models.notification_channel import NotificationChannel  # noqa F401
 from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F401
 from app.models.tmdb_language import TmdbLanguage  # noqa F401
 from app.models.tmdb_region import TmdbRegion  # noqa F401
-from app.models.user import User
+from app.models.user import User  # noqa F401
 from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
 from app.scheduler import setup_cron_jobs
-from app.utils.auth import (
-    create_temporary_user,
-    generate_new_tokens,
-    verify_refresh_token_and_get_identity,
-)
+from app.utils.auth import authenticate_request
 
 _logger = logging.getLogger(__name__)
-
-
-# --- Define public endpoints (adjust as needed) ---
-# Consider moving this to configuration
-PUBLIC_ENDPOINTS = {
-    "static",  # Flask's static file serving
-    "html.service_worker",  # The service worker js file
-    "html.get_poster",  # Serving posters likely doesn't need login
-}
 
 
 def create_app(config_name, start_scheduler=False):
@@ -60,155 +42,10 @@ def create_app(config_name, start_scheduler=False):
     # Register CLI commands
     register_cli(app)
 
-    # === Request Hooks (New Auth Logic) ===
+    # === Request Hooks (Auth Logic) ===
     @app.before_request
-    def unified_auth_check():
-        """
-        Authentication middleware that runs before each request.
-
-        This function implements CineTagIt's unique user authentication flow:
-
-        1. First, it tries to authenticate the user using JWT tokens
-           (access token or refresh token)
-        2. If no valid tokens are found and the endpoint requires authentication,
-           it automatically creates a temporary anonymous user account
-        3. This allows visitors to use the application without
-           explicitly registering first
-
-        The temporary user becomes permanent when the user registers
-        by setting an email and password through the registration process.
-
-        This approach provides a seamless experience for users,
-        allowing them to try the application before committing to registration,
-        while maintaining data continuity when they do register.
-        """
-        g.current_user = None  # Ensure g.current_user is reset at start of request
-        g.new_access_token = None  # Ensure reset
-        g.new_refresh_token = None  # Ensure reset
-
-        # 1. Check Endpoint Type
-        endpoint = request.endpoint
-        if endpoint in PUBLIC_ENDPOINTS:
-            return None
-
-        # 2. Check for Bot
-        if CrawlerDetect(user_agent=request.headers.get("User-Agent")).isCrawler():
-            _logger.info("Bot detected, skipping auth.")
-            return None
-
-        # 3. Attempt Access Token Auth
-        try:
-            verify_jwt_in_request(optional=True)  # Verify JWT token (expiry, etc.)
-            user_id = get_jwt_identity()
-            if user_id:
-                with app.app_context():  # Ensure context for DB query
-                    user = User.query.get(user_id)
-                if user:
-                    g.current_user = user
-                else:
-                    _logger.warning(
-                        "Access token identity %s not found in DB.", user_id
-                    )
-        except jwt.ExpiredSignatureError:
-            pass  # Access token expired, fallback to the refresh token logic below
-        except jwt.InvalidTokenError as e:
-            _logger.warning(
-                "Invalid access token encountered for endpoint %s: %s", endpoint, e
-            )
-        except Exception:
-            # Catch other potential verification errors
-            _logger.exception(
-                "Error verifying JWT access token for endpoint %s", endpoint
-            )
-
-        refresh_token_cookie = request.cookies.get("refresh_token_cookie")
-
-        if g.current_user:
-            # Migrate users only having a valid
-            # access token to the refresh token logic
-            if not refresh_token_cookie:
-                _logger.debug("Migrating user %s to refresh tokens", g.current_user)
-                try:
-                    (
-                        g.new_access_token,
-                        g.new_refresh_token,
-                    ) = generate_new_tokens(g.current_user.id)
-                except Exception:
-                    _logger.exception(
-                        "Error generating tokens during refresh cookie restoration",
-                    )
-                    g.new_access_token = None
-                    g.new_refresh_token = None
-            return None
-
-        # 4. Attempt Refresh Token Auth
-        # Try refresh if access tkn expired or if access tkn was missing/invalid
-        if refresh_token_cookie:
-            try:
-                (
-                    refreshed_user_id,
-                    old_jti,
-                ) = verify_refresh_token_and_get_identity(refresh_token_cookie)
-                if refreshed_user_id:
-                    with app.app_context():  # Ensure context for DB query
-                        user = User.query.get(refreshed_user_id)
-                    if user:
-                        (
-                            g.new_access_token,
-                            g.new_refresh_token,
-                        ) = generate_new_tokens(refreshed_user_id, old_jti)
-                        g.current_user = user
-                        _logger.debug(
-                            "User %s authenticated via refresh token.", user.id
-                        )
-                        return None  # Authenticated via refresh, proceed
-                    _logger.warning(
-                        "User identity %s from valid refresh token not found in DB.",
-                        refreshed_user_id,
-                    )
-                # Fall through to invalid token handling
-                else:
-                    _logger.warning(
-                        "Refresh token deemed invalid by verification helper "
-                        "(e.g., revoked)."
-                    )
-                    # Fall through to invalid token handling
-
-            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-                _logger.warning("Refresh token verification failed: %s", e)
-            except Exception as e:
-                _logger.warning(
-                    "Refresh token verification failed: %s\n%s",
-                    e,
-                    traceback.format_exc(),
-                )
-
-        if g.current_user:
-            return None
-
-        # 5. Handle Guest User / Unauthenticated for Protected Route
-        try:
-            # Create temporary user within app context for DB access
-            with app.app_context():
-                temp_user = create_temporary_user()
-            if not temp_user:
-                raise Exception(
-                    f"Failed to create guest user object, result is falsy: {temp_user}"
-                )
-            (
-                g.new_access_token,
-                g.new_refresh_token,
-            ) = generate_new_tokens(temp_user.id)
-
-        except Exception:
-            _logger.exception(
-                "Failed to create temporary user for endpoint %s", endpoint
-            )  # Use exception logger
-            # Consider redirecting to an error page or login
-            return make_response("Server error creating guest session", 500)
-        else:
-            g.current_user = temp_user
-            return None  # Proceed with guest user
+    def authenticate():
+        return authenticate_request(app)
 
     @app.after_request
     def manage_auth_cookies(response):

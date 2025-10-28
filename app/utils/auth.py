@@ -2,14 +2,27 @@ import logging
 import uuid
 
 import jwt
-from flask import current_app
-from flask_jwt_extended import create_access_token, create_refresh_token
+from crawlerdetect import CrawlerDetect
+from flask import Flask, current_app, g, make_response, request
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt_identity,
+    verify_jwt_in_request,
+)
 
 from app.extensions import db
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.user import User
 
 _logger = logging.getLogger(__name__)
+
+
+PUBLIC_ENDPOINTS = {
+    "static",  # Flask's static file serving
+    "html.service_worker",  # The service worker js file
+    "html.get_poster",  # Serving posters likely doesn't need login
+}
 
 
 def decode_refresh_token(encoded_token: str) -> dict:
@@ -185,3 +198,156 @@ def generate_new_tokens(
 
     # Return None for both on any failure
     return None, None
+
+
+def _authenticate_via_auth_token(app: Flask, endpoint: str):
+    try:
+        verify_jwt_in_request(optional=True)  # Verify JWT token (expiry, etc.)
+        user_id = get_jwt_identity()
+        if user_id:
+            with app.app_context():  # Ensure context for DB query
+                user = User.query.get(user_id)
+            if user:
+                g.current_user = user
+            else:
+                _logger.warning("Access token identity %s not found in DB.", user_id)
+    except jwt.ExpiredSignatureError:
+        pass  # Access token expired, fallback to the refresh token logic below
+    except jwt.InvalidTokenError as e:
+        _logger.warning(
+            "Invalid access token encountered for endpoint %s: %s", endpoint, e
+        )
+    except Exception:
+        # Catch other potential verification errors
+        _logger.exception("Error verifying JWT access token for endpoint %s", endpoint)
+
+    # Migrate users only having a valid access token to the refresh token logic
+    refresh_token_cookie = request.cookies.get("refresh_token_cookie")
+    if g.current_user and not refresh_token_cookie:
+        _logger.debug("Migrating user %s to refresh tokens", g.current_user)
+        try:
+            (
+                g.new_access_token,
+                g.new_refresh_token,
+            ) = generate_new_tokens(g.current_user.id)
+        except Exception:
+            _logger.exception(
+                "Error generating tokens during refresh cookie restoration",
+            )
+            g.new_access_token = None
+            g.new_refresh_token = None
+
+
+def _authenticate_via_refresh_token(app: Flask, endpoint: str):
+    refresh_token = request.cookies.get("refresh_token_cookie")
+    if not refresh_token:
+        return
+
+    try:
+        (
+            refreshed_user_id,
+            old_jti,
+        ) = verify_refresh_token_and_get_identity(refresh_token)
+
+        if not refreshed_user_id:
+            _logger.warning(
+                "Refresh token deemed invalid by verification helper (e.g., revoked)."
+            )
+            return
+
+        with app.app_context():  # Ensure context for DB query
+            user = User.query.get(refreshed_user_id)
+
+        if not user:
+            _logger.warning(
+                "User identity %s from valid refresh token not found in DB. "
+                "Endpoint: %s",
+                refreshed_user_id,
+                endpoint,
+            )
+            return
+
+        (
+            g.new_access_token,
+            g.new_refresh_token,
+        ) = generate_new_tokens(refreshed_user_id, old_jti)
+        g.current_user = user
+        _logger.debug("User %s authenticated via refresh token.", user.id)
+
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        _logger.warning("Refresh token verification failed.", exc_info=True)
+    except Exception:
+        _logger.warning("Refresh token verification failed.", exc_info=True)
+
+
+def _authenticate_as_guest_user(app: Flask, endpoint: str):
+    try:
+        # Create temporary user within app context for DB access
+        with app.app_context():
+            temp_user = create_temporary_user()
+        if not temp_user:
+            raise Exception(
+                f"Failed to create guest user object, result is falsy: {temp_user}"
+            )
+
+        (g.new_access_token, g.new_refresh_token) = generate_new_tokens(temp_user.id)
+
+    except Exception:
+        _logger.exception("Failed to create temporary user for endpoint %s", endpoint)
+    else:
+        g.current_user = temp_user
+
+
+def authenticate_request(app: Flask):
+    """
+    Authentication middleware that runs before each request.
+
+    This function implements CineTagIt's unique user authentication flow:
+
+    1. First, it tries to authenticate the user using JWT tokens
+       (access token or refresh token)
+    2. If no valid tokens are found and the endpoint requires authentication,
+       it automatically creates a temporary anonymous user account
+    3. This allows visitors to use the application without
+       explicitly registering first
+
+    The temporary user becomes permanent when the user registers
+    by setting an email and password through the registration process.
+
+    This approach provides a seamless experience for users,
+    allowing them to try the application before committing to registration,
+    while maintaining data continuity when they do register.
+    """
+    g.current_user = None  # Ensure g.current_user is reset at start of request
+    g.new_access_token = None  # Ensure reset
+    g.new_refresh_token = None  # Ensure reset
+
+    # 1. Check Endpoint Type
+    endpoint = request.endpoint
+    if endpoint in PUBLIC_ENDPOINTS:
+        return None
+
+    # 2. Check for Bot
+    if CrawlerDetect(user_agent=request.headers.get("User-Agent")).isCrawler():
+        _logger.info("Bot detected, skipping auth.")
+        return None
+
+    # 3. Attempt Access Token Auth
+    _authenticate_via_auth_token(app, endpoint)
+
+    if g.current_user:
+        return None
+
+    # 4. Attempt Refresh Token Auth
+    _authenticate_via_refresh_token(app, endpoint)
+
+    if g.current_user:
+        return None
+
+    # 5. Handle Guest User / Unauthenticated for Protected Route
+    _authenticate_as_guest_user(app, endpoint)
+
+    if g.current_user:
+        return None
+
+    return make_response("Server error creating guest session", 500)
