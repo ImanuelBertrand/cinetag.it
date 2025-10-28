@@ -183,5 +183,5 @@ def generate_new_tokens(
     else:
         return access_token, refresh_token
 
-        # Return None for both on any failure
-        return None, None
+    # Return None for both on any failure
+    return None, None
