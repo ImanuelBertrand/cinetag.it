@@ -390,6 +390,21 @@ def profile_post(user, form_data):
     flash("Profile saved successfully.", "success")
 
 
+def _create_select_options(objects):
+    result = {}
+    for obj in objects:
+        if obj.sort_order < 1000:
+            result[obj.code] = obj.get_name()
+        else:
+            break
+    result[""] = "──────────"
+    for obj in objects:
+        if obj.code in result:
+            continue
+        result[obj.code] = obj.get_name()
+    return result
+
+
 @html.route("/profile", methods=["GET", "POST"])
 def profile():
     user = get_current_user()
@@ -418,20 +433,6 @@ def profile():
             _logger.exception("Error updating profile.")
             flash("Error updating profile.", "danger")
 
-    def create_select_options(objects):
-        result = {}
-        for obj in objects:
-            if obj.sort_order < 1000:
-                result[obj.code] = obj.get_name()
-            else:
-                break
-        result[""] = "──────────"
-        for obj in objects:
-            if obj.code in result:
-                continue
-            result[obj.code] = obj.get_name()
-        return result
-
     regions = TmdbRegion.query.order_by(TmdbRegion.sort_order).all()
     languages = TmdbLanguage.query.order_by(TmdbLanguage.sort_order).all()
 
@@ -443,8 +444,8 @@ def profile():
         "profile.html",
         user=user,
         form_data=form_data,
-        regions=create_select_options(regions),
-        languages=create_select_options(languages),
+        regions=_create_select_options(regions),
+        languages=_create_select_options(languages),
     )
 
 
