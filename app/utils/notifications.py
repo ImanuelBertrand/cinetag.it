@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 
 from app.exceptions import WebPushSubscriptionExpiredError
@@ -178,26 +179,17 @@ def send_email_notification(notification: Notification):
     return send_email(user_mail, subject, body)
 
 
-def setup_notifications(channel: NotificationChannel):
-    valid_decisions = ["approve"]
-    if channel.include_maybe_movies:
-        valid_decisions.append("maybe")
-
-    user_movies = UserMovie.query.filter(
-        UserMovie.user_id == channel.user_id,
-        UserMovie.decision.in_(valid_decisions),
-    ).all()
-
-    user_notifications = Notification.query.filter_by(channel_id=channel.id).all()
+def add_missing_notifications(
+    channel: NotificationChannel,
+    user_movies: Iterable[UserMovie],
+    user_notifications: Iterable[Notification],
+):
+    scheduled_at_threshold = datetime.now() - timedelta(days=7)
+    today = date.today()
+    user_region = channel.user.region
     user_notification_dict = {
         (n.movie_id, n.days_in_advance): n for n in user_notifications
     }
-
-    user_region = channel.user.region
-
-    scheduled_at_threshold = datetime.now() - timedelta(days=7)
-    # Add missing notifications
-    today = date.today()
     for user_movie in user_movies:
         region_info = MovieRegionInfo.query.filter_by(
             movie_id=user_movie.movie_id, region=user_region
@@ -221,7 +213,13 @@ def setup_notifications(channel: NotificationChannel):
                 )
                 db.session.add(notification)
 
-    # delete extra notifications, in case movies or days config has changed
+
+def delete_outdated_notifications(
+    channel: NotificationChannel,
+    user_movies: Iterable[UserMovie],
+    user_notifications: Iterable[Notification],
+):
+    scheduled_at_threshold = datetime.now() - timedelta(days=7)
     user_movie_ids = {m.movie_id for m in user_movies}
     for notification in user_notifications:
         if notification.is_sent:
@@ -233,5 +231,21 @@ def setup_notifications(channel: NotificationChannel):
             or notification.scheduled_at < scheduled_at_threshold
         ):
             db.session.delete(notification)
+
+
+def setup_notifications(channel: NotificationChannel):
+    valid_decisions = ["approve"]
+    if channel.include_maybe_movies:
+        valid_decisions.append("maybe")
+
+    user_movies = UserMovie.query.filter(
+        UserMovie.user_id == channel.user_id,
+        UserMovie.decision.in_(valid_decisions),
+    ).all()
+
+    user_notifications = Notification.query.filter_by(channel_id=channel.id).all()
+
+    add_missing_notifications(channel, user_movies, user_notifications)
+    delete_outdated_notifications(channel, user_movies, user_notifications)
 
     db.session.commit()
