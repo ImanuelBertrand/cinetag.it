@@ -65,6 +65,62 @@ def _validate_password(password):
     return len(password) >= 8
 
 
+def validate_register_post(user: User, data: dict) -> bool:
+    # --- Time-based check: too fast submission or too old form (using old data?) ---
+    try:
+        form_ts = int(data.get("form_rendered_at", "0"))
+    except ValueError:
+        form_ts = 0
+
+    now = int(datetime.utcnow().timestamp())
+    min_seconds = 3  # adjust as desired
+    if form_ts and (now - form_ts) < min_seconds:
+        flash("Please take a moment to complete the form.", "danger")
+        return False
+
+    if form_ts and (now - form_ts) > 86400:
+        flash("Something went wrong. Please try again.", "danger")
+        return False
+
+    # --- JavaScript challenge: ensure a minimal JS executed ---
+    if (data.get("form_state") or "0") != "initializing":
+        flash("Something went wrong. Please try again.", "danger")
+        return False
+
+    return True
+
+
+def validate_register_post_credentials(email: str, password: str) -> bool:
+    # password sanity check
+    if not password:
+        flash("Password is required.", "danger")
+        return False
+    if not _validate_password(password):
+        flash("Password must be at least 8 characters.", "danger")
+        return False
+
+    # e-mail sanity check
+    if not email:
+        flash("Email is required.", "danger")
+        return False
+    if not _validate_email(email):
+        flash("Invalid email.", "danger")
+        return False
+
+    existing_user = User.query.filter(
+        db.or_(
+            User.email == email,
+            User.new_email == email,
+        )
+    ).first()
+
+    if existing_user:
+        flash("Email address already in use.", "danger")
+        return False
+
+    return True
+
+
 def register_post(user: User):
     """
     Register a new user or update the temporary user with the provided data.
@@ -100,56 +156,12 @@ def register_post(user: User):
         flash("Thanks! Please check your email to confirm.", "success")
         return redirect(url_for("html.profile"))
 
-    # --- Time-based check: too fast submission or too old form (using old data?) ---
-    try:
-        form_ts = int(data.get("form_rendered_at", "0"))
-    except ValueError:
-        form_ts = 0
-
-    now = int(datetime.utcnow().timestamp())
-    min_seconds = 3  # adjust as desired
-    if form_ts and (now - form_ts) < min_seconds:
-        flash("Please take a moment to complete the form.", "danger")
-        return None
-
-    if form_ts and (now - form_ts) > 86400:
-        flash("Something went wrong. Please try again.", "danger")
-        return None
-
-    # --- JavaScript challenge: ensure a minimal JS executed ---
-    if (data.get("form_state") or "0") != "initializing":
-        flash("Something went wrong. Please try again.", "danger")
+    if not validate_register_post(user, data):
         return None
 
     email = data.get("email")
-
-    # e-mail sanity check
-    if not email:
-        flash("Email is required.", "danger")
-        return None
-    if not _validate_email(email):
-        flash("Invalid email.", "danger")
-        return None
-
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user:
-        flash("Email address already in use.", "danger")
-        queue_confirmation_mail(existing_user)
-        return None
-
-    pending_user = User.query.filter_by(new_email=email).first()
-    if pending_user:
-        flash("Email address already in use.", "danger")
-        queue_confirmation_mail(pending_user)
-        return None
-
-    # password sanity check
     password = data.get("password")
-    if not password:
-        flash("Password is required.", "danger")
-        return None
-    if not _validate_password(password):
-        flash("Password must be at least 8 characters.", "danger")
+    if not validate_register_post_credentials(email, password):
         return None
 
     user.new_email = email
