@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime, timedelta
+from collections.abc import Sequence
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import natsort
@@ -330,87 +331,138 @@ def fetch_theatrical_releases(movie: Movie) -> list[dict[str, Any]]:
     return filtered_regions
 
 
+def _parse_best_release_dates(
+    release_data: list[dict[str, Any]],
+) -> dict[str, date]:
+    """
+    Parses the raw API release data into a clean dict of {region: best_date}.
+    """
+    best_release_dates = {}
+    fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
+    for data in release_data:
+        region = data["iso_3166_1"]
+        dates = data["release_dates"]
+
+        # Prefer "pure" release dates (those without a 'note')
+        pure_release_dates = [d["release_date"] for d in dates if not d["note"]]
+
+        if pure_release_dates:
+            date_str = min(pure_release_dates)
+        elif dates:  # Fallback to using any date if no "pure" ones exist
+            date_str = min([d["release_date"] for d in dates])
+        else:
+            continue  # Skip region if no dates are provided
+
+        best_release_dates[region] = datetime.strptime(date_str, fmt).date()
+    return best_release_dates
+
+
+def _create_new_region_infos(
+    movie_id: int,
+    best_release_dates: dict[str, date],
+    existing_regions: set[str],
+) -> set[str]:
+    new_region_infos = []
+    new_regions = set()
+    for region, release_date in best_release_dates.items():
+        if region in existing_regions or region in new_region_infos:
+            continue
+        new_region_infos.append(
+            MovieRegionInfo.create_from_tmdb(movie_id, region, release_date)
+        )
+        new_regions.add(region)
+
+    if new_region_infos:
+        db.session.bulk_save_objects(new_region_infos)
+
+    return new_regions
+
+
+def _update_existing_region_infos(
+    existing_region_infos: Sequence[MovieRegionInfo],
+    best_release_dates: dict[str, date],
+) -> None:
+    """Updates existing region infos with new dates and removes 'is_fake' flag."""
+    for region_info in existing_region_infos:
+        release_date = best_release_dates.get(region_info.region)
+        if release_date and region_info.update_from_tmdb(release_date):
+            db.session.add(region_info)
+
+
+def _delete_obsolete_region_infos(
+    existing_region_infos: Sequence[MovieRegionInfo],
+    best_release_dates: dict[str, date],
+) -> None:
+    """Deletes non-fake region infos that are no longer in the API data."""
+    for region_info in existing_region_infos:
+        if not region_info.is_fake and region_info.region not in best_release_dates:
+            db.session.delete(region_info)
+
+
+def _sync_fake_region_infos(
+    movie_id: int,
+    original_release_date: date,
+    existing_regions: set[str],
+    new_regions: set[str],
+) -> None:
+    # 1. Create missing fake objects
+    all_regions = {region.code for region in TmdbRegion.query.all()}
+    regions_needing_fakes = all_regions - existing_regions - new_regions
+    fake_region_infos = [
+        MovieRegionInfo(
+            movie_id=movie_id,
+            region=region,
+            release_date=original_release_date,
+            is_fake=True,
+        )
+        for region in regions_needing_fakes
+    ]
+    if fake_region_infos:
+        db.session.bulk_save_objects(fake_region_infos)
+
+    # 2. Update outdated fake objects
+    fake_ids_to_update = [
+        info.id
+        for info in MovieRegionInfo.query.filter(
+            MovieRegionInfo.movie_id == movie_id,
+            MovieRegionInfo.is_fake.is_(True),
+            MovieRegionInfo.release_date != original_release_date,
+        ).all()
+    ]
+
+    if fake_ids_to_update:
+        MovieRegionInfo.query.filter(MovieRegionInfo.id.in_(fake_ids_to_update)).update(
+            {MovieRegionInfo.release_date: original_release_date}
+        )
+
+
 def update_movie_regions(movie: Movie) -> None:
     release_data = fetch_theatrical_releases(movie)
     if not release_data:
         MovieRegionInfo.query.filter_by(movie_id=movie.id).delete()
         return
 
-    best_release_dates = {}
-    fmt = "%Y-%m-%dT%H:%M:%S.%fZ"
-    for data in release_data:
-        region = data["iso_3166_1"]
-        dates = data["release_dates"]
-        pure_release_dates = [d for d in dates if not d["note"]]
-        if pure_release_dates:
-            date = min([d["release_date"] for d in pure_release_dates])
-        else:
-            date = min([d["release_date"] for d in dates])
-        best_release_dates[region] = datetime.strptime(date, fmt).date()
+    best_release_dates = _parse_best_release_dates(release_data)
 
     existing_region_infos = MovieRegionInfo.query.filter_by(movie_id=movie.id).all()
-
-    # Create new objects that are missing in the db (not fake ones)
     existing_regions = {info.region for info in existing_region_infos}
 
-    new_region_infos = {}
-    for rd in best_release_dates:
-        if rd in existing_regions or rd in new_region_infos:
-            continue
-        new_region_infos[rd] = MovieRegionInfo.create_from_tmdb(
-            movie.id, rd, best_release_dates[rd]
-        )
-    db.session.bulk_save_objects(new_region_infos.values())
+    # Create new objects that are missing in the db (not fake ones)
+    new_regions = _create_new_region_infos(
+        movie.id, best_release_dates, existing_regions
+    )
 
     # Update existing objects (remove fake flag if set previously)
-    region_infos_to_update = [
-        info for info in existing_region_infos if info.region in best_release_dates
-    ]
-    for region_info in region_infos_to_update:
-        date = best_release_dates.get(region_info.region)
-        if region_info.update_from_tmdb(date):
-            db.session.add(region_info)
+    _update_existing_region_infos(existing_region_infos, best_release_dates)
 
     # Delete non-fake region infos that are no longer in the theatrical releases
-    region_infos_to_delete = [
-        info
-        for info in existing_region_infos
-        if not info.is_fake and info.region not in best_release_dates
-    ]
-    for region_info in region_infos_to_delete:
-        db.session.delete(region_info)
+    _delete_obsolete_region_infos(existing_region_infos, best_release_dates)
 
-    # Create fake objects for regions that are missing in the DB
+    # Handle fake release dates
     original_release_date = min(best_release_dates.values())
-    all_regions = TmdbRegion.query.all()
-    missing_regions = (
-        {region.code for region in all_regions}
-        - existing_regions
-        - set(new_region_infos.keys())
+    _sync_fake_region_infos(
+        movie.id, original_release_date, existing_regions, new_regions
     )
-    fake_region_infos = [
-        MovieRegionInfo(
-            movie_id=movie.id,
-            region=region,
-            release_date=original_release_date,
-            is_fake=True,
-        )
-        for region in missing_regions
-    ]
-    if fake_region_infos:
-        db.session.bulk_save_objects(fake_region_infos)
-
-    # Update outdated fake objects
-    fake_region_infos = MovieRegionInfo.query.filter(
-        MovieRegionInfo.movie_id == movie.id,
-        MovieRegionInfo.is_fake.is_(True),
-        MovieRegionInfo.release_date != original_release_date,
-    ).all()
-    fake_ids_to_update = [info.id for info in fake_region_infos]
-    if fake_ids_to_update:
-        MovieRegionInfo.query.filter(MovieRegionInfo.id.in_(fake_ids_to_update)).update(
-            {MovieRegionInfo.release_date: original_release_date}
-        )
 
 
 def _get_movie_info_update_threshold():
