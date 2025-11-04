@@ -13,12 +13,14 @@ from app.models.misc_data import MiscData
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo
 from app.models.movie_region_info import MovieRegionInfo
+from app.models.tmdb_genre import MovieGenre, TmdbGenre, TmdbGenreName
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.services.movie_service import get_lang_infos, get_region_infos
 from app.utils.tmdb import (
     fetch_changed_movies,
+    fetch_genre_list,
     fetch_languages,
     fetch_movie_details,
     fetch_movie_images,
@@ -29,6 +31,109 @@ from app.utils.tmdb import (
 )
 
 _logger = logging.getLogger(__name__)
+
+
+def sync_genre_names(language: str) -> None:
+    """Upsert TMDb genres and their localized names for the given language."""
+    genres = fetch_genre_list(language)
+    if not genres:
+        return
+
+    now = datetime.now()
+    genre_ids = [g["id"] for g in genres]
+
+    # Ensure base genres exist
+    existing_genres = {
+        g.id: g for g in TmdbGenre.query.filter(TmdbGenre.id.in_(genre_ids)).all()
+    }
+    new_genres = [
+        TmdbGenre(id=gid, updated_at=now)
+        for gid in genre_ids
+        if gid not in existing_genres
+    ]
+    if new_genres:
+        db.session.bulk_save_objects(new_genres)
+
+    # Upsert names for this language
+    existing_names = {
+        (n.genre_id, n.language): n
+        for n in (
+            TmdbGenreName.query.filter(
+                TmdbGenreName.genre_id.in_(genre_ids),
+                TmdbGenreName.language == language,
+            ).all()
+        )
+    }
+
+    names_to_add = []
+    for g in genres:
+        key = (g["id"], language)
+        existing = existing_names.get(key)
+        if existing:
+            if existing.name != g["name"]:
+                existing.name = g["name"]
+                existing.updated_at = now
+                db.session.add(existing)
+        else:
+            names_to_add.append(
+                TmdbGenreName(
+                    genre_id=g["id"], language=language, name=g["name"], updated_at=now
+                )
+            )
+
+    if names_to_add:
+        db.session.bulk_save_objects(names_to_add)
+
+    # Update updated_at on base genres
+    if existing_genres:
+        for gid in genre_ids:
+            gen = existing_genres.get(gid)
+            if gen and gen.updated_at != now:
+                gen.updated_at = now
+                db.session.add(gen)
+
+
+def update_movie_genres(movie_id: int, tmdb_movie: dict) -> None:
+    """Reconcile movie_genres rows for a movie from either list payload (genre_ids)
+    or details payload (genres objects)."""
+    if not tmdb_movie:
+        return
+
+    if "genre_ids" in tmdb_movie and isinstance(tmdb_movie.get("genre_ids"), list):
+        desired_ids = {int(gid) for gid in tmdb_movie.get("genre_ids", [])}
+    elif "genres" in tmdb_movie and isinstance(tmdb_movie.get("genres"), list):
+        desired_ids = {
+            int(g.get("id")) for g in tmdb_movie.get("genres", []) if "id" in g
+        }
+    else:
+        desired_ids = set()
+
+    existing_links = MovieGenre.query.filter_by(movie_id=movie_id).all()
+    existing_ids = {link.genre_id for link in existing_links}
+
+    to_add = desired_ids - existing_ids
+    to_delete = existing_ids - desired_ids
+
+    if not desired_ids and not existing_ids:
+        return
+
+    # Ensure base genres exist for any new ids
+    if to_add:
+        existing_base = {
+            g.id for g in TmdbGenre.query.filter(TmdbGenre.id.in_(list(to_add))).all()
+        }
+        missing = to_add - existing_base
+        if missing:
+            db.session.bulk_save_objects([TmdbGenre(id=gid) for gid in missing])
+
+        db.session.bulk_save_objects(
+            [MovieGenre(movie_id=movie_id, genre_id=gid) for gid in to_add]
+        )
+
+    if to_delete:
+        MovieGenre.query.filter(
+            MovieGenre.movie_id == movie_id, MovieGenre.genre_id.in_(list(to_delete))
+        ).delete(synchronize_session=False)
 
 
 def fetch_new_languages():
@@ -171,6 +276,12 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     :param language:
     :return:
     """
+    # Ensure genre names for this language are synced (best-effort)
+    try:
+        sync_genre_names(language)
+    except Exception:
+        _logger.exception("Failed to sync genre names for language %s", language)
+
     movie_ids = [movie["id"] for movie in tmdb_movies]
     existing_movies: dict[int, Movie] = {
         movie.id: movie for movie in Movie.query.filter(Movie.id.in_(movie_ids)).all()
@@ -207,6 +318,12 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
         elif language_info.update_from_tmdb(tmdb_movie):
             db.session.add(language_info)
 
+        # Update movie_genre association using genre_ids from list payload
+        try:
+            update_movie_genres(movie_id, tmdb_movie)
+        except Exception:
+            _logger.exception("Failed updating genres for movie %s", movie_id)
+
     if movies_to_add:
         db.session.bulk_save_objects(movies_to_add)
     if region_info_to_add:
@@ -242,6 +359,12 @@ def update_movie_details(movie: Movie):
 
     movie.update_from_tmdb(movie_data)
     db.session.add(movie)
+
+    # Sync English genre names and update movie genre associations from details payload
+    try:
+        update_movie_genres(movie.id, movie_data)
+    except Exception:
+        _logger.exception("Failed syncing/updating genres for movie %s", movie.id)
 
 
 def update_movie_languages(movie: Movie):
@@ -500,6 +623,8 @@ def update_all_upcoming_movies():
     used_regions_by_users = db.session.query(User.region).distinct().all()
     used_regions_by_users = {region for (region,) in used_regions_by_users}
     used_regions_by_users = used_regions_by_users | {"US", "DE", "GB", "FR"}
+
+    sync_genre_names("en")
 
     for region in used_regions_by_users:
         sync_upcoming_movies(region, "en")

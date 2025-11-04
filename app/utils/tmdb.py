@@ -196,6 +196,21 @@ def fetch_regions() -> list[dict]:
     )
 
 
+def fetch_genre_list(language: str) -> list[dict]:
+    """
+    Fetch the list of TMDb movie genres for a given language.
+    Returns a list of { id, name }.
+    """
+    data = _cached_tmdb_call(
+        f"genres_{language}",
+        DEFAULT_TTL,
+        _get_json,
+        "genre/movie/list",
+        params={"language": language},
+    )
+    return data.get("genres", [])
+
+
 def fetch_movie_languages(movie_id: int) -> list[dict]:
     return _cached_tmdb_call(
         f"movie_languages_{movie_id}",

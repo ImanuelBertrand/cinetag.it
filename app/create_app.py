@@ -18,6 +18,7 @@ from app.models.movie_region_info import MovieRegionInfo  # noqa F401
 from app.models.notification import Notification  # noqa F401
 from app.models.notification_channel import NotificationChannel  # noqa F401
 from app.models.send_confirmation_mails import SentConfirmationMails  # noqa F401
+from app.models.tmdb_genre import MovieGenre, TmdbGenre, TmdbGenreName  # noqa F401
 from app.models.tmdb_language import TmdbLanguage  # noqa F401
 from app.models.tmdb_region import TmdbRegion  # noqa F401
 from app.models.user import User  # noqa F401
