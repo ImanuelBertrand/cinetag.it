@@ -29,6 +29,7 @@ from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_calendar import UserCalendar
+from app.models.user_movie import UserMovie
 from app.services.image_service import get_image_contents, get_image_url
 from app.services.user_service import (
     authenticate_user,
@@ -703,6 +704,10 @@ def get_movie_details(movie_id):
             for code in country_codes:
                 origin_countries.append(country_names.get(code, code))
 
+        # Get current user's decision for this movie (if any)
+        user_movie = UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
+        user_decision = user_movie.decision if user_movie else None
+
         movie_data = {
             "id": movie.id,
             "title": lang_info["title"],
@@ -719,6 +724,7 @@ def get_movie_details(movie_id):
             "original_language": original_language_name,
             "origin_countries": origin_countries,
             "region_release_dates": region_release_dates,
+            "decision": user_decision,
         }
         if not movie:
             flash("Movie not found.", "danger")

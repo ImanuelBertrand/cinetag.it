@@ -4,44 +4,69 @@
 
 {% block content %}
     <h2>{{ movie.title }}</h2>
-    <div class="movie-details">
-        <img class="poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}"/>
 
-        {% if movie["tagline"] %}
-            <div class="tagline"><em>{{ movie["tagline"] }}</em></div>
-        {% endif %}
+    {% set decision_class = 'decided decided-' ~ movie.decision if movie.decision else '' %}
+    <div class="movie-item movie-details-card {{ decision_class }}" id="movie-{{ movie.id }}">
+        <div class="decision-icon"></div>
+        <div class="movie-details movie-details-view">
+            <div class="poster-col">
+                <img class="poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}"/>
 
-        <div class="plot">{{ movie["overview"] }}</div>
-
-        <p>Release Date: {{ movie["release_date"] }}</p>
-
-        {% if movie["runtime"] %}
-            <p>Runtime: {{ movie["runtime"] }} minutes</p>
-        {% endif %}
-
-        {% if movie["original_language"] %}
-            <p>Original Language: {{ movie["original_language"] }}</p>
-        {% endif %}
-
-        {% if movie["origin_countries"] %}
-            <p>Origin Countries: {{ movie["origin_countries"]|join(", ") }}</p>
-        {% endif %}
-
-        {% if movie["region_release_dates"] %}
-            <div class="release-dates">
-                <h4>Release Dates:</h4>
-                <ul>
-                    {% for region, date in movie["region_release_dates"].items() %}
-                        <li>{{ region }}: {{ date }}</li>
-                    {% endfor %}
-                </ul>
+                <div class="decide" aria-label="Your decision for this movie">
+                    <div data-decision="approve" data-movie-id="{{ movie.id }}" role="button" tabindex="0" aria-pressed="{{ 'true' if movie.decision == 'approve' else 'false' }}">👍️</div>
+                    <div data-decision="maybe" data-movie-id="{{ movie.id }}" role="button" tabindex="0" aria-pressed="{{ 'true' if movie.decision == 'maybe' else 'false' }}">🤷</div>
+                    <div data-decision="disapprove" data-movie-id="{{ movie.id }}" role="button" tabindex="0" aria-pressed="{{ 'true' if movie.decision == 'disapprove' else 'false' }}">👎</div>
+                </div>
+                <div class="decision-current" id="decision-current-{{ movie.id }}">
+                    {% if movie.decision %}
+                        {% if movie.decision == 'approve' %}You tagged this as: 👍 Approve{% elif movie.decision == 'maybe' %}You tagged this as: 🤷 Maybe{% elif movie.decision == 'disapprove' %}You tagged this as: 👎 Disapprove{% endif %}
+                    {% else %}
+                        You have not tagged this movie yet.
+                    {% endif %}
+                </div>
             </div>
-        {% endif %}
 
-        {% if movie["imdb_id"] %}
-            <p><a href="https://www.imdb.com/title/{{ movie['imdb_id'] }}" target="_blank">IMDB</a></p>
-        {% endif %}
-        <p><a href="https://www.themoviedb.org/movie/{{ movie['id'] }}" target="_blank">TMDB</a></p>
+            {% if movie["tagline"] %}
+                <div class="tagline"><em>{{ movie["tagline"] }}</em></div>
+            {% endif %}
+
+            <div class="plot">{{ movie["overview"] }}</div>
+
+            <p>Release Date: {{ movie["release_date"] }}</p>
+
+            {% if movie["runtime"] %}
+                <p>Runtime: {{ movie["runtime"] }} minutes</p>
+            {% endif %}
+
+            {% if movie["original_language"] %}
+                <p>Original Language: {{ movie["original_language"] }}</p>
+            {% endif %}
+
+            {% if movie["origin_countries"] %}
+                <p>Origin Countries: {{ movie["origin_countries"]|join(", ") }}</p>
+            {% endif %}
+
+            {% if movie["region_release_dates"] %}
+                <div class="release-dates">
+                    <h4>Release Dates:</h4>
+                    <ul>
+                        {% for region, date in movie["region_release_dates"].items() %}
+                            <li>{{ region }}: {{ date }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {% if movie["imdb_id"] %}
+                <p><a href="https://www.imdb.com/title/{{ movie['imdb_id'] }}" target="_blank">IMDB</a></p>
+            {% endif %}
+            <p><a href="https://www.themoviedb.org/movie/{{ movie['id'] }}" target="_blank">TMDB</a></p>
+        </div>
     </div>
 
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/movie_details.js') }}"></script>
 {% endblock %}

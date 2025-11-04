@@ -8,6 +8,15 @@ $electric-pink: #fc466b;
 $emerald-green: #3ddc84;
 $header-height: 5em;
 $mobile-screen: 600px;
+$color-approve-border: #0f0;
+$color-approve-background: #7CFC00;
+$color-approve-text: #7CFC00;
+$color-disapprove-border: #f00;
+$color-disapprove-background: #ff6b6b;
+$color-disapprove-text: #ff6b6b;
+$color-maybe-border: #00f;
+$color-maybe-background: #76a9ff;
+$color-maybe-text: #76a9ff;
 
 /* Base Styles */
 body {
@@ -328,7 +337,7 @@ footer {
       }
 
       &.decided-approve {
-        outline-color: #0f0;
+        outline-color: $color-approve-border;
 
         .decision-icon::after {
           content: "👍️";
@@ -336,7 +345,7 @@ footer {
       }
 
       &.decided-disapprove {
-        outline-color: #f00;
+        outline-color: $color-disapprove-border;
 
         .decision-icon::after {
           content: "👎️";
@@ -344,7 +353,7 @@ footer {
       }
 
       &.decided-maybe {
-        outline-color: #00f;
+        outline-color: $color-maybe-border;
 
         .decision-icon::after {
           content: "🤷️";
@@ -694,5 +703,100 @@ ul.release-list li {
 
   #name-filter {
     width: 100%;
+  }
+}
+
+/* Movie details view enhancements */
+.movie-details-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $gunmetal-gray;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.movie-details-view {
+  display: block;
+}
+
+.movie-details-view .poster-col {
+  float: right;
+  margin: 0 0 1em 2em;
+  text-align: center;
+}
+
+.movie-details-view .poster-col .poster {
+  display: block;
+  max-width: 300px;
+  width: 100%;
+  height: auto;
+}
+
+
+.movie-details-view .decide {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.movie-details-view .decide > div {
+  flex: 1 1 33%;
+  font-size: 1.8em;
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 6px 8px;
+  user-select: none;
+  outline: none;
+}
+
+.movie-details-view .decide > div:focus {
+  box-shadow: 0 0 0 2px $neon-blue inset;
+}
+
+/* Current decision label below buttons */
+.movie-details-view .decision-current {
+  margin-top: 6px;
+  font-size: 0.95em;
+  color: $steel-gray;
+}
+
+/* Color-code the current decision via card state */
+.movie-details-card.decided-approve .decision-current {
+  color: $color-approve-text;
+}
+
+.movie-details-card.decided-disapprove .decision-current {
+  color: $color-disapprove-text;
+}
+
+.movie-details-card.decided-maybe .decision-current {
+  color: $color-maybe-text;
+}
+
+.decided-approve .decide div[data-decision='approve'] {
+  background-color: $color-approve-background;
+}
+
+.decided-maybe .decide div[data-decision='maybe'] {
+  background-color: $color-maybe-background;
+}
+
+.decided-disapprove .decide div[data-decision='disapprove'] {
+  background-color: $color-disapprove-background;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: $mobile-screen) {
+  .movie-details-view .poster-col {
+    float: none;
+    margin: 0 auto 1em auto;
+  }
+  .movie-details-view .poster-col .poster {
+    max-width: 100%;
   }
 }
