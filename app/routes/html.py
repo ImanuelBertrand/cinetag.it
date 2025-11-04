@@ -705,7 +705,9 @@ def get_movie_details(movie_id):
                 origin_countries.append(country_names.get(code, code))
 
         # Get current user's decision for this movie (if any)
-        user_movie = UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
+        user_movie = UserMovie.query.filter_by(
+            user_id=user.id, movie_id=movie_id
+        ).first()
         user_decision = user_movie.decision if user_movie else None
 
         movie_data = {
