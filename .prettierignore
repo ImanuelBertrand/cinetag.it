@@ -1,0 +1,9 @@
+.venv
+.ruff_cache
+.github
+*.yaml
+*.py
+*.html
+*.md
+*.yml
+app/static/js/fullcalendar

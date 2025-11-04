@@ -9,8 +9,8 @@ $emerald-green: #3ddc84;
 $header-height: 5em;
 $mobile-screen: 600px;
 $color-approve-border: #0f0;
-$color-approve-background: #7CFC00;
-$color-approve-text: #7CFC00;
+$color-approve-background: #7cfc00;
+$color-approve-text: #7cfc00;
 $color-disapprove-border: #f00;
 $color-disapprove-background: #ff6b6b;
 $color-disapprove-text: #ff6b6b;
@@ -22,7 +22,7 @@ $color-maybe-text: #76a9ff;
 body {
   background-color: $dark-gray;
   color: $steel-gray;
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   margin: 0;
   padding: 0;
   line-height: 1.4;
@@ -159,7 +159,9 @@ header {
         pointer-events: none;
         background-color: $gunmetal-gray;
         z-index: 1;
-        transition: opacity 0.2s, height 0.2s;
+        transition:
+          opacity 0.2s,
+          height 0.2s;
 
         @media screen and (min-width: $mobile-screen) {
           position: absolute;
@@ -228,7 +230,10 @@ main {
   flex: 1;
   padding: 20px;
 
-  a, a:visited, a:active, a:link {
+  a,
+  a:visited,
+  a:active,
+  a:link {
     color: $neon-blue;
     text-decoration: none;
 
@@ -436,7 +441,8 @@ footer {
     }
   }
 
-  &.movie-grid-all, &.movie-grid-pending {
+  &.movie-grid-all,
+  &.movie-grid-pending {
     .movie-item.decided::after {
       opacity: 0.5;
     }
@@ -475,7 +481,8 @@ footer {
     box-sizing: border-box;
   }
 
-  input, select {
+  input,
+  select {
     flex: 1 1 auto;
     box-sizing: border-box;
     padding: 5px;
@@ -507,7 +514,8 @@ footer {
   }
 }
 
-input, select {
+input,
+select {
   box-sizing: border-box;
   padding: 5px;
   min-width: 0;
@@ -520,7 +528,6 @@ input, select {
 
 form {
   margin-bottom: 1em;
-
 }
 
 button {
@@ -546,7 +553,8 @@ button {
     color: $cool-gray;
     cursor: default;
 
-    &:hover, &.danger {
+    &:hover,
+    &.danger {
       background-color: $gunmetal-gray;
       color: $cool-gray;
     }
@@ -731,7 +739,6 @@ ul.release-list li {
   height: auto;
 }
 
-
 .movie-details-view .decide {
   display: flex;
   flex-direction: row;
@@ -778,15 +785,15 @@ ul.release-list li {
   color: $color-maybe-text;
 }
 
-.decided-approve .decide div[data-decision='approve'] {
+.decided-approve .decide div[data-decision="approve"] {
   background-color: $color-approve-background;
 }
 
-.decided-maybe .decide div[data-decision='maybe'] {
+.decided-maybe .decide div[data-decision="maybe"] {
   background-color: $color-maybe-background;
 }
 
-.decided-disapprove .decide div[data-decision='disapprove'] {
+.decided-disapprove .decide div[data-decision="disapprove"] {
   background-color: $color-disapprove-background;
 }
 

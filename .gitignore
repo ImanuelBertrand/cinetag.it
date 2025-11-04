@@ -9,3 +9,4 @@ app/logs
 *.pem
 .env
 temp
+node_modules

@@ -1,0 +1,29 @@
+{
+  "name": "cinetagit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ImanuelBertrand/cinetag.it.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ImanuelBertrand/cinetag.it/issues"
+  },
+  "homepage": "https://github.com/ImanuelBertrand/cinetag.it#readme",
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "prettier-plugin-jinja-template": "^2.1.0"
+  }
+}
