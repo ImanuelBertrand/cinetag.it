@@ -1,4 +1,4 @@
-uliweb-alembic
+alembic
 APScheduler
 Babel
 Flask-APScheduler
