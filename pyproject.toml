@@ -1,3 +1,41 @@
+[project]
+name = "CineTagIt"
+version = "1.0.0"
+dependencies = [
+    "alembic>=1.18.4",
+    "apscheduler>=3.11.2",
+    "babel>=2.18.0",
+    "crawlerdetect>=0.3.2",
+    "cryptography>=46.0.5",
+    "flask>=3.1.2",
+    "flask-apscheduler>=1.13.1",
+    "flask-assets>=2.1.0",
+    "flask-babel>=4.0.0",
+    "flask-bcrypt>=1.0.1",
+    "flask-caching>=2.3.1",
+    "flask-jwt-extended>=4.7.1",
+    "flask-mail>=0.10.0",
+    "flask-migrate>=4.1.0",
+    "flask-redis>=0.4.0",
+    "flask-script>=2.0.6",
+    "flask-sqlalchemy>=3.1.1",
+    "icalendar>=7.0.1",
+    "libsass>=0.23.0",
+    "natsort>=8.4.0",
+    "pillow>=12.1.1",
+    "py-vapid>=1.9.4",
+    "pyjwt>=2.11.0",
+    "pymysql>=1.1.2",
+    "pytest>=9.0.2",
+    "pywebpush>=2.3.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "sqlalchemy>=2.0.46",
+    "uuid>=1.30",
+    "werkzeug>=3.1.5",
+]
+
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"
