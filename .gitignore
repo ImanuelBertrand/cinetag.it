@@ -10,3 +10,5 @@ app/logs
 .env
 temp
 node_modules
+**/__pycache__
+storage
