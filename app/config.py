@@ -1,23 +1,15 @@
 import os
 
-import yaml
+
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).lower() in ("yes", "true", "t", "1")
 
 
 class Config:
-    def __init__(self, config_file=None):
-        if config_file is None:
-            config_file = os.environ.get("CONFIG_FILE", "app/config.yaml")
-
-        if os.path.exists(config_file):
-            self.load_config(config_file)
-
-    def load_config(self, config_file):
-        with open(config_file) as file:
-            config_data = yaml.safe_load(file)
-        if config_data:
-            for key, value in config_data.items():
-                setattr(self, key, value)
-
     @staticmethod
     def init_app(app):
         pass
@@ -25,8 +17,8 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
-    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
-    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL") is not None
+    MAIL_USE_TLS = parse_bool(os.environ.get("MAIL_USE_TLS", True))
+    MAIL_USE_SSL = parse_bool(os.environ.get("MAIL_USE_SSL", False))
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
@@ -35,7 +27,8 @@ class Config:
     JWT_TOKEN_LOCATION = ("headers", "cookies")
     JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
     JWT_ACCESS_COOKIE_PATH = "/"
-    JWT_ACCESS_TOKEN_EXPIRES = 3600
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 3600))
+    JWT_REFRESH_TOKEN_EXPIRES = int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES", 604800))
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/"
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
@@ -48,8 +41,9 @@ class Config:
 
     COUNT_TOP_SELECT_OPTION = 5
 
-    DEFAULT_REGION = "US"
-    DEFAULT_LANGUAGE = "en"
+    DEFAULT_REGION = os.environ.get("DEFAULT_REGION", "US")
+    DEFAULT_LANGUAGE = os.environ.get("DEFAULT_LANGUAGE", "en")
+    TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
 
     ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     APP_DIR = os.path.join(ROOT_DIR, "app")

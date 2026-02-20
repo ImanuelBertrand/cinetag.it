@@ -28,6 +28,7 @@ dependencies = [
     "pyjwt>=2.11.0",
     "pymysql>=1.1.2",
     "pytest>=9.0.2",
+    "python-dotenv>=1.2.1",
     "pywebpush>=2.3.0",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",

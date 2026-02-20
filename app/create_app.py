@@ -34,8 +34,7 @@ _logger = logging.getLogger(__name__)
 def create_app(config_name, start_scheduler=False):
     app = Flask(__name__, template_folder="templates", static_folder="static")
     config_class = config_by_name[config_name]
-    config_instance = config_class()
-    app.config.from_object(config_instance)
+    app.config.from_object(config_class)
     config_class.init_app(app)
 
     init_extensions(app)
