@@ -1,0 +1,36 @@
+{
+    "name": "CineTagIt Dev Environment",
+    "dockerComposeFile": [
+        "../devenv/docker-compose.yml"
+    ],
+    "service": "app",
+    "runServices": ["db", "redis", "mailhog", "app"],
+    "workspaceFolder": "/app",
+    "forwardPorts": [5000, 8025, 1025, 3306, 6379],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "mtxr.sqltools",
+                "mtxr.sqltools-driver-mysql"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/app/.venv/bin/python",
+                "python.terminal.activateEnvInSelectedTerminal": true,
+                "python.testing.pytestEnabled": true,
+                "python.testing.unittestEnabled": false,
+                "editor.formatOnSave": true,
+                "[python]": {
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll.ruff": "explicit",
+                        "source.organizeImports.ruff": "explicit"
+                    },
+                    "editor.defaultFormatter": "charliermarsh.ruff"
+                }
+            }
+        }
+    },
+    "postCreateCommand": "uv sync --frozen",
+    "remoteUser": "root"
+}
