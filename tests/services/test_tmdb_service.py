@@ -29,13 +29,13 @@ def test_fetch_new_languages(app):
 
         # Set up the mocks
         with (
-            patch("app.utils.tmdb.fetch_languages", return_value=mock_languages),
+            patch("app.services.tmdb_service.fetch_languages", return_value=mock_languages),
             patch("app.models.tmdb_language.TmdbLanguage.query") as mock_query,
             patch(
                 "app.models.tmdb_language.TmdbLanguage.create_from_tmdb"
             ) as mock_create,
             patch("app.extensions.db.session.bulk_save_objects") as mock_bulk_save,
-            patch("app.extensions.db.session.delete"),
+            patch("app.extensions.db.session.delete") as mock_delete,
             patch("app.extensions.db.session.add") as mock_add,
             patch("app.extensions.db.session.commit") as mock_commit,
         ):
@@ -53,8 +53,9 @@ def test_fetch_new_languages(app):
             mock_create.assert_any_call(mock_languages[1])  # fr
             mock_create.assert_any_call(mock_languages[2])  # es
             mock_bulk_save.assert_called_once()
-            # The add method is called for the German language that's being deleted
-            mock_add.assert_called_once_with(mock_db_languages[1])
+            # Verify that the German language (which is not in API response) is deleted
+            # db.session.delete is called with a list [code, ...]
+            mock_delete.assert_called_once_with(["de"])
             mock_commit.assert_called_once()
 
 

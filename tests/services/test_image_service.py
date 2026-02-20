@@ -118,7 +118,7 @@ def test_fetch_image(app):
 
             # Verify the function called the expected methods
             mock_get.assert_called_once_with(
-                "https://image.tmdb.org/t/p/test/image.jpg"
+                "https://image.tmdb.org/t/p/test/image.jpg", timeout=10
             )
             mock_makedirs.assert_called_once_with(
                 os.path.dirname("/test/path/original/test/image.jpg"), exist_ok=True
