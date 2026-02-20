@@ -70,8 +70,5 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Copy test config
-        run: cp .devcontainer/docker-config.yaml app/config.yaml
-
       - name: Run tests
         run: uv run pytest

@@ -8,10 +8,8 @@ class Config:
         if config_file is None:
             config_file = os.environ.get("CONFIG_FILE", "app/config.yaml")
 
-        if not os.path.exists(config_file):
-            raise FileNotFoundError(f"Configuration file {config_file} not found")
-
-        self.load_config(config_file)
+        if os.path.exists(config_file):
+            self.load_config(config_file)
 
     def load_config(self, config_file):
         with open(config_file) as file:
