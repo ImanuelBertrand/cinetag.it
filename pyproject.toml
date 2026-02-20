@@ -77,5 +77,6 @@ per-file-ignores = { "test_*" = ["S101"] }
 [tool.ruff.format]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 python_files = "test_*.py"
