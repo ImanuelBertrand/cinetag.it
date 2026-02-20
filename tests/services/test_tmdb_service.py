@@ -29,14 +29,16 @@ def test_fetch_new_languages(app):
 
         # Set up the mocks
         with (
-            patch("app.services.tmdb_service.fetch_languages", return_value=mock_languages),
+            patch(
+                "app.services.tmdb_service.fetch_languages", return_value=mock_languages
+            ),
             patch("app.models.tmdb_language.TmdbLanguage.query") as mock_query,
             patch(
                 "app.models.tmdb_language.TmdbLanguage.create_from_tmdb"
             ) as mock_create,
             patch("app.extensions.db.session.bulk_save_objects") as mock_bulk_save,
             patch("app.extensions.db.session.delete") as mock_delete,
-            patch("app.extensions.db.session.add") as mock_add,
+            patch("app.extensions.db.session.add"),
             patch("app.extensions.db.session.commit") as mock_commit,
         ):
             # Configure the mocks
