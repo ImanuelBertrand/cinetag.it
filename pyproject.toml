@@ -75,3 +75,7 @@ extend-ignore = [
 per-file-ignores = { "test_*" = ["S101"] }
 
 [tool.ruff.format]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

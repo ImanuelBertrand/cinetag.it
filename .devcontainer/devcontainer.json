@@ -1,7 +1,7 @@
 {
     "name": "CineTagIt Dev Environment",
     "dockerComposeFile": [
-        "../devenv/docker-compose.yml"
+        "docker-compose.yml"
     ],
     "service": "app",
     "runServices": ["db", "redis", "mailhog", "app"],
