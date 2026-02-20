@@ -29,7 +29,7 @@ SQLALCHEMY_DATABASE_URI: mysql+pymysql://username:password@localhost/database_na
 
 # Cache Configuration
 CACHE_KEY_PREFIX: cinetag
-CACHE_TYPE: RedisCache
+CACHE_TYPE: flask_caching.backends.rediscache.RedisCache
 CACHE_REDIS_URL: redis://localhost:6379/0
 
 # Additional JWT Configuration

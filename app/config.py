@@ -41,7 +41,9 @@ class Config:
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
     JWT_CSRF_CHECK_FORM = True
 
-    CACHE_TYPE = os.environ.get("CACHE_TYPE", "simple")
+    CACHE_TYPE = os.environ.get(
+        "CACHE_TYPE", "flask_caching.backends.simplecache.SimpleCache"
+    )
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
 
     COUNT_TOP_SELECT_OPTION = 5
