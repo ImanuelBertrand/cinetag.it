@@ -1,7 +1,16 @@
 import logging
 import os
 
-from app.create_app import create_app
+from dotenv import load_dotenv
+
+# Load the .env file if present (Apache mod_wsgi will not do that automatically)
+env_file = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_file):
+    load_dotenv(env_file)
+
+# Import the app files only after the global .env initialization is done
+from app.create_app import create_app  # noqa: E402, I001
+
 
 os.chdir(os.path.dirname(__file__))
 
