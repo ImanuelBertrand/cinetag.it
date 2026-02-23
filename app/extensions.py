@@ -1,6 +1,5 @@
 import base64
 
-import pymysql
 from apscheduler.executors.pool import ThreadPoolExecutor
 from flask import request
 from flask_apscheduler import APScheduler
@@ -12,8 +11,6 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
-pymysql.install_as_MySQLdb()
 
 # Initialize extensions
 db = SQLAlchemy()
