@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:18-alpine
+    user: "${UID}:${GID}"
+    container_name: cinetagit_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cinetagit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secretpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-cinetagit_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    networks:
+      - cinetagit_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinetagit} -d ${POSTGRES_DB:-cinetagit_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    image: ghcr.io/imanuelbertrand/cinetag.it:latest
+    container_name: cinetagit_app
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URI=postgresql://${POSTGRES_USER:-cinetagit}:${POSTGRES_PASSWORD:-secretpassword}@db:5432/${POSTGRES_DB:-cinetagit_db}
+      - FLASK_ENV=${FLASK_ENV}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - TMDB_API_KEY=${TMDB_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data/storage:/app/storage
+    networks:
+      - cinetagit_network
+
+networks:
+  cinetagit_network:
+    driver: bridge
