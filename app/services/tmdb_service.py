@@ -93,11 +93,11 @@ def sync_genre_names(language: str) -> None:
                 db.session.add(gen)
 
 
-def update_movie_genres(movie_id: int, tmdb_movie: dict) -> None:
+def update_movie_genres(movie_id: int, tmdb_movie: dict) -> list[MovieGenre]:
     """Reconcile movie_genres rows for a movie from either list payload (genre_ids)
     or details payload (genres objects)."""
     if not tmdb_movie:
-        return
+        return []
 
     if "genre_ids" in tmdb_movie and isinstance(tmdb_movie.get("genre_ids"), list):
         desired_ids = {int(gid) for gid in tmdb_movie.get("genre_ids", [])}
@@ -115,7 +115,12 @@ def update_movie_genres(movie_id: int, tmdb_movie: dict) -> None:
     to_delete = existing_ids - desired_ids
 
     if not desired_ids and not existing_ids:
-        return
+        return []
+
+    if to_delete:
+        MovieGenre.query.filter(
+            MovieGenre.movie_id == movie_id, MovieGenre.genre_id.in_(list(to_delete))
+        ).delete(synchronize_session=False)
 
     # Ensure base genres exist for any new ids
     if to_add:
@@ -126,14 +131,9 @@ def update_movie_genres(movie_id: int, tmdb_movie: dict) -> None:
         if missing:
             db.session.bulk_save_objects([TmdbGenre(id=gid) for gid in missing])
 
-        db.session.bulk_save_objects(
-            [MovieGenre(movie_id=movie_id, genre_id=gid) for gid in to_add]
-        )
+        return [MovieGenre(movie_id=movie_id, genre_id=gid) for gid in to_add]
 
-    if to_delete:
-        MovieGenre.query.filter(
-            MovieGenre.movie_id == movie_id, MovieGenre.genre_id.in_(list(to_delete))
-        ).delete(synchronize_session=False)
+    return []
 
 
 def fetch_new_languages():
@@ -292,6 +292,7 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     movies_to_add: list[Movie] = []
     region_info_to_add: list[MovieRegionInfo] = []
     language_info_to_add: list[MovieLanguageInfo] = []
+    genre_relations_to_save: list[MovieGenre] = []
 
     for tmdb_movie in tmdb_movies:
         movie_id = tmdb_movie["id"]
@@ -320,7 +321,7 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
 
         # Update movie_genre association using genre_ids from list payload
         try:
-            update_movie_genres(movie_id, tmdb_movie)
+            genre_relations_to_save += update_movie_genres(movie_id, tmdb_movie)
         except Exception:
             _logger.exception("Failed updating genres for movie %s", movie_id)
 
@@ -330,6 +331,8 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
         db.session.bulk_save_objects(region_info_to_add)
     if language_info_to_add:
         db.session.bulk_save_objects(language_info_to_add)
+    if genre_relations_to_save:
+        db.session.bulk_save_objects(genre_relations_to_save)
 
 
 def sync_upcoming_movies(region: str, language: str | None = None) -> list[int]:
