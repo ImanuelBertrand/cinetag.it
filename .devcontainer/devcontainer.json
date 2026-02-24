@@ -1,9 +1,6 @@
 {
   "name": "CineTagIt Dev Environment",
-  "dockerComposeFile": [
-    "../docker-compose.yml",
-    "docker-compose.yml"
-  ],
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
   "service": "web",
   "runServices": ["db", "mailhog", "web"],
   "workspaceFolder": "/app",
