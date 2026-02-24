@@ -8,6 +8,7 @@ Create Date: 2025-05-29 14:00:00.000000
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.sql import func
 
 # revision identifiers, used by Alembic.
 revision = "00_create_initial_tables"
@@ -29,13 +30,9 @@ def upgrade():
         sa.Column("language", sa.String(5), nullable=True, server_default="en"),
         sa.Column("temporary_user_id", sa.Integer(), nullable=True),
         sa.Column("password_reset_token", sa.String(32), nullable=True),
+        sa.Column("created_at", sa.DateTime(), server_default=func.now()),
         sa.Column(
-            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+            "updated_at", sa.DateTime(), server_default=func.now(), onupdate=func.now()
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -62,13 +59,9 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("movie_id", sa.Integer(), nullable=False),
         sa.Column("decision", sa.String(10), nullable=False),
+        sa.Column("created_at", sa.DateTime(), server_default=func.now()),
         sa.Column(
-            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+            "updated_at", sa.DateTime(), server_default=func.now(), onupdate=func.now()
         ),
         sa.ForeignKeyConstraint(
             ["movie_id"],
@@ -89,13 +82,12 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("calendar_type", sa.String(10), nullable=False),
         sa.Column("calendar_hash", sa.String(64), nullable=False, unique=True),
-        sa.Column(
-            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
+        sa.Column("created_at", sa.DateTime(), server_default=func.now()),
         sa.Column(
             "updated_at",
             sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+            server_default=func.now(),
+            onupdate=func.now(),
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],
@@ -112,21 +104,24 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("enabled", sa.Integer(), nullable=True),
         sa.Column("days_in_advance", sa.JSON(), nullable=False),
-        sa.Column("mode", sa.Enum("email", "push"), nullable=False),
+        sa.Column(
+            "mode",
+            sa.Enum("email", "push", name="user_notification_mode"),
+            nullable=False,
+        ),
         sa.Column("notification_data", sa.JSON(), nullable=True),
         sa.Column(
             "include_maybe_movies",
             sa.Boolean(),
             nullable=True,
-            server_default=sa.text("1"),
+            server_default=sa.text("true"),
         ),
-        sa.Column(
-            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
+        sa.Column("created_at", sa.DateTime(), server_default=func.now()),
         sa.Column(
             "updated_at",
             sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+            server_default=func.now(),
+            onupdate=func.now(),
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],
@@ -143,16 +138,17 @@ def upgrade():
         sa.Column("channel_id", sa.Integer(), nullable=False),
         sa.Column("movie_id", sa.Integer(), nullable=False),
         sa.Column("days_in_advance", sa.Integer(), nullable=False),
-        sa.Column("is_sent", sa.Boolean(), nullable=True, server_default=sa.text("0")),
+        sa.Column(
+            "is_sent", sa.Boolean(), nullable=True, server_default=sa.text("false")
+        ),
         sa.Column("scheduled_at", sa.DateTime(), nullable=True),
         sa.Column("sent_at", sa.DateTime(), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
+        sa.Column("created_at", sa.DateTime(), server_default=func.now()),
         sa.Column(
             "updated_at",
             sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+            server_default=func.now(),
+            onupdate=func.now(),
         ),
         sa.ForeignKeyConstraint(
             ["channel_id"],
@@ -176,7 +172,9 @@ def upgrade():
         sa.Column("movie_id", sa.Integer(), nullable=False),
         sa.Column("region", sa.String(2), nullable=False),
         sa.Column("release_date", sa.Date(), nullable=False),
-        sa.Column("is_fake", sa.Boolean(), nullable=True, server_default=sa.text("0")),
+        sa.Column(
+            "is_fake", sa.Boolean(), nullable=True, server_default=sa.text("false")
+        ),
         sa.ForeignKeyConstraint(
             ["movie_id"],
             ["movies.id"],
@@ -217,7 +215,7 @@ def upgrade():
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("CURRENT_TIMESTAMP"),
+            server_default=func.now(),
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -280,9 +278,7 @@ def upgrade():
         "sent_confirmation_mails",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("email", sa.String(120), nullable=False),
-        sa.Column(
-            "sent_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
-        ),
+        sa.Column("sent_at", sa.DateTime(), server_default=func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
 

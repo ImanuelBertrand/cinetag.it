@@ -26,11 +26,11 @@ def get_tmdb_api_token() -> str:
     :return: The TMDb API token
     """
     # First check environment variable
-    token = os.environ.get("TMDB_API_TOKEN")
+    token = os.environ.get("TMDB_API_KEY")
 
     # Fall back to configuration file if not in environment
     if not token:
-        token = current_app.config.get("TMDB_API_TOKEN")
+        token = current_app.config.get("TMDB_API_KEY")
 
     if not token:
         raise TMDbAPIError("TMDb API Token is not configured.")

@@ -51,6 +51,9 @@ class Config:
     POSTER_DIR = os.path.join(STORAGE_DIR, "posters")
     TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
 
+    CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 300))
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False
