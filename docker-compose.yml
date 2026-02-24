@@ -19,6 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: cinetagit_redis
+    restart: always
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - cinetagit_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     image: ghcr.io/imanuelbertrand/cinetag.it:latest
@@ -32,8 +51,13 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - TMDB_API_KEY=${TMDB_API_KEY}
+      - CACHE_TYPE=RedisCache
+      - CACHE_REDIS_URL=redis://redis:6379/0
+      - CACHE_DEFAULT_TIMEOUT=300
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./data/storage:/app/storage
