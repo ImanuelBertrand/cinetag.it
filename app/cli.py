@@ -1,8 +1,12 @@
+from typing import TYPE_CHECKING
+
 import click
-from flask import Flask
 
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.services.maintenance_service import purge_abandoned_guests
+
+if TYPE_CHECKING:
+    from flask import Flask
 
 
 def register_cli(app: Flask):

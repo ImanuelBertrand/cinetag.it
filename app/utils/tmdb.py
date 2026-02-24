@@ -1,14 +1,16 @@
 import logging
 import os
-from collections.abc import Callable
 from datetime import date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from flask import current_app
 
 from app.exceptions import TMDbAPIError
 from app.extensions import cache
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _logger = logging.getLogger(__name__)
 

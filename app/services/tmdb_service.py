@@ -1,7 +1,6 @@
 import logging
-from collections.abc import Sequence
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import natsort
 from flask import current_app
@@ -29,6 +28,9 @@ from app.utils.tmdb import (
     fetch_release_dates,
     fetch_upcoming_movies,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _logger = logging.getLogger(__name__)
 

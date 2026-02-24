@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
-from collections.abc import Iterable
 from datetime import date, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from app.exceptions import WebPushSubscriptionExpiredError
 from app.extensions import db
@@ -10,6 +10,9 @@ from app.models.notification import Notification
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
 from app.utils.email import send_email
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _logger = logging.getLogger(__name__)
 

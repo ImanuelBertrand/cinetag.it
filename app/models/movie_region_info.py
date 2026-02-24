@@ -1,6 +1,9 @@
-import datetime
+from typing import TYPE_CHECKING
 
 from app.extensions import db
+
+if TYPE_CHECKING:
+    import datetime
 
 
 class MovieRegionInfo(db.Model):
