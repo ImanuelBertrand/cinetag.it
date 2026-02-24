@@ -16,7 +16,7 @@ class TmdbRegion(db.Model):
         return self.native_name or self.english_name
 
     @staticmethod
-    def create_from_tmdb(data: dict) -> "TmdbRegion":
+    def create_from_tmdb(data: dict) -> TmdbRegion:
         return TmdbRegion(
             code=data["iso_3166_1"],
             english_name=data["english_name"],

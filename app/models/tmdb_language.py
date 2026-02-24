@@ -14,7 +14,7 @@ class TmdbLanguage(db.Model):
         return self.name or self.english_name
 
     @staticmethod
-    def create_from_tmdb(data: dict) -> "TmdbLanguage":
+    def create_from_tmdb(data: dict) -> TmdbLanguage:
         return TmdbLanguage(
             code=data["iso_639_1"],
             english_name=data["english_name"],

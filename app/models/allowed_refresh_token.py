@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.extensions import db
 
@@ -31,7 +31,7 @@ class AllowedRefreshToken(db.Model):
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
     user = db.relationship(
@@ -70,7 +70,7 @@ class AllowedRefreshToken(db.Model):
             return
 
         # Convert UNIX timestamp to timezone-aware datetime
-        expires_dt = datetime.fromtimestamp(expires_at_timestamp, tz=timezone.utc)
+        expires_dt = datetime.fromtimestamp(expires_at_timestamp, tz=UTC)
 
         new_token = AllowedRefreshToken(jti=jti, user_id=user_id, expires_at=expires_dt)
         db.session.add(new_token)
@@ -103,7 +103,7 @@ class AllowedRefreshToken(db.Model):
     def cleanup_expired_tokens():
         """Deletes expired token entries from the database.
         Should be run periodically."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         try:
             expired_count = AllowedRefreshToken.query.filter(
                 AllowedRefreshToken.expires_at < now

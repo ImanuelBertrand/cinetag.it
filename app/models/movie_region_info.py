@@ -23,7 +23,7 @@ class MovieRegionInfo(db.Model):
         return f"<MovieRegionInfo {self.movie_id} ({self.region})>"
 
     @staticmethod
-    def create_from_tmdb(movie_id: int, region: str, date) -> "MovieRegionInfo":
+    def create_from_tmdb(movie_id: int, region: str, date) -> MovieRegionInfo:
         return MovieRegionInfo(
             movie_id=movie_id,
             region=region,
