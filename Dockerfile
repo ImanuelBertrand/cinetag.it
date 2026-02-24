@@ -1,8 +1,15 @@
 # 1. Use the official uv image for the build stage
-FROM ghcr.io/astral-sh/uv:0.10.4-python3.10-trixie AS builder
+FROM ghcr.io/astral-sh/uv:0.10.5-python3.14-trixie AS builder
 
 # 2. Set the working directory
 WORKDIR /app
+
+# Install build dependencies for libsass and other packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # 3. Enable bytecode compilation for faster startups
 ENV UV_LINK_MODE=copy
