@@ -22,7 +22,7 @@ COPY . .
 RUN uv sync --frozen --no-dev
 
 # --- Final Runtime Stage ---
-FROM python:3.10-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.title="CineTagIt"
 LABEL org.opencontainers.image.description="Never miss a movie again!"
