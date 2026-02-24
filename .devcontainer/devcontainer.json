@@ -1,17 +1,20 @@
 {
   "name": "CineTagIt Dev Environment",
-  "dockerComposeFile": ["docker-compose.yml"],
-  "service": "app",
-  "runServices": ["db", "redis", "mailhog", "app"],
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.yml"
+  ],
+  "service": "web",
+  "runServices": ["db", "mailhog", "web"],
   "workspaceFolder": "/app",
-  "forwardPorts": [5000, 8025, 1025, 3306, 6379],
+  "forwardPorts": [8000, 8025, 1025, 5432],
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "charliermarsh.ruff",
         "mtxr.sqltools",
-        "mtxr.sqltools-driver-mysql",
+        "mtxr.sqltools-driver-pg",
         "esbenp.prettier-vscode"
       ],
       "settings": {
