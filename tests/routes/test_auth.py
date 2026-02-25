@@ -28,7 +28,6 @@ def test_registration_flow(client, app) -> None:
         import time
 
         registration_data = {
-            "display_name": "New User",
             "email": "newuser@example.com",
             "password": "securepassword123",
             "website": "",  # Honeypot
@@ -47,7 +46,6 @@ def test_registration_flow(client, app) -> None:
     with app.app_context():
         user = User.query.filter_by(new_email="newuser@example.com").first()
         assert user is not None
-        assert user.display_name == "New User"
         assert user.email is None  # Not confirmed yet
         assert bcrypt.check_password_hash(user.password, "securepassword123")
 
@@ -55,7 +53,6 @@ def test_registration_flow(client, app) -> None:
 def test_registration_honeypot(client, app) -> None:
     """Test that the honeypot field blocks registration."""
     registration_data = {
-        "display_name": "Bot User",
         "email": "bot@example.com",
         "password": "somepassword",
         "website": "http://evil.com",  # Honeypot filled
@@ -77,7 +74,9 @@ def test_login_logout_flow(client, app) -> None:
     # 1. Create a user first
     with app.app_context():
         hashed_pw = bcrypt.generate_password_hash("password123").decode("utf-8")
-        user = User(display_name="Login User", email="login@example.com", password=hashed_pw)
+        user = User(
+            display_name="Login User", email="login@example.com", password=hashed_pw
+        )
         db.session.add(user)
         db.session.commit()
 
