@@ -52,6 +52,7 @@ def test_name_filter_with_other_filters(app, test_user, test_movies):
             user=test_user, mode="approved", name_filter="Star", limit=10
         )
 
+        assert len(approved_result["movies"]) > 0
         # Should only include approved movies with "Star" in the title
         assert all("Star" in movie["title"] for movie in approved_result["movies"])
         assert all(
@@ -63,6 +64,7 @@ def test_name_filter_with_other_filters(app, test_user, test_movies):
             user=test_user, mode="all", need_poster=True, name_filter="Star", limit=10
         )
 
+        assert len(poster_result["movies"]) > 0
         # Should only include movies with posters and "Star" in the title
         assert all("Star" in movie["title"] for movie in poster_result["movies"])
         assert all(movie["poster_url"] for movie in poster_result["movies"])
