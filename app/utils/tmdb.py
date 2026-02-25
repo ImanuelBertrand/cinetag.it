@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any
 
 import requests
@@ -113,7 +113,7 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> list[dict]:
     params = {
         "region": region,
         "language": language,
-        "release_date.gte": datetime.now().strftime("%Y-%m-%d"),
+        "release_date.gte": datetime.now(UTC).strftime("%Y-%m-%d"),
         "with_release_type": "3",  # Theatrical
         "page": 1,
     }

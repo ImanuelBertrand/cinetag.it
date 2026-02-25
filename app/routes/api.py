@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from flask import Blueprint, jsonify, request
 
@@ -96,7 +96,11 @@ def get_movies_api(filter_mode):
 
         # Convert min_release_date to datetime if provided
         if min_release_date:
-            min_release_date = datetime.strptime(min_release_date, "%Y-%m-%d").date()
+            min_release_date = (
+                datetime.strptime(min_release_date, "%Y-%m-%d")
+                .replace(tzinfo=UTC)
+                .date()
+            )
 
         # Convert min_movie_id to int if provided
         if min_movie_id:

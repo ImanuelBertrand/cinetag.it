@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import exists
 
@@ -23,7 +23,7 @@ def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> di
         # Best-effort cleanup; proceed even if cleanup failed
         db.session.rollback()
 
-    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
 
     # EXISTS subquery: does this user have any allowed refresh token?
     has_allowed_token = exists().where(AllowedRefreshToken.user_id == User.id)
@@ -67,7 +67,7 @@ def purge_inactive_empty_guests_with_tokens(
     Returns a result dict. If dry_run=True, only reports candidates.
     """
 
-    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
 
     has_any_movie = exists().where(UserMovie.user_id == User.id)
     has_any_calendar = exists().where(UserCalendar.user_id == User.id)

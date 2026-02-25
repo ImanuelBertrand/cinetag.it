@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -59,7 +59,7 @@ def authenticate_user(data) -> User:
 
 def generate_confirmation_token(user):
     return jwt.encode(
-        {"confirm": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
+        {"confirm": user.id, "exp": datetime.now(UTC) + timedelta(hours=24)},
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
     )
@@ -184,7 +184,7 @@ def get_movies_based_on_filter(
             UserMovie,
             db.and_(UserMovie.movie_id == Movie.id, UserMovie.user_id == user.id),
         )
-        .filter(MovieRegionInfo.release_date >= datetime.now().date())
+        .filter(MovieRegionInfo.release_date >= datetime.now(UTC).date())
     )
 
     # Apply pagination filter
@@ -370,9 +370,9 @@ def _get_user_movies(
             UserMovie.user_id == user.id, UserMovie.decision.in_(decisions)
         ).all()
     if not start:
-        start = datetime.min
+        start = datetime.min.replace(tzinfo=UTC)
     if not end:
-        end = datetime.max
+        end = datetime.max.replace(tzinfo=UTC)
 
     joined_query = (
         db.session.query(UserMovie)
@@ -512,7 +512,7 @@ def queue_confirmation_mail(user: User):
         300: 5,
         86400: 10,
     }
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     # Delete historic entries
     longest_duration = max(rate_limits.keys())

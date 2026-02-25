@@ -1,6 +1,6 @@
 import atexit
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import partial
 
 from app.extensions import scheduler
@@ -129,7 +129,7 @@ def setup_cron_jobs():
         scheduler.add_job(
             id=job_id,
             trigger="interval",
-            next_run_time=datetime.now(),
+            next_run_time=datetime.now(UTC),
             misfire_grace_time=7200,
             max_instances=1,
             coalesce=True,

@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from app.exceptions import WebPushSubscriptionExpiredError
@@ -42,7 +42,7 @@ def cron_send_notifications():
         Notification.query.join(NotificationChannel)
         .filter(
             Notification.is_sent.is_(False),
-            Notification.scheduled_at <= datetime.utcnow(),
+            Notification.scheduled_at <= datetime.now(UTC),
             NotificationChannel.enabled == 1,
         )
         .order_by(Notification.scheduled_at.asc())
@@ -67,7 +67,7 @@ def cron_send_notifications():
 
             if is_sent:
                 notification.is_sent = True
-                notification.sent_at = datetime.utcnow()
+                notification.sent_at = datetime.now(UTC)
                 db.session.add(notification)
                 db.session.commit()
                 sent_notifications[notification.user_id].add(notification.movie_id)
@@ -111,7 +111,7 @@ def get_push_notification_content(
 
     movie_title = movie_data["title"]
     release_date = movie_region_info.release_date
-    days_till_release = (release_date - date.today()).days
+    days_till_release = (release_date - datetime.now(UTC).date()).days
 
     return {
         "title": f"Upcoming movie: {movie_title}",
@@ -172,7 +172,7 @@ def send_email_notification(notification: Notification):
     ).first()
     movie_title = movie_data["title"]
     release_date = movie_region_info.release_date
-    days_till_release = (release_date - date.today()).days
+    days_till_release = (release_date - datetime.now(UTC).date()).days
     body = (
         f"Hello! You have a movie '{movie_title}' "
         f"coming up in {days_till_release} days."
@@ -187,8 +187,8 @@ def add_missing_notifications(
     user_movies: Iterable[UserMovie],
     user_notifications: Iterable[Notification],
 ):
-    scheduled_at_threshold = datetime.now() - timedelta(days=7)
-    today = date.today()
+    scheduled_at_threshold = datetime.now(UTC) - timedelta(days=7)
+    today = datetime.now(UTC).date()
     user_region = channel.user.region
     user_notification_dict = {
         (n.movie_id, n.days_in_advance): n for n in user_notifications
@@ -222,7 +222,7 @@ def delete_outdated_notifications(
     user_movies: Iterable[UserMovie],
     user_notifications: Iterable[Notification],
 ):
-    scheduled_at_threshold = datetime.now() - timedelta(days=7)
+    scheduled_at_threshold = datetime.now(UTC) - timedelta(days=7)
     user_movie_ids = {m.movie_id for m in user_movies}
     for notification in user_notifications:
         if notification.is_sent:

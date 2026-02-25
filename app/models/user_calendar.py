@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.extensions import db
 
@@ -24,9 +24,9 @@ class UserCalendar(db.Model):
         db.String(10), nullable=False
     )  # 'wanted', 'maybe', or 'all'
     calendar_hash = db.Column(db.String(64), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
     )
 
     user = db.relationship("User", back_populates="calendars")

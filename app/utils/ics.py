@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from icalendar import Calendar, Event
 
@@ -28,7 +28,7 @@ def create_ics_file(events: list[dict], calendar_name: str) -> bytes:
         if isinstance(event.get("start"), str):
             start_date = datetime.fromisoformat(event.get("start"))
         else:
-            start_date = event.get("start", datetime.now())
+            start_date = event.get("start", datetime.now(UTC))
 
         # Set the event to all day
         ical_event.add("dtstart", start_date.date())

@@ -1,7 +1,7 @@
 import logging
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from babel.dates import format_date
 from flask import (
@@ -73,7 +73,7 @@ def validate_register_post(user: User, data: dict) -> bool:
     except ValueError:
         form_ts = 0
 
-    now = int(datetime.utcnow().timestamp())
+    now = int(datetime.now(UTC).timestamp())
     min_seconds = 3  # adjust as desired
     if form_ts and (now - form_ts) < min_seconds:
         flash("Please take a moment to complete the form.", "danger")
@@ -201,7 +201,7 @@ def register():
             return register_result
     else:
         # Provide a render timestamp for the template (UTC seconds)
-        form_data["form_rendered_at"] = str(int(datetime.utcnow().timestamp()))
+        form_data["form_rendered_at"] = str(int(datetime.now(UTC).timestamp()))
 
     return render_template("register.html", form_data=form_data)
 
@@ -746,7 +746,7 @@ def get_user_release_dates():
     user = get_current_user()
     try:
         # four weeks ago
-        start = datetime.now() - timedelta(weeks=4)
+        start = datetime.now(UTC) - timedelta(weeks=4)
         releases = fetch_user_events(user, start)
         return render_template("release_dates.html", releases=releases)
     except UserFeedbackError as e:

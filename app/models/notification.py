@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.extensions import db
 
@@ -14,9 +14,9 @@ class Notification(db.Model):
     is_sent = db.Column(db.Boolean, default=False)
     scheduled_at = db.Column(db.DateTime)
     sent_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
     )
 
     channel = db.relationship("NotificationChannel", back_populates="notifications")

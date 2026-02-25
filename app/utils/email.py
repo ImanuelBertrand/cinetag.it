@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from flask import current_app, url_for
@@ -36,7 +36,7 @@ def generate_confirmation_token(user):
         {
             "confirmation": user.id,
             "new_mail": user.new_email,
-            "exp": datetime.utcnow() + timedelta(hours=24),
+            "exp": datetime.now(UTC) + timedelta(hours=24),
         },
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
@@ -69,7 +69,7 @@ def generate_password_reset_token(user):
     return jwt.encode(
         {
             "reset_password": user.id,
-            "exp": datetime.utcnow() + timedelta(hours=1),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
             "token": user.password_reset_token,
         },
         current_app.config["SECRET_KEY"],

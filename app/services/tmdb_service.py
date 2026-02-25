@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import natsort
@@ -41,7 +41,7 @@ def sync_genre_names(language: str) -> None:
     if not genres:
         return
 
-    now = datetime.now()
+    now = datetime.now(UTC)
     genre_ids = [g["id"] for g in genres]
 
     # Ensure base genres exist
@@ -299,7 +299,11 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     for tmdb_movie in tmdb_movies:
         movie_id = tmdb_movie["id"]
         movie = existing_movies.get(tmdb_movie["id"])
-        release_date = datetime.strptime(tmdb_movie["release_date"], "%Y-%m-%d").date()
+        release_date = (
+            datetime.strptime(tmdb_movie["release_date"], "%Y-%m-%d")
+            .replace(tzinfo=UTC)
+            .date()
+        )
         if not movie:
             movies_to_add.append(Movie.create_from_tmdb(tmdb_movie))
         elif movie.update_from_tmdb(tmdb_movie):
@@ -350,7 +354,7 @@ def sync_upcoming_movies(region: str, language: str | None = None) -> list[int]:
     tmdb_movies = fetch_upcoming_movies(region, language)
     save_movie_list(tmdb_movies, region, language)
 
-    MiscData.save(f"last_sync_upcoming_movies_{region}", datetime.now().isoformat())
+    MiscData.save(f"last_sync_upcoming_movies_{region}", datetime.now(UTC).isoformat())
     db.session.commit()
 
     _logger.info("Synced %s upcoming movies", len(tmdb_movies))
@@ -481,7 +485,9 @@ def _parse_best_release_dates(
         else:
             continue  # Skip region if no dates are provided
 
-        best_release_dates[region] = datetime.strptime(date_str, fmt).date()
+        best_release_dates[region] = (
+            datetime.strptime(date_str, fmt).replace(tzinfo=UTC).date()
+        )
     return best_release_dates
 
 
@@ -594,7 +600,7 @@ def update_movie_regions(movie: Movie) -> None:
 
 
 def _get_movie_info_update_threshold():
-    return datetime.now() - timedelta(days=14)
+    return datetime.now(UTC) - timedelta(days=14)
 
 
 def check_movie_information(movie: Movie):
@@ -610,7 +616,7 @@ def check_movie_information(movie: Movie):
         update_movie_languages(movie)
         update_movie_posters(movie)
         update_movie_regions(movie)
-        movie.info_update_at = datetime.now()
+        movie.info_update_at = datetime.now(UTC)
         db.session.add(movie)
     except TMDbAPIError as e:
         if e.status_code == 404:
@@ -640,7 +646,7 @@ def update_all_upcoming_movies():
 def refresh_changed_movies():
     last_refresh_date = MiscData.get("last_refresh_changes_movies")
     if not last_refresh_date:
-        MiscData.save("last_refresh_changes_movies", datetime.now().isoformat())
+        MiscData.save("last_refresh_changes_movies", datetime.now(UTC).isoformat())
         db.session.query(Movie).update(
             {Movie.info_update_at: None}, synchronize_session=False
         )
@@ -648,9 +654,9 @@ def refresh_changed_movies():
         return
 
     start_date = datetime.fromisoformat(last_refresh_date).date()
-    if start_date < datetime.now().date() - timedelta(days=14):
-        start_date = datetime.now().date() - timedelta(days=14)
-    end_date = datetime.now().date()
+    if start_date < datetime.now(UTC).date() - timedelta(days=14):
+        start_date = datetime.now(UTC).date() - timedelta(days=14)
+    end_date = datetime.now(UTC).date()
     if start_date >= end_date:
         # Would be nice to fetch intraday updates, but TMDB only supports dates
         # so this would lead to a lot of redundant updates.
@@ -661,7 +667,7 @@ def refresh_changed_movies():
         {Movie.info_update_at: None}, synchronize_session=False
     )
 
-    MiscData.save("last_refresh_changes_movies", datetime.now().isoformat())
+    MiscData.save("last_refresh_changes_movies", datetime.now(UTC).isoformat())
 
 
 def refresh_outdated_movies():

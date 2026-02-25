@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -88,7 +88,7 @@ def test_user(app):
 def test_movies(app, test_user):
     """Create test movies with different titles."""
     with app.app_context():
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         # Create movies with different titles
         movie_ids = []

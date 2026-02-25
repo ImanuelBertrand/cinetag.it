@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.extensions import db
 
@@ -15,9 +15,9 @@ class User(db.Model):
     language = db.Column(db.String(5), nullable=True, default="en")
     temporary_user_id = db.Column(db.Integer, nullable=True)
     password_reset_token = db.Column(db.String(32), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
     )
 
     user_movies = db.relationship(
