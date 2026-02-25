@@ -44,7 +44,7 @@ services:
     container_name: cinetagit_app
     restart: always
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - DATABASE_URI=postgresql://${POSTGRES_USER:-cinetagit}:${POSTGRES_PASSWORD:-secretpassword}@db:5432/${POSTGRES_DB:-cinetagit_db}
       - FLASK_ENV=${FLASK_ENV}
