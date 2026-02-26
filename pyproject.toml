@@ -40,7 +40,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.15.2", "taplo>=0.9.3"]
+dev = ["ruff>=0.15.3", "taplo>=0.9.3"]
 
 
 [tool.ruff]
