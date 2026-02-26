@@ -174,9 +174,7 @@ def register_post(user: User):
     db.session.commit()
 
     try:
-        msg = (
-            "User registered successfully. Please check your email to confirm."
-        )
+        msg = "User registered successfully. Please check your email to confirm."
         flash(msg, "success")
         return redirect(url_for("html.profile"))
     except UserFeedbackError as e:
