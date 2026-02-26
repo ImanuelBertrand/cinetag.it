@@ -176,8 +176,6 @@ def register_post(user: User):
     try:
         msg = (
             "User registered successfully. Please check your email to confirm."
-            "You won't be able to login until you confirm your email."
-            "If you don't see the email, you can resend it in your profile."
         )
         flash(msg, "success")
         return redirect(url_for("html.profile"))
