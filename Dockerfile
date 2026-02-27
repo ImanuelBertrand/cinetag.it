@@ -28,6 +28,11 @@ COPY . .
 # 7. Sync the project (installs your app into the venv)
 RUN uv sync --frozen --no-dev
 
+# 8. Precompile assets
+# Use TestingConfig to avoid needing a real DB/Redis during build
+ENV FLASK_APP="app.create_app:create_app('testing')"
+RUN .venv/bin/python -m flask build-assets
+
 # --- Final Runtime Stage ---
 FROM python:3.14-slim
 
@@ -43,6 +48,10 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy your application code
 COPY . .
+
+# Copy precompiled assets from the builder stage
+# (This ensures we get the compiled dist/style.css)
+COPY --from=builder /app/app/static/dist /app/app/static/dist
 
 # Place the virtual env on the PATH so 'python' and 'gunicorn' work automatically
 ENV PATH="/app/.venv/bin:$PATH"

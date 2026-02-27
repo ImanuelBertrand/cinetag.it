@@ -10,6 +10,18 @@ if TYPE_CHECKING:
 
 
 def register_cli(app: Flask):
+    @app.cli.command("build-assets")
+    def build_assets_cmd():
+        """Precompile static assets."""
+        from app.extensions import assets_env
+
+        click.echo("Building assets...")
+        # assets_env is registered in init_extensions, so it should be ready
+        for name, bundle in assets_env._named_bundles.items():
+            click.echo(f"Building bundle: {name}")
+            bundle.build()
+        click.echo("Assets built successfully.")
+
     @app.cli.command("purge-guests")
     @click.option("--days", default=14, type=int, help="Retention window in days")
     @click.option(
