@@ -8,6 +8,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libffi-dev \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -16,11 +18,12 @@ ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
 
 # 4. Copy only the lock and project files first
-COPY uv.lock pyproject.toml ./
+COPY uv.lock pyproject.toml package.json package-lock.json* ./
 
 # 5. Install dependencies (without the app itself)
 # --frozen ensures uv.lock is respected exactly
 RUN uv sync --frozen --no-install-project --no-dev
+RUN npm install
 
 # 6. Copy the rest of the app
 COPY . .
@@ -32,6 +35,11 @@ RUN uv sync --frozen --no-dev
 # Use TestingConfig to avoid needing a real DB/Redis during build
 ENV FLASK_APP="app.create_app:create_app('testing')"
 RUN .venv/bin/python -m flask build-assets
+
+# Copy fullcalendar files to static directory
+RUN mkdir -p app/static/vendor/fullcalendar && \
+    cp node_modules/fullcalendar/index.global.min.js app/static/vendor/fullcalendar/ && \
+    cp -r node_modules/@fullcalendar/core/locales app/static/vendor/fullcalendar/
 
 # --- Final Runtime Stage ---
 FROM python:3.14-slim
@@ -52,6 +60,7 @@ COPY . .
 # Copy precompiled assets from the builder stage
 # (This ensures we get the compiled dist/style.css)
 COPY --from=builder /app/app/static/dist /app/app/static/dist
+COPY --from=builder /app/app/static/vendor /app/app/static/vendor
 
 # Place the virtual env on the PATH so 'python' and 'gunicorn' work automatically
 ENV PATH="/app/.venv/bin:$PATH"
