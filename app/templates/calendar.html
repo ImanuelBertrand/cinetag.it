@@ -10,6 +10,8 @@
 {% block scripts %}
     {% set lang = current_user.language or 'en' %}
     <script defer src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}"></script>
-    <script defer src="{{ url_for('static', filename='vendor/fullcalendar/locales/' + lang + '.global.js') }}"></script>
+    {% if lang != 'en' %}
+        <script defer src="{{ url_for('static', filename='vendor/fullcalendar/locales/' + lang + '.global.js') }}"></script>
+    {% endif %}
     <script defer src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 {% endblock %}
