@@ -27,6 +27,6 @@
     "prettier-plugin-jinja-template": "^2.1.0"
   },
   "dependencies": {
-    "fullcalendar": "^6.1.15"
+    "fullcalendar": "^6.1.20"
   }
 }
