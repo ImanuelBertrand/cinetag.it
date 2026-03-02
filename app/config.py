@@ -73,6 +73,7 @@ class TestingConfig(Config):
     # Disable scheduler for testing
     SCHEDULER_API_ENABLED = False
     SCHEDULER_ENABLED = False
+    JWT_COOKIE_CSRF_PROTECT = False
 
 
 config_by_name = {
