@@ -51,7 +51,7 @@ def generate_confirmation_token(user):
 def confirm_user_email(token):
     try:
         data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
-        user = User.query.get(data["confirmation"])
+        user = db.session.get(User, data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
         if not user.new_email or user.new_email != data["new_mail"]:

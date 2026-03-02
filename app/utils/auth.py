@@ -206,7 +206,7 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str):
         user_id = get_jwt_identity()
         if user_id:
             with app.app_context():  # Ensure context for DB query
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
             if user:
                 g.current_user = user
             else:
@@ -256,7 +256,7 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str):
             return
 
         with app.app_context():  # Ensure context for DB query
-            user = User.query.get(refreshed_user_id)
+            user = db.session.get(User, refreshed_user_id)
 
         if not user:
             _logger.warning(

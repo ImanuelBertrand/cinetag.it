@@ -128,7 +128,7 @@ def test_email_confirmation(client, app):
     assert b"Email confirmed successfully" in response.data
 
     with app.app_context():
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         assert user.email == "confirm@example.com"
         assert user.new_email is None
 
