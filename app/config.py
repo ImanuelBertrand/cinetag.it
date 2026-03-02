@@ -74,6 +74,14 @@ class TestingConfig(Config):
     SCHEDULER_API_ENABLED = False
     SCHEDULER_ENABLED = False
     JWT_COOKIE_CSRF_PROTECT = False
+    SECRET_KEY = os.environ.get(
+        "SECRET_KEY",
+        "your-extremely-long-and-secure-secret-key-that-is-very-long-for",
+    )
+    JWT_SECRET_KEY = os.environ.get(
+        "JWT_SECRET_KEY",
+        "your-even-longer-and-even-more-secure-jwt-secret-key-that-is-very-long",
+    )
 
 
 config_by_name = {
