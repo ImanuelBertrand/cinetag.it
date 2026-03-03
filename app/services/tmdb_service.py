@@ -6,7 +6,7 @@ import natsort
 from flask import current_app
 from natsort import natsorted
 
-from app.exceptions import TMDbAPIError
+from app.errors import TMDbAPIError
 from app.extensions import db
 from app.models.misc_data import MiscData
 from app.models.movie import Movie

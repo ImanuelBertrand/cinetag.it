@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from flask import Blueprint, jsonify, request
 
-from app.exceptions import UserFeedbackError
+from app.errors import UserFeedbackError
 from app.extensions import db
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from unittest.mock import patch
 
-from app.exceptions import TMDbAPIError
+from app.errors import TMDbAPIError
 from app.extensions import db
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo

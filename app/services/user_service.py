@@ -10,7 +10,7 @@ from flask_sqlalchemy.session import Session
 from sqlalchemy import func
 from sqlalchemy.orm.exc import UnmappedInstanceError
 
-from app.exceptions import UserFeedbackError
+from app.errors import UserFeedbackError
 from app.extensions import bcrypt, cache, db
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo

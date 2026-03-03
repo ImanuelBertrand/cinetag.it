@@ -20,7 +20,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
 )
 
-from app.exceptions import UserFeedbackError
+from app.errors import UserFeedbackError
 from app.extensions import bcrypt, db
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo

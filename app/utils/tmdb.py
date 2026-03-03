@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 from flask import current_app
 
-from app.exceptions import TMDbAPIError
+from app.errors import TMDbAPIError
 from app.extensions import cache
 
 if TYPE_CHECKING:

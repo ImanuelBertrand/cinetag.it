@@ -8,7 +8,7 @@ from flask import current_app
 from py_vapid import Vapid
 from pywebpush import WebPushException, webpush
 
-from app.exceptions import WebPushSubscriptionExpiredError
+from app.errors import WebPushSubscriptionExpiredError
 
 _logger = logging.getLogger(__name__)
 

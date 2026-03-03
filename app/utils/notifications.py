@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from app.exceptions import WebPushSubscriptionExpiredError
+from app.errors import WebPushSubscriptionExpiredError
 from app.extensions import db
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification import Notification
