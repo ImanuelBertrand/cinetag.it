@@ -19,7 +19,7 @@ depends_on = None
 
 def upgrade():
     # 1. Add new columns to users table
-    op.add_column("users", sa.Column("display_name", sa.String(200), nullable=True))
+    op.alter_column("users", "name", new_column_name="display_name")
     op.add_column(
         "users",
         sa.Column("friend_code", sa.String(64), nullable=True, unique=True),
