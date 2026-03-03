@@ -14,5 +14,8 @@ services:
       - MAIL_PORT=1025
       - MAIL_USE_TLS=false
       - MAIL_USE_SSL=false
+      - SERVER_NAME=${SERVER_NAME:-localhost:8000}
+      - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-http}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-noreply@cinetag.it}
     depends_on:
       - mailhog
