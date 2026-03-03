@@ -7,7 +7,7 @@ from app.extensions import bcrypt, db
 from app.models.user import User
 
 
-def test_registration_flow(client, app):
+def test_registration_flow(client, app) -> None:
     """Test the full registration flow from anonymous to permanent user."""
     # 1. Accessing home should create an anonymous user
     # (via get_current_user in before_request)
@@ -52,7 +52,7 @@ def test_registration_flow(client, app):
         assert bcrypt.check_password_hash(user.password, "securepassword123")
 
 
-def test_registration_honeypot(client, app):
+def test_registration_honeypot(client, app) -> None:
     """Test that the honeypot field blocks registration."""
     registration_data = {
         "name": "Bot User",
@@ -72,7 +72,7 @@ def test_registration_honeypot(client, app):
         assert user is None
 
 
-def test_login_logout_flow(client, app):
+def test_login_logout_flow(client, app) -> None:
     """Test login and logout functionality."""
     # 1. Create a user first
     with app.app_context():
@@ -94,7 +94,7 @@ def test_login_logout_flow(client, app):
     assert b"Logged out successfully" in response.data
 
 
-def test_login_invalid_credentials(client, app):
+def test_login_invalid_credentials(client, app) -> None:
     """Test login with wrong credentials."""
     login_data = {"email": "nonexistent@example.com", "password": "wrongpassword"}
     response = client.post("/login", data=login_data, follow_redirects=True)
@@ -102,7 +102,7 @@ def test_login_invalid_credentials(client, app):
     assert b"Invalid email or password" in response.data
 
 
-def test_email_confirmation(client, app):
+def test_email_confirmation(client, app) -> None:
     """Test the email confirmation process."""
     # 1. Create a user with a new_email
     with app.app_context():
@@ -133,7 +133,7 @@ def test_email_confirmation(client, app):
         assert user.new_email is None
 
 
-def test_password_reset_flow(client, app):
+def test_password_reset_flow(client, app) -> None:
     """Test the password reset flow."""
     # 1. Create a user
     with app.app_context():

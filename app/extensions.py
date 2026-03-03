@@ -34,7 +34,7 @@ def obfuscate_email(email: str) -> str:
     return base64.b64encode(email.encode("utf-8")).decode("utf-8")[::-1]
 
 
-def init_extensions(app):
+def init_extensions(app) -> None:
     """
     Initialize the Flask extensions with the application instance.
     """

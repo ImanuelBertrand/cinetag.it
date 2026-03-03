@@ -9,7 +9,7 @@ from app.services.tmdb_service import (
 )
 
 
-def test_fetch_new_languages(app):
+def test_fetch_new_languages(app) -> None:
     """Test that fetch_new_languages correctly processes languages from the API."""
     with app.app_context():
         # Mock the API response
@@ -61,7 +61,7 @@ def test_fetch_new_languages(app):
             mock_commit.assert_called_once()
 
 
-def test_update_regions(app):
+def test_update_regions(app) -> None:
     """Test that update_regions correctly updates region information."""
     # Mock the necessary functions
     with (
@@ -81,7 +81,7 @@ def test_update_regions(app):
         mock_commit.assert_called_once()
 
 
-def test_save_movie_list(app):
+def test_save_movie_list(app) -> None:
     """Test that save_movie_list correctly processes a list of movies."""
     with app.app_context():
         # Create test data
@@ -168,7 +168,7 @@ def test_save_movie_list(app):
             assert mock_bulk_save.call_count == 3
 
 
-def test_sync_upcoming_movies(app):
+def test_sync_upcoming_movies(app) -> None:
     """Test that sync_upcoming_movies correctly syncs upcoming movies."""
     # Mock the necessary functions
     with (
@@ -197,12 +197,12 @@ def test_sync_upcoming_movies(app):
         assert result == [1, 2]
 
 
-def test_sort_objects(app):
+def test_sort_objects(app) -> None:
     """Test that _sort_objects correctly sorts objects based on user counts."""
     with app.app_context():
         # Create test objects
         class TestObject:
-            def __init__(self, code, name):
+            def __init__(self, code, name) -> None:
                 self.code = code
                 self.name = name
                 self.sort_order = None

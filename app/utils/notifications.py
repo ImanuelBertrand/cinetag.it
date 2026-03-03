@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-def cron_setup_notifications():
+def cron_setup_notifications() -> None:
     # TODO performance in case of many users
     channels = NotificationChannel.query.all()
     for channel in channels:
@@ -37,7 +37,7 @@ def cron_setup_notifications():
             db.session.commit()
 
 
-def cron_send_notifications():
+def cron_send_notifications() -> None:
     scheduled_notifications = (
         Notification.query.join(NotificationChannel)
         .filter(
@@ -186,7 +186,7 @@ def add_missing_notifications(
     channel: NotificationChannel,
     user_movies: Iterable[UserMovie],
     user_notifications: Iterable[Notification],
-):
+) -> None:
     scheduled_at_threshold = datetime.now(UTC) - timedelta(days=7)
     today = datetime.now(UTC).date()
     user_region = channel.user.region
@@ -229,7 +229,7 @@ def delete_outdated_notifications(
     channel: NotificationChannel,
     user_movies: Iterable[UserMovie],
     user_notifications: Iterable[Notification],
-):
+) -> None:
     scheduled_at_threshold = datetime.now(UTC) - timedelta(days=7)
     user_movie_ids = {m.movie_id for m in user_movies}
     for notification in user_notifications:
@@ -244,7 +244,7 @@ def delete_outdated_notifications(
             db.session.delete(notification)
 
 
-def setup_notifications(channel: NotificationChannel):
+def setup_notifications(channel: NotificationChannel) -> None:
     valid_decisions = ["approve"]
     if channel.include_maybe_movies:
         valid_decisions.append("maybe")

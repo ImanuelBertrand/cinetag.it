@@ -43,7 +43,7 @@ def generate_confirmation_token(user):
     )
 
 
-def send_confirmation_email(user):
+def send_confirmation_email(user) -> None:
     if not user.new_email:
         _logger.error(
             "Can't send confirmation email for user %s: no new email", user.id
@@ -77,7 +77,7 @@ def generate_password_reset_token(user):
     )
 
 
-def send_password_reset_email(user):
+def send_password_reset_email(user) -> None:
     token = generate_password_reset_token(user)
     reset_url = url_for("html.reset_password", token=token, _external=True)
     subject = "Password Reset Requested"
@@ -88,7 +88,7 @@ def send_password_reset_email(user):
     send_email(user.email, subject, body)
 
 
-def queue_email(user, mail_type):
+def queue_email(user, mail_type) -> None:
     if mail_type not in ["confirm", "reset"]:
         raise ValueError(f"Unknown mail type: {mail_type}")
 
@@ -98,7 +98,7 @@ def queue_email(user, mail_type):
 
 
 # cron job to send mail
-def send_queued_emails():
+def send_queued_emails() -> None:
     send_dict = defaultdict(list)
     for item in UserEmailQueue.query.all():
         send_dict[(item.user, item.mail_type)].append(item)

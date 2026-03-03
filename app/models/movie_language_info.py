@@ -19,7 +19,7 @@ class MovieLanguageInfo(db.Model):
         db.UniqueConstraint("movie_id", "language", name="movie_language_info_idx"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MovieLanguageInfo {self.movie_id} ({self.language})>"
 
     @staticmethod

@@ -12,7 +12,7 @@ from app.models.user_movie import UserMovie
 from app.services.tmdb_service import check_movie_information
 
 
-def test_movie_deletion_on_404(app):
+def test_movie_deletion_on_404(app) -> None:
     """Test that a movie is deleted when
     TMDb returns 404, along with all related data."""
     with app.app_context():

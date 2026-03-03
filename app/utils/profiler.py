@@ -2,6 +2,7 @@ import logging
 import time
 from collections import defaultdict
 from functools import wraps
+from typing import Any, Self
 
 _logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ def profile_function(func):
     """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
@@ -31,7 +32,7 @@ class Profiler:
     Can be used either as a context manager or with explicit start/stop calls.
     """
 
-    def __init__(self, name, log_level="info"):
+    def __init__(self, name, log_level="info") -> None:
         self.name = name
         self.log_level = log_level
         self.start_time = None
@@ -40,11 +41,11 @@ class Profiler:
         self.section_start_time = None
         self.is_running = False
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.stop()
 
     def start(self):

@@ -13,7 +13,7 @@ class TmdbGenre(db.Model):
         "TmdbGenreName", back_populates="genre", cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TmdbGenre {self.id}>"
 
 
@@ -27,7 +27,7 @@ class TmdbGenreName(db.Model):
 
     genre = db.relationship("TmdbGenre", back_populates="names")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<TmdbGenreName {self.genre_id}:{self.language}={self.name}>"
 
 
@@ -41,5 +41,5 @@ class MovieGenre(db.Model):
 
     movie = db.relationship("Movie", back_populates="genres")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MovieGenre {self.movie_id}:{self.genre_id}>"

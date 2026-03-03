@@ -36,7 +36,7 @@ class Movie(db.Model):
 
     genres = db.relationship("MovieGenre", cascade="all, delete-orphan")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Movie {self.id} ({self.original_title})>"
 
     def get_localized_data(

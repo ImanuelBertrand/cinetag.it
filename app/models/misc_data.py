@@ -9,7 +9,7 @@ class MiscData(db.Model):
     value = db.Column(db.String(255), nullable=False)
 
     @staticmethod
-    def save(key, value, commit=False):
+    def save(key, value, commit=False) -> None:
         data = MiscData.query.filter_by(key=key).first()
         if data:
             data.value = value
@@ -24,5 +24,5 @@ class MiscData(db.Model):
         data = MiscData.query.filter_by(key=key).first()
         return data.value if data else default
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MiscData {self.key}: {self.value}>"

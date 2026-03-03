@@ -5,7 +5,7 @@ from app.models.user_email import UserEmailQueue
 from app.utils.email import queue_email, send_queued_emails
 
 
-def test_send_queued_emails_with_server_name(app, test_user):
+def test_send_queued_emails_with_server_name(app, test_user) -> None:
     """Test that send_queued_emails works when SERVER_NAME is configured."""
     with app.test_request_context():
         # Set SERVER_NAME which is required
@@ -51,7 +51,7 @@ def test_send_queued_emails_with_server_name(app, test_user):
         assert UserEmailQueue.query.count() == 0
 
 
-def test_send_queued_emails_fails_without_server_name(app, test_user):
+def test_send_queued_emails_fails_without_server_name(app, test_user) -> None:
     """Test that send_queued_emails raises
     RuntimeError when SERVER_NAME is NOT configured."""
     with app.app_context():

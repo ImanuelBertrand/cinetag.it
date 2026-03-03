@@ -17,7 +17,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     # Create users table
     op.create_table(
         "users",
@@ -283,7 +283,7 @@ def upgrade():
     )
 
 
-def downgrade():
+def downgrade() -> None:
     # Drop tables in reverse order of creation
     # to avoid foreign key constraint violations
     op.drop_table("sent_confirmation_mails")

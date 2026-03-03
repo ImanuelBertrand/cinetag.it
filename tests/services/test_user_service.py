@@ -3,7 +3,7 @@ from datetime import datetime
 from app.services.user_service import get_movies_based_on_filter
 
 
-def test_name_filter_with_pagination(app, test_user, test_movies):
+def test_name_filter_with_pagination(app, test_user, test_movies) -> None:
     """Test that name filter works correctly with pagination."""
     with app.app_context():
         # Test case 1: First page with name filter
@@ -44,7 +44,7 @@ def test_name_filter_with_pagination(app, test_user, test_movies):
         assert no_match_result["has_more"] is False
 
 
-def test_name_filter_with_other_filters(app, test_user, test_movies):
+def test_name_filter_with_other_filters(app, test_user, test_movies) -> None:
     """Test that name filter works correctly with other filters."""
     with app.app_context():
         # Test with mode filter

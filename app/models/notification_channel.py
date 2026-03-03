@@ -26,10 +26,10 @@ class NotificationChannel(db.Model):
     )
 
     @staticmethod
-    def get_valid_types():
+    def get_valid_types() -> list[str]:
         return ["email", "push"]
 
-    def __init__(self, user_id: int, mode: str, enabled: bool):
+    def __init__(self, user_id: int, mode: str, enabled: bool) -> None:
         self.user_id = user_id
         self.mode = mode
         self.enabled = enabled

@@ -16,7 +16,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     # Create tmdb_genres table
     op.create_table(
         "tmdb_genres",
@@ -61,7 +61,7 @@ def upgrade():
     )
 
 
-def downgrade():
+def downgrade() -> None:
     op.drop_table("movie_genres")
     op.drop_index("ix_tmdb_genre_names_language_name", table_name="tmdb_genre_names")
     op.drop_table("tmdb_genre_names")

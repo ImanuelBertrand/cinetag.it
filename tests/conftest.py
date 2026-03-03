@@ -37,7 +37,7 @@ def app():
 
 
 @pytest.fixture(autouse=True)
-def clean_test_db(app):
+def clean_test_db(app) -> None:
     with app.app_context():
         # Only run this cleanup if we're using a real database, not in-memory SQLite
         if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///:memory:"):

@@ -147,7 +147,9 @@ def create_temporary_user():
         return user
 
 
-def _validate_token_generation(access_token: str | None, refresh_token: str | None):
+def _validate_token_generation(
+    access_token: str | None, refresh_token: str | None
+) -> None:
     """Abstracted check to satisfy TRY301."""
     if not access_token or not refresh_token:
         # Raising outside the 'try' block in the caller
@@ -224,7 +226,7 @@ def generate_new_tokens(
     return None, None
 
 
-def _authenticate_via_auth_token(app: Flask, endpoint: str):
+def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
     try:
         verify_jwt_in_request(optional=True)  # Verify JWT token (expiry, etc.)
         user_id = get_jwt_identity()
@@ -262,7 +264,7 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str):
             g.new_refresh_token = None
 
 
-def _authenticate_via_refresh_token(app: Flask, endpoint: str):
+def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
     refresh_token = request.cookies.get("refresh_token_cookie")
     if not refresh_token:
         return
@@ -302,7 +304,7 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str):
         _logger.warning("Refresh token verification failed.", exc_info=True)
 
 
-def _authenticate_as_guest_user(app: Flask, endpoint: str):
+def _authenticate_as_guest_user(app: Flask, endpoint: str) -> None:
     try:
         # Create temporary user within app context for DB access
         with app.app_context():

@@ -11,7 +11,7 @@ def parse_bool(value):
 
 class Config:
     @staticmethod
-    def init_app(app):
+    def init_app(app) -> None:
         pass
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False

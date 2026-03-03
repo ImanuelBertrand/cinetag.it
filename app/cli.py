@@ -9,9 +9,9 @@ if TYPE_CHECKING:
     from flask import Flask
 
 
-def register_cli(app: Flask):
+def register_cli(app: Flask) -> None:
     @app.cli.command("build-assets")
-    def build_assets_cmd():
+    def build_assets_cmd() -> None:
         """Precompile static assets."""
         from app.extensions import assets_env
 
@@ -32,13 +32,13 @@ def register_cli(app: Flask):
         default=False,
         help="Actually delete (omit for dry-run)",
     )
-    def purge_guests_cmd(days: int, force: bool):
+    def purge_guests_cmd(days: int, force: bool) -> None:
         """Delete anonymous users without allowed refresh tokens older than N days."""
         result = purge_abandoned_guests(retention_days=days, dry_run=not force)
         click.echo(result)
 
     @app.cli.command("cleanup-expired-refresh-tokens")
-    def cleanup_expired_refresh_tokens_cmd():
+    def cleanup_expired_refresh_tokens_cmd() -> None:
         """Remove expired refresh token allowlist entries."""
         count = AllowedRefreshToken.cleanup_expired_tokens()
         click.echo({"expired_tokens_deleted": count})
@@ -51,7 +51,7 @@ def register_cli(app: Flask):
         default=False,
         help="Actually delete (omit for dry-run)",
     )
-    def purge_empty_guests_cmd(days: int, force: bool):
+    def purge_empty_guests_cmd(days: int, force: bool) -> None:
         """Delete guest users that still have a refresh token
         but no data and are older than N days."""
         # import locally to avoid modifying top-level imports further

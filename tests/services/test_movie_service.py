@@ -3,7 +3,7 @@ from app.models.movie_region_info import MovieRegionInfo
 from app.services.movie_service import get_lang_infos, get_region_infos
 
 
-def test_get_region_infos(app, test_movies):
+def test_get_region_infos(app, test_movies) -> None:
     """Test that get_region_infos returns the correct region information."""
     with app.app_context():
         # Get movie IDs from test_movies fixture
@@ -23,7 +23,7 @@ def test_get_region_infos(app, test_movies):
         assert all(info.region == "US" for info in region_infos.values())
 
 
-def test_get_lang_infos(app, test_movies):
+def test_get_lang_infos(app, test_movies) -> None:
     """Test that get_lang_infos returns the correct language information."""
     with app.app_context():
         # Get movie IDs from test_movies fixture
@@ -43,7 +43,7 @@ def test_get_lang_infos(app, test_movies):
         assert all(info.language == "en" for info in lang_infos.values())
 
 
-def test_get_region_infos_empty(app):
+def test_get_region_infos_empty(app) -> None:
     """Test that get_region_infos handles empty input correctly."""
     with app.app_context():
         # Test with empty list of movie IDs
@@ -53,7 +53,7 @@ def test_get_region_infos_empty(app):
         assert region_infos == {}
 
 
-def test_get_lang_infos_empty(app):
+def test_get_lang_infos_empty(app) -> None:
     """Test that get_lang_infos handles empty input correctly."""
     with app.app_context():
         # Test with empty list of movie IDs

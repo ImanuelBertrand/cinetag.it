@@ -22,7 +22,7 @@ from app.utils.notifications import (
 _logger = logging.getLogger(__name__)
 
 
-def shutdown_scheduler_if_running():
+def shutdown_scheduler_if_running() -> None:
     if scheduler.running:
         scheduler.shutdown()
         _logger.info("Scheduler shut down successfully")
@@ -33,12 +33,12 @@ def shutdown_scheduler_if_running():
 atexit.register(shutdown_scheduler_if_running)
 
 
-def run_with_context(func):
+def run_with_context(func) -> None:
     with scheduler.app.app_context():
         func()
 
 
-def job_cleanup_expired_refresh_tokens():
+def job_cleanup_expired_refresh_tokens() -> None:
     # Best-effort; no exception should crash scheduler
     try:
         AllowedRefreshToken.cleanup_expired_tokens()
@@ -46,7 +46,7 @@ def job_cleanup_expired_refresh_tokens():
         _logger.exception("Error cleaning expired tokens")
 
 
-def job_purge_abandoned_guests():
+def job_purge_abandoned_guests() -> None:
     try:
         # Allow configuration override;
         # default 21 days to be safer than refresh lifetime
@@ -56,7 +56,7 @@ def job_purge_abandoned_guests():
         _logger.exception("Error purging abandoned guests")
 
 
-def job_purge_empty_guests():
+def job_purge_empty_guests() -> None:
     try:
         # Separate retention window for empty guests that still have tokens
         days = scheduler.app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
@@ -70,7 +70,7 @@ def job_purge_empty_guests():
         _logger.exception("Error purging empty guests")
 
 
-def setup_cron_jobs():
+def setup_cron_jobs() -> None:
     # Check if scheduler is enabled in config
     if (
         hasattr(scheduler.app, "config")

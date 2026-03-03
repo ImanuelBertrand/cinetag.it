@@ -22,7 +22,7 @@ def get_tmdb_image_url(remote_filename: str) -> str:
     return f"{get_tmdb_image_base_url()}/{remote_filename}"
 
 
-def fetch_image(remote_filename: str, size: str = "original"):
+def fetch_image(remote_filename: str, size: str = "original") -> None:
     target_filename = f"{get_image_base_path()}/{size}/{remote_filename}"
     remote_url = get_tmdb_image_url(remote_filename)
     response = requests.get(remote_url, timeout=10)
@@ -33,7 +33,7 @@ def fetch_image(remote_filename: str, size: str = "original"):
         file.write(response.content)
 
 
-def resize_image(original_file: str, width: int, target_filename: str):
+def resize_image(original_file: str, width: int, target_filename: str) -> None:
     image = Image.open(original_file)
     image.thumbnail((width, width * 3))
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)

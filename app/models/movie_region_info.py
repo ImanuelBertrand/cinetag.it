@@ -22,7 +22,7 @@ class MovieRegionInfo(db.Model):
         db.Index("movie_region_info_release_date_idx", "release_date"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<MovieRegionInfo {self.movie_id} ({self.region})>"
 
     @staticmethod

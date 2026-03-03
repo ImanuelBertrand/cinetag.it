@@ -41,7 +41,7 @@ class AllowedRefreshToken(db.Model):
         ),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<AllowedRefreshToken jti={self.jti} "
             f"user_id={self.user_id} expires_at={self.expires_at}>"
@@ -61,7 +61,7 @@ class AllowedRefreshToken(db.Model):
         )
 
     @staticmethod
-    def add_token(jti: str, user_id: int, expires_at_timestamp: float):
+    def add_token(jti: str, user_id: int, expires_at_timestamp: float) -> None:
         """Adds a new token JTI to the allowlist."""
         if not jti or not user_id or not expires_at_timestamp:
             _logger.error(
@@ -79,7 +79,7 @@ class AllowedRefreshToken(db.Model):
         # of the transaction where the token is issued.
 
     @staticmethod
-    def revoke_token(jti: str):
+    def revoke_token(jti: str) -> bool:
         """Removes a token JTI from the allowlist (revokes it)."""
         token_entry = AllowedRefreshToken.query.filter_by(jti=jti).first()
         if token_entry:
@@ -91,7 +91,7 @@ class AllowedRefreshToken(db.Model):
         return False
 
     @staticmethod
-    def revoke_all_for_user(user_id: int):
+    def revoke_all_for_user(user_id: int) -> bool:
         """Revokes all refresh tokens for a specific user."""
         deleted_count = AllowedRefreshToken.query.filter_by(user_id=user_id).delete()
         _logger.info("Revoked %s refresh token(s) for user %s.", deleted_count, user_id)
@@ -100,7 +100,7 @@ class AllowedRefreshToken(db.Model):
         return deleted_count > 0
 
     @staticmethod
-    def cleanup_expired_tokens():
+    def cleanup_expired_tokens() -> int:
         """Deletes expired token entries from the database.
         Should be run periodically."""
         now = datetime.now(UTC)
@@ -109,7 +109,6 @@ class AllowedRefreshToken(db.Model):
                 AllowedRefreshToken.expires_at < now
             ).delete()
             db.session.commit()  # Commit the cleanup transaction immediately
-
         except Exception:
             _logger.exception("Error during expired refresh token cleanup")
             db.session.rollback()

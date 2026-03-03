@@ -320,7 +320,9 @@ def delete_data():
     return response
 
 
-def _validate_profile_input(data, has_new_mail, has_new_pw, has_old_email, has_old_pw):
+def _validate_profile_input(
+    data, has_new_mail, has_new_pw, has_old_email, has_old_pw
+) -> bool:
     if (not has_old_email or not has_old_pw) and (has_new_pw or has_new_mail):
         raise UserFeedbackError(
             "Registration is only possible on the registration page."
@@ -338,8 +340,8 @@ def _validate_profile_input(data, has_new_mail, has_new_pw, has_old_email, has_o
 
 def _update_user_credentials(
     user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
-):
-    def confirm_current_pw():
+) -> None:
+    def confirm_current_pw() -> None:
         current_pw = data.get("current_password")
         if not current_pw:
             raise UserFeedbackError("Current password is required.")
@@ -381,7 +383,7 @@ def _update_user_credentials(
             form_data["email"] = user.email  # reset email field in the UI
 
 
-def profile_post(user: User, form_data: dict[str, str]):
+def profile_post(user: User, form_data: dict[str, str]) -> None:
     data = request.form
 
     form_data.update(data)
@@ -472,7 +474,7 @@ def profile():
     )
 
 
-def profile_notifications_post(user):
+def profile_notifications_post(user) -> bool:
     """A POST request to the notification page (form submit)
     only handles the email notifications.
     An API endpoint handles push notifications."""

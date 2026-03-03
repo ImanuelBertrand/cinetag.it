@@ -48,7 +48,7 @@ def generate_confirmation_token(user):
     )
 
 
-def confirm_user_email(token):
+def confirm_user_email(token) -> None:
     try:
         data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user = db.session.get(User, data["confirmation"])
@@ -71,7 +71,7 @@ def hash_password(password: str) -> str:
     return bcrypt.generate_password_hash(password).decode("utf-8")
 
 
-def reset_user_password(token, new_password):
+def reset_user_password(token, new_password) -> None:
     try:
         data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
         user_id = data.get("reset_password")
@@ -500,7 +500,7 @@ def get_current_user() -> User | None:
     return user
 
 
-def queue_confirmation_mail(user: User):
+def queue_confirmation_mail(user: User) -> None:
     rate_limits = {
         60: 1,
         300: 5,

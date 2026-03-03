@@ -1,5 +1,6 @@
 import secrets
 from datetime import UTC, datetime
+from typing import Self
 
 from app.extensions import db
 
@@ -36,12 +37,12 @@ class UserCalendar(db.Model):
     )
 
     @classmethod
-    def generate_hash(cls):
+    def generate_hash(cls) -> str:
         """Generate a new random hash for a calendar URL"""
         return secrets.token_hex(32)
 
     @classmethod
-    def get_or_create(cls, user_id, calendar_type):
+    def get_or_create(cls, user_id, calendar_type) -> Self:
         """
         Get an existing calendar or create a new one if it doesn't exist.
 
@@ -67,7 +68,7 @@ class UserCalendar(db.Model):
         return calendar
 
     @classmethod
-    def reset_hash(cls, user_id, calendar_type):
+    def reset_hash(cls, user_id, calendar_type) -> Self:
         """
         Reset the hash for a specific calendar.
 

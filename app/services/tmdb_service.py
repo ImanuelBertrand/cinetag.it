@@ -138,7 +138,7 @@ def update_movie_genres(movie_id: int, tmdb_movie: dict) -> list[MovieGenre]:
     return []
 
 
-def fetch_new_languages():
+def fetch_new_languages() -> None:
     api_languages = {language["iso_639_1"]: language for language in fetch_languages()}
     db_languages = {language.code: language for language in TmdbLanguage.query.all()}
 
@@ -162,7 +162,7 @@ def fetch_new_languages():
     db.session.commit()
 
 
-def _sort_objects(objects, user_counts):
+def _sort_objects(objects, user_counts) -> None:
     for obj in objects:
         if obj.code not in user_counts:
             user_counts[obj.code] = 0
@@ -207,7 +207,7 @@ def _sort_objects(objects, user_counts):
         c += 10
 
 
-def calculate_language_sort_orders():
+def calculate_language_sort_orders() -> None:
     languages = TmdbLanguage.query.all()
     user_counts = (
         db.session.query(User.language, db.func.count(User.id))
@@ -218,13 +218,13 @@ def calculate_language_sort_orders():
     _sort_objects(languages, lang_counts)
 
 
-def update_languages():
+def update_languages() -> None:
     fetch_new_languages()
     calculate_language_sort_orders()
     db.session.commit()
 
 
-def calculate_region_sort_orders():
+def calculate_region_sort_orders() -> None:
     regions = TmdbRegion.query.all()
     user_counts = (
         db.session.query(User.region, db.func.count(User.id))
@@ -235,7 +235,7 @@ def calculate_region_sort_orders():
     _sort_objects(regions, region_counts)
 
 
-def fetch_new_regions():
+def fetch_new_regions() -> None:
     api_regions = {region["iso_3166_1"]: region for region in fetch_regions()}
     db_regions = {region.code: region for region in TmdbRegion.query.all()}
 
@@ -261,7 +261,7 @@ def fetch_new_regions():
                 db.session.add(existing_region)
 
 
-def update_regions():
+def update_regions() -> None:
     fetch_new_regions()
     calculate_region_sort_orders()
     db.session.commit()
@@ -323,7 +323,7 @@ def _bulk_save_movies(
     region_info_to_add: list[MovieRegionInfo],
     language_info_to_add: list[MovieLanguageInfo],
     genre_relations_to_save: list[MovieGenre],
-):
+) -> None:
     if movies_to_add:
         db.session.bulk_save_objects(movies_to_add)
     if region_info_to_add:
@@ -334,7 +334,7 @@ def _bulk_save_movies(
         db.session.bulk_save_objects(genre_relations_to_save)
 
 
-def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
+def save_movie_list(tmdb_movies: list[dict], region: str, language: str) -> None:
     """
     Save a list of movies to the database.
     It will create the movie itself, but also the region and language info of the
@@ -414,7 +414,7 @@ def sync_upcoming_movies(region: str, language: str | None = None) -> list[int]:
     return [movie["id"] for movie in tmdb_movies]
 
 
-def update_movie_details(movie: Movie):
+def update_movie_details(movie: Movie) -> None:
     movie_data = fetch_movie_details(movie.id, "en")
     if not movie_data:
         return
@@ -429,7 +429,7 @@ def update_movie_details(movie: Movie):
         _logger.exception("Failed syncing/updating genres for movie %s", movie.id)
 
 
-def update_movie_languages(movie: Movie):
+def update_movie_languages(movie: Movie) -> None:
     tmdb_movie_languages = fetch_movie_languages(movie.id)
     if not tmdb_movie_languages:
         return
@@ -471,7 +471,7 @@ def update_movie_languages(movie: Movie):
     db.session.bulk_save_objects(new_infos.values())
 
 
-def update_movie_posters(movie: Movie):
+def update_movie_posters(movie: Movie) -> None:
     language_infos = MovieLanguageInfo.query.filter_by(movie_id=movie.id).all()
     if not language_infos:
         return
@@ -656,7 +656,7 @@ def _get_movie_info_update_threshold():
     return datetime.now(UTC) - timedelta(days=14)
 
 
-def check_movie_information(movie: Movie):
+def check_movie_information(movie: Movie) -> None:
     if not movie:
         return
 
@@ -681,7 +681,7 @@ def check_movie_information(movie: Movie):
         _logger.exception("Error updating movie information for %s", movie)
 
 
-def update_all_upcoming_movies():
+def update_all_upcoming_movies() -> None:
     _logger.info("Updating all upcoming movies")
 
     used_regions_by_users = db.session.query(User.region).distinct().all()
@@ -696,7 +696,7 @@ def update_all_upcoming_movies():
     refresh_outdated_movies()
 
 
-def refresh_changed_movies():
+def refresh_changed_movies() -> None:
     last_refresh_date = MiscData.get("last_refresh_changes_movies")
     if not last_refresh_date:
         MiscData.save("last_refresh_changes_movies", datetime.now(UTC).isoformat())
@@ -723,7 +723,7 @@ def refresh_changed_movies():
     MiscData.save("last_refresh_changes_movies", datetime.now(UTC).isoformat())
 
 
-def refresh_outdated_movies():
+def refresh_outdated_movies() -> None:
     outdated_movies = Movie.query.filter(
         db.or_(
             Movie.info_update_at.is_(None),
@@ -733,7 +733,7 @@ def refresh_outdated_movies():
     refresh_movie_information(outdated_movies)
 
 
-def refresh_movie_information(movies: list[Movie]):
+def refresh_movie_information(movies: list[Movie]) -> None:
     _logger.info("Checking %s movies for updated information", len(movies))
     for c, movie in enumerate(movies):
         try:

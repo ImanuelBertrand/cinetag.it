@@ -88,9 +88,13 @@ def _get_json(url: str, params: dict[str, str] | None = None):
     return _get(url, params=params).json()
 
 
-def _cached_tmdb_call(
-    cache_key: str, ttl: int, fetch_function: Callable, *args, **kwargs
-) -> Any:
+def _cached_tmdb_call[T](
+    cache_key: str,
+    ttl: int,
+    fetch_function: Callable[..., T],
+    *args: Any,
+    **kwargs: Any,
+) -> T:
     """
     Helper function to cache the results of a TMDb API call.
     :param cache_key: The cache key to use

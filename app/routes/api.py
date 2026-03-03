@@ -322,7 +322,7 @@ def _find_and_update_subscription(
     endpoint: str,
     days_in_advance: list[int] | None,
     include_maybe_movies: bool | None,
-):
+) -> bool:
     for channel in push_channels:
         if (
             channel.notification_data
