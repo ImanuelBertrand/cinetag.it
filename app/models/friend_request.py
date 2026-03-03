@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.extensions import db
 
@@ -12,9 +12,13 @@ class FriendRequest(db.Model):
     status = db.Column(
         db.String(20), nullable=False, default="pending"
     )  # pending, accepted, rejected
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=datetime.now(UTC),
     )
 
     requester = db.relationship(

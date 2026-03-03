@@ -15,9 +15,13 @@ class NotificationChannel(db.Model):
     )
     notification_data = db.Column(db.JSON, nullable=True)
     include_maybe_movies = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     user = db.relationship("User", back_populates="notification_channels")

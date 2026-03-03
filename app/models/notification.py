@@ -12,11 +12,15 @@ class Notification(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"))
     days_in_advance = db.Column(db.Integer, nullable=False)
     is_sent = db.Column(db.Boolean, default=False)
-    scheduled_at = db.Column(db.DateTime)
-    sent_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    scheduled_at = db.Column(db.DateTime(timezone=True))
+    sent_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     channel = db.relationship("NotificationChannel", back_populates="notifications")

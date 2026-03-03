@@ -6,7 +6,7 @@ class TmdbGenre(db.Model):
 
     # Use TMDb's stable genre id as the primary key
     id = db.Column(db.Integer, primary_key=True)
-    updated_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # Relationship for localized names
     names = db.relationship(
@@ -23,7 +23,7 @@ class TmdbGenreName(db.Model):
     genre_id = db.Column(db.Integer, db.ForeignKey("tmdb_genres.id"), primary_key=True)
     language = db.Column(db.String(8), primary_key=True)
     name = db.Column(db.String(255), nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     genre = db.relationship("TmdbGenre", back_populates="names")
 

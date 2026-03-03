@@ -10,9 +10,13 @@ class UserMovie(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
     decision = db.Column(db.String(10), nullable=False)  # 'approve' or 'disapprove'
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     user = db.relationship("User", back_populates="user_movies")

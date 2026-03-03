@@ -13,4 +13,4 @@ class SentConfirmationMails(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), nullable=False)
-    sent_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    sent_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(UTC))

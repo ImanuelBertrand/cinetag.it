@@ -25,9 +25,13 @@ class UserCalendar(db.Model):
         db.String(10), nullable=False
     )  # 'wanted', 'maybe', or 'all'
     calendar_hash = db.Column(db.String(64), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     user = db.relationship("User", back_populates="calendars")

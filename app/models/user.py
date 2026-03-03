@@ -23,9 +23,13 @@ class User(db.Model):
     # Relationship to a temporary user (if the user liked a move before logging in)
     temporary_user_id = db.Column(db.Integer, nullable=True)
     password_reset_token = db.Column(db.String(32), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = db.Column(
-        db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     user_movies = db.relationship(

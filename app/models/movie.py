@@ -13,7 +13,7 @@ class Movie(db.Model):
     original_title = db.Column(db.String(255), nullable=False)
     popularity = db.Column(db.Float, nullable=True)
     original_language = db.Column(db.String(2), nullable=True)
-    info_update_at = db.Column(db.DateTime, nullable=True)
+    info_update_at = db.Column(db.DateTime(timezone=True), nullable=True)
     imdb_id = db.Column(db.String(20), nullable=True)
     origin_country = db.Column(db.String(255), nullable=True)
     runtime = db.Column(db.Integer, nullable=True)
