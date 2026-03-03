@@ -1,8 +1,10 @@
 import os
 
 import requests
-from flask import current_app
 from PIL import Image
+from flask import current_app
+
+from app.errors import ImageFetchError
 
 
 def get_image_base_path() -> str:
@@ -25,7 +27,7 @@ def fetch_image(remote_filename: str, size: str = "original"):
     remote_url = get_tmdb_image_url(remote_filename)
     response = requests.get(remote_url, timeout=10)
     if response.status_code != 200:
-        raise Exception(f"Failed to fetch image from {remote_url}")
+        raise ImageFetchError(f"Failed to fetch image from {remote_url}")
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
     with open(target_filename, "xb") as file:
         file.write(response.content)

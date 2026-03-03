@@ -11,6 +11,7 @@ from flask_jwt_extended import (
     verify_jwt_in_request,
 )
 
+from app.errors import UserCreationError
 from app.extensions import db
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.user import User
@@ -140,7 +141,7 @@ def create_temporary_user():
     except Exception as e:
         # Ensure rollback in case of error during commit
         db.session.rollback()
-        raise Exception("Failed to create temporary user") from e
+        raise UserCreationError("Failed to create temporary user") from e
     else:
         _logger.debug("Created temporary user %s", user.id)
         return user

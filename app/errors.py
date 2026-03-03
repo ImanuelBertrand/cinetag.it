@@ -25,3 +25,11 @@ class WebPushSubscriptionExpiredError(Exception):
     def __init__(self, message, subscription_info=None):
         super().__init__(message)
         self.subscription_info = subscription_info
+
+
+class ImageFetchError(Exception):
+    """Raised when the remote image cannot be retrieved."""
+
+
+class UserCreationError(Exception):
+    """Raised when a temporary guest user cannot be persisted."""
