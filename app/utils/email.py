@@ -14,7 +14,7 @@ from app.models.user_email import UserEmailQueue
 _logger = logging.getLogger(__name__)
 
 
-def send_email(to: str, subject: str | list, body: str) -> bool:
+def send_email(to: str | list[str], subject: str, body: str) -> bool:
     sender = current_app.config["MAIL_DEFAULT_SENDER"]
     sender_name = current_app.config.get("MAIL_DEFAULT_SENDER_NAME")
     if sender_name:
@@ -116,6 +116,5 @@ def send_queued_emails():
                 db.session.delete(item)
             db.session.commit()
         except Exception:
-            _logger.exception("Error sending mail")
             db.session.rollback()
             _logger.exception("Error sending mail")

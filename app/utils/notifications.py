@@ -202,7 +202,7 @@ def add_missing_notifications(
         if region_info.release_date <= today:
             continue
         for day in channel.days_in_advance:
-            scheduled_date = region_info.release_date - timedelta(days=day)
+            scheduled_date = region_info.release_date - timedelta(days=int(day))
             scheduled_date = datetime.combine(scheduled_date, datetime.min.time())
             if scheduled_date < scheduled_at_threshold:
                 continue

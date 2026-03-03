@@ -63,6 +63,8 @@ def confirm_user_email(token):
         raise UserFeedbackError("The confirmation link has expired.") from None
     except jwt.InvalidTokenError:
         raise UserFeedbackError("Invalid token.") from None
+    except KeyError:
+        raise UserFeedbackError("Invalid token.") from None
 
 
 def hash_password(password: str) -> str:
