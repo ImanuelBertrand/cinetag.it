@@ -50,17 +50,15 @@ exclude = [".git", "__pycache__", "venv_*"]
 
 [tool.ruff.lint]
 select = [
-  "E",   # Error
-  "W",   # Warnin
   "B",   # flake8-bugbear
   "C4",  # flake8-comprehensions
   "C90", # mccabe # TODO
   "DTZ", # flake8-datetimez
+  "E",   # Error
   "F",   # Pyflakes
   "G",   # flake8-logging-format
   "I",   # isort
   "PIE", # flake8-pie
-  "UP",  # pyupgrade
   "RET", # flake8-return
   "RUF", # flake8-return
   "S",   # flake8-bandit
@@ -68,6 +66,8 @@ select = [
   "TC",  # flake8-type-checking
   "TID", # flake8-tidy-imports
   "TRY", # tryceratops
+  "UP",  # pyupgrade
+  "W",   # Warnin
 ]
 extend-ignore = ["TRY003"]
 
