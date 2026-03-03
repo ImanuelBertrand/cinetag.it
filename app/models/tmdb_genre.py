@@ -39,5 +39,7 @@ class MovieGenre(db.Model):
     )
     genre_id = db.Column(db.Integer, db.ForeignKey("tmdb_genres.id"), primary_key=True)
 
+    movie = db.relationship("Movie", back_populates="genres")
+
     def __repr__(self):
         return f"<MovieGenre {self.movie_id}:{self.genre_id}>"
