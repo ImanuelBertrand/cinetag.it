@@ -81,11 +81,7 @@ services:
       - cinetagit_network
 
   nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-      args:
-        - BUILDER_IMAGE=ghcr.io/imanuelbertrand/cinetag.it:latest
+    image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
     container_name: cinetagit_nginx
     restart: always
     ports:
