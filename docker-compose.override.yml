@@ -1,0 +1,18 @@
+services:
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cinetagit_mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI port
+    networks:
+      - cinetagit_network
+
+  web:
+    environment:
+      - MAIL_SERVER=mailhog
+      - MAIL_PORT=1025
+      - MAIL_USE_TLS=false
+      - MAIL_USE_SSL=false
+    depends_on:
+      - mailhog

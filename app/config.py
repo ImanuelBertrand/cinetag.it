@@ -44,6 +44,9 @@ class Config:
     DEFAULT_REGION = os.environ.get("DEFAULT_REGION", "US")
     DEFAULT_LANGUAGE = os.environ.get("DEFAULT_LANGUAGE", "en")
     TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+    SERVER_NAME = os.environ.get("SERVER_NAME")
+    APPLICATION_ROOT = os.environ.get("APPLICATION_ROOT", "/")
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
 
     ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     APP_DIR = os.path.join(ROOT_DIR, "app")
