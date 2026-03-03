@@ -34,7 +34,9 @@ class TmdbGenreName(db.Model):
 class MovieGenre(db.Model):
     __tablename__ = "movie_genres"
 
-    movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), primary_key=True)
+    movie_id = db.Column(
+        db.Integer, db.ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True
+    )
     genre_id = db.Column(db.Integer, db.ForeignKey("tmdb_genres.id"), primary_key=True)
 
     def __repr__(self):
