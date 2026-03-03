@@ -87,7 +87,6 @@ services:
     ports:
       - "8001:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./data/storage/posters:/usr/share/nginx/html/posters:ro
     depends_on:
       - web
