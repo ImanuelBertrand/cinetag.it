@@ -1,0 +1,14 @@
+# Use the builder stage from the main Dockerfile to get static assets
+ARG BUILDER_IMAGE=ghcr.io/imanuelbertrand/cinetag.it:latest
+FROM ${BUILDER_IMAGE} AS app_assets
+
+FROM nginx:alpine
+
+# Copy static assets from the app image
+COPY --from=app_assets /app/app/static /usr/share/nginx/html/static
+
+# Create directory for posters (will be mounted)
+RUN mkdir -p /usr/share/nginx/html/posters
+
+# Copy nginx config (this will be overridden by mount in docker-compose for dev, but good for image)
+COPY nginx.conf /etc/nginx/nginx.conf

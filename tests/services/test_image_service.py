@@ -2,9 +2,9 @@ import os
 from unittest.mock import MagicMock, mock_open, patch
 
 from app.services.image_service import (
+    ensure_image_exists,
     fetch_image,
     get_image_base_path,
-    get_image_contents,
     get_image_url,
     get_tmdb_image_base_url,
     get_tmdb_image_url,
@@ -149,9 +149,8 @@ def test_resize_image():
         mock_image.save.assert_called_once_with("/test/resized.jpg")
 
 
-def test_get_image_contents_resized_exists(app):
-    """Test that get_image_contents returns the correct image contents
-    when resized image exists."""
+def test_ensure_image_exists_already_present(app):
+    """Test that ensure_image_exists returns the path immediately if file exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -163,20 +162,15 @@ def test_get_image_contents_resized_exists(app):
                 return_value="/test/path",
             ),
             patch("os.path.exists", return_value=True),
-            patch("os.makedirs"),
-            patch(
-                "builtins.open", mock_open(read_data=b"resized image content")
-            ) as mock_file,
         ):
-            content = get_image_contents("test/image.jpg", 500)
+            path = ensure_image_exists("test/image.jpg", 500)
 
-            assert content == b"resized image content"
-            mock_file.assert_called_once_with("/test/path/w500/test/image.jpg", "rb")
+            assert path == "/test/path/w500/test/image.jpg"
 
 
-def test_get_image_contents_original_exists(app):
-    """Test that get_image_contents returns the correct image contents
-    when only original image exists."""
+def test_ensure_image_exists_triggers_resize(app):
+    """Test that ensure_image_exists triggers resize
+    if original exists but resized doesn't."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -189,12 +183,10 @@ def test_get_image_contents_original_exists(app):
             ),
             patch("os.path.exists", side_effect=[False, True]),
             patch("app.services.image_service.resize_image") as mock_resize,
-            patch("os.makedirs"),
-            patch("builtins.open", mock_open(read_data=b"original image content")),
         ):
-            content = get_image_contents("test/image.jpg", 500)
+            path = ensure_image_exists("test/image.jpg", 500)
 
-            assert content == b"original image content"
+            assert path == "/test/path/w500/test/image.jpg"
             mock_resize.assert_called_once_with(
                 "/test/path/original/test/image.jpg",
                 500,
@@ -202,9 +194,9 @@ def test_get_image_contents_original_exists(app):
             )
 
 
-def test_get_image_contents_fetch_needed(app):
-    """Test that get_image_contents fetches
-    and resizes the image when neither exists."""
+def test_ensure_image_exists_triggers_fetch_and_resize(app):
+    """Test that ensure_image_exists fetches and
+    resizes the image when neither exists."""
     with app.app_context():
         # Configure test paths
         app.config["POSTER_DIR"] = "/test/path"
@@ -218,12 +210,10 @@ def test_get_image_contents_fetch_needed(app):
             patch("os.path.exists", side_effect=[False, False]),
             patch("app.services.image_service.fetch_image") as mock_fetch,
             patch("app.services.image_service.resize_image") as mock_resize,
-            patch("os.makedirs"),
-            patch("builtins.open", mock_open(read_data=b"fetched image content")),
         ):
-            content = get_image_contents("test/image.jpg", 500)
+            path = ensure_image_exists("test/image.jpg", 500)
 
-            assert content == b"fetched image content"
+            assert path == "/test/path/w500/test/image.jpg"
             mock_fetch.assert_called_once_with("test/image.jpg")
             mock_resize.assert_called_once_with(
                 "/test/path/original/test/image.jpg",

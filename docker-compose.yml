@@ -42,8 +42,8 @@ services:
     image: ghcr.io/imanuelbertrand/cinetag.it:latest
     container_name: cinetagit_app
     restart: always
-    ports:
-      - "127.0.0.1:8000:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URI=postgresql://${POSTGRES_USER:-cinetagit}:${POSTGRES_PASSWORD:-secretpassword}@db:5432/${POSTGRES_DB:-cinetagit_db}
       - FLASK_ENV=${FLASK_ENV}
@@ -77,6 +77,24 @@ services:
     volumes:
       - ./data/storage:/app/storage
       - ./data/instance:/app/instance
+    networks:
+      - cinetagit_network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+      args:
+        - BUILDER_IMAGE=ghcr.io/imanuelbertrand/cinetag.it:latest
+    container_name: cinetagit_nginx
+    restart: always
+    ports:
+      - "8001:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data/storage/posters:/usr/share/nginx/html/posters:ro
+    depends_on:
+      - web
     networks:
       - cinetagit_network
 

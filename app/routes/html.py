@@ -30,7 +30,7 @@ from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_calendar import UserCalendar
 from app.models.user_movie import UserMovie
-from app.services.image_service import get_image_contents, get_image_url
+from app.services.image_service import ensure_image_exists, get_image_url
 from app.services.user_service import (
     authenticate_user,
     confirm_user_email,
@@ -834,40 +834,27 @@ def get_ics_calendar(calendar_hash):
 
 @html.route("/poster/<int:width>/<filename>")
 def get_poster(width, filename):
-    def send_file(
-        file_contents: bytes,
-        mimetype: str,
-        as_attachment: bool = False,
-        filename: str | None = None,
-    ):
-        response = make_response(file_contents)
-        response.mimetype = mimetype
-        if as_attachment:
-            header_value = f"attachment; filename={filename}"
-            response.headers["Content-Disposition"] = header_value
-        return response
-
-    def get_mime_type(filename: str) -> str:
-        if filename.endswith((".jpg", ".jpeg")):
+    def get_mime_type(f_name: str) -> str:
+        if f_name.endswith((".jpg", ".jpeg")):
             return "image/jpeg"
-        if filename.endswith(".png"):
+        if f_name.endswith(".png"):
             return "image/png"
-        if filename.endswith(".gif"):
+        if f_name.endswith(".gif"):
             return "image/gif"
-        if filename.endswith(".webp"):
+        if f_name.endswith(".webp"):
             return "image/webp"
-        raise ValueError(f"Unsupported file type: {filename}")
+        raise ValueError(f"Unsupported file type: {f_name}")
 
     valid_widths = {500}
     if width not in valid_widths:
         return "Invalid width", 400
 
-    mime_type = get_mime_type(filename)
-    return send_file(
-        get_image_contents(filename, int(width)),
-        mimetype=mime_type,
-        as_attachment=False,
-    )
+    ensure_image_exists(filename, int(width))
+
+    response = make_response("", 200)
+    response.headers["X-Accel-Redirect"] = f"/internal-static/w{width}/{filename}"
+    response.headers["Content-Type"] = get_mime_type(filename)
+    return response
 
 
 @html.route("/why", methods=["GET"])

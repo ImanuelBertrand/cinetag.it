@@ -38,7 +38,7 @@ def resize_image(original_file: str, width: int, target_filename: str):
     image.save(target_filename)
 
 
-def get_image_contents(filename: str, width: int) -> bytes:
+def ensure_image_exists(filename: str, width: int) -> str:
     local_file_original = f"{get_image_base_path()}/original/{filename}"
     local_file_resized = f"{get_image_base_path()}/w{width}/{filename}"
     if not os.path.exists(local_file_resized):
@@ -46,12 +46,10 @@ def get_image_contents(filename: str, width: int) -> bytes:
             fetch_image(filename)
         resize_image(local_file_original, width, local_file_resized)
 
-    os.makedirs(os.path.dirname(local_file_resized), exist_ok=True)
-    with open(local_file_resized, "rb") as file:
-        return file.read()
+    return local_file_resized
 
 
-def get_image_url(filename: str, width: int) -> str | None:
+def get_image_url(filename: str | None, width: int) -> str | None:
     if not filename:
         return None
     return f"/poster/{width}/{filename.lstrip('/')}"
