@@ -320,42 +320,32 @@ def delete_data():
     return response
 
 
-def profile_post(user, form_data):
-    def confirm_current_pw():
-        current_pw = form_data.get("current_password")
-        if not current_pw:
-            raise UserFeedbackError("Current password is required.")
-        pw_is_valid = bcrypt.check_password_hash(user.password, current_pw)
-        if not pw_is_valid:
-            raise UserFeedbackError("Invalid current password.")
-
-    data = request.form
-
-    form_data.update(data)
-    form_data["new_password"] = ""
-    form_data["new_password_confirmation"] = ""
-    form_data["current_password"] = ""
-
-    # Make initial registration available only on the registration page
-    # to avoid edge cases here
-    has_new_mail = bool(data.get("email"))
-    has_new_pw = bool(data.get("new_password"))
-    has_old_pw = bool(user.password)
-    has_old_email = bool(user.email)
+def _validate_profile_input(data, has_new_mail, has_new_pw, has_old_email, has_old_pw):
     if (not has_old_email or not has_old_pw) and (has_new_pw or has_new_mail):
         raise UserFeedbackError(
             "Registration is only possible on the registration page."
         )
 
-    # e-mail sanity check
     if has_new_mail and not _validate_email(data.get("email")):
         flash("Invalid email.", "danger")
-        return
+        return False
 
-    # password sanity check
     if has_new_pw and not _validate_password(data.get("new_password")):
         flash("Password must be at least 8 characters.", "danger")
-        return
+        return False
+    return True
+
+
+def _update_user_credentials(
+    user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
+):
+    def confirm_current_pw():
+        current_pw = data.get("current_password")
+        if not current_pw:
+            raise UserFeedbackError("Current password is required.")
+        pw_is_valid = bcrypt.check_password_hash(user.password, current_pw)
+        if not pw_is_valid:
+            raise UserFeedbackError("Invalid current password.")
 
     # Set new credentials
     if has_new_pw and has_new_mail:
@@ -389,6 +379,30 @@ def profile_post(user, form_data):
             queue_confirmation_mail(user)
             flash("Please check your inbox for a confirmation email.", "info")
             form_data["email"] = user.email  # reset email field in the UI
+
+
+def profile_post(user: User, form_data: dict[str, str]):
+    data = request.form
+
+    form_data.update(data)
+    form_data["new_password"] = ""
+    form_data["new_password_confirmation"] = ""
+    form_data["current_password"] = ""
+
+    # Make initial registration available only on the registration page
+    # to avoid edge cases here
+    has_new_mail = bool(data.get("email"))
+    has_new_pw = bool(data.get("new_password"))
+    has_old_pw = bool(user.password)
+    has_old_email = bool(user.email)
+    if not _validate_profile_input(
+        data, has_new_mail, has_new_pw, has_old_email, has_old_pw
+    ):
+        return
+
+    _update_user_credentials(
+        user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
+    )
 
     user.name = data.get("name")
     user.language = data.get("language")

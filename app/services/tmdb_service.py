@@ -267,6 +267,73 @@ def update_regions():
     db.session.commit()
 
 
+def _process_movie(
+    tmdb_movie: dict,
+    existing_movies: dict[int, Movie],
+    existing_region_info: MovieRegionInfo,
+    existing_lang_info: MovieLanguageInfo,
+    region: str,
+    language: str,
+) -> tuple[
+    Movie | None, MovieRegionInfo | None, MovieLanguageInfo | None, list[MovieGenre]
+]:
+    movie_id = tmdb_movie["id"]
+    movie = existing_movies.get(movie_id)
+    release_date = (
+        datetime.strptime(tmdb_movie["release_date"], "%Y-%m-%d")
+        .replace(tzinfo=UTC)
+        .date()
+    )
+
+    res_movie = None
+    if not movie:
+        res_movie = Movie.create_from_tmdb(tmdb_movie)
+    elif movie.update_from_tmdb(tmdb_movie):
+        db.session.add(movie)
+
+    res_region_info = None
+    region_info: MovieRegionInfo = existing_region_info.get(movie_id)
+    if not region_info:
+        res_region_info = MovieRegionInfo.create_from_tmdb(
+            movie_id, region, release_date
+        )
+    elif region_info.update_from_tmdb(release_date):
+        db.session.add(region_info)
+
+    res_language_info = None
+    language_info: MovieLanguageInfo = existing_lang_info.get(movie_id)
+    if not language_info:
+        res_language_info = MovieLanguageInfo.create_from_tmdb(
+            movie_id, tmdb_movie, language
+        )
+    elif language_info.update_from_tmdb(tmdb_movie):
+        db.session.add(language_info)
+
+    res_genre_relations = []
+    try:
+        res_genre_relations = update_movie_genres(movie_id, tmdb_movie)
+    except Exception:
+        _logger.exception("Failed updating genres for movie %s", movie_id)
+
+    return res_movie, res_region_info, res_language_info, res_genre_relations
+
+
+def _bulk_save_movies(
+    movies_to_add: list[Movie],
+    region_info_to_add: list[MovieRegionInfo],
+    language_info_to_add: list[MovieLanguageInfo],
+    genre_relations_to_save: list[MovieGenre],
+):
+    if movies_to_add:
+        db.session.bulk_save_objects(movies_to_add)
+    if region_info_to_add:
+        db.session.bulk_save_objects(region_info_to_add)
+    if language_info_to_add:
+        db.session.bulk_save_objects(language_info_to_add)
+    if genre_relations_to_save:
+        db.session.bulk_save_objects(genre_relations_to_save)
+
+
 def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     """
     Save a list of movies to the database.
@@ -297,48 +364,34 @@ def save_movie_list(tmdb_movies: list[dict], region: str, language: str):
     genre_relations_to_save: list[MovieGenre] = []
 
     for tmdb_movie in tmdb_movies:
-        movie_id = tmdb_movie["id"]
-        movie = existing_movies.get(tmdb_movie["id"])
-        release_date = (
-            datetime.strptime(tmdb_movie["release_date"], "%Y-%m-%d")
-            .replace(tzinfo=UTC)
-            .date()
+        (
+            m_to_add,
+            ri_to_add,
+            li_to_add,
+            gr_to_add,
+        ) = _process_movie(
+            tmdb_movie,
+            existing_movies,
+            existing_region_info,
+            existing_lang_info,
+            region,
+            language,
         )
-        if not movie:
-            movies_to_add.append(Movie.create_from_tmdb(tmdb_movie))
-        elif movie.update_from_tmdb(tmdb_movie):
-            db.session.add(movie)
+        if m_to_add:
+            movies_to_add.append(m_to_add)
+        if ri_to_add:
+            region_info_to_add.append(ri_to_add)
+        if li_to_add:
+            language_info_to_add.append(li_to_add)
+        if gr_to_add:
+            genre_relations_to_save += gr_to_add
 
-        region_info: MovieRegionInfo = existing_region_info.get(movie_id)
-        if not region_info:
-            region_info_to_add.append(
-                MovieRegionInfo.create_from_tmdb(movie_id, region, release_date)
-            )
-        elif region_info.update_from_tmdb(release_date):
-            db.session.add(region_info)
-
-        language_info: MovieLanguageInfo = existing_lang_info.get(movie_id)
-        if not language_info:
-            language_info_to_add.append(
-                MovieLanguageInfo.create_from_tmdb(movie_id, tmdb_movie, language)
-            )
-        elif language_info.update_from_tmdb(tmdb_movie):
-            db.session.add(language_info)
-
-        # Update movie_genre association using genre_ids from list payload
-        try:
-            genre_relations_to_save += update_movie_genres(movie_id, tmdb_movie)
-        except Exception:
-            _logger.exception("Failed updating genres for movie %s", movie_id)
-
-    if movies_to_add:
-        db.session.bulk_save_objects(movies_to_add)
-    if region_info_to_add:
-        db.session.bulk_save_objects(region_info_to_add)
-    if language_info_to_add:
-        db.session.bulk_save_objects(language_info_to_add)
-    if genre_relations_to_save:
-        db.session.bulk_save_objects(genre_relations_to_save)
+    _bulk_save_movies(
+        movies_to_add,
+        region_info_to_add,
+        language_info_to_add,
+        genre_relations_to_save,
+    )
 
 
 def sync_upcoming_movies(region: str, language: str | None = None) -> list[int]:

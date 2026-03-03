@@ -125,37 +125,16 @@ def get_all_region_flags() -> dict[str, str]:
     }
 
 
-@profile_function
-def get_movies_based_on_filter(
+def _build_movies_query(
     user: User,
+    region: str,
+    language: str,
+    min_release_date,
+    min_movie_id: int | None,
+    need_imdb: bool,
+    name_filter: str | None,
     mode: str,
-    need_imdb: bool = False,
-    need_poster: bool = False,
-    name_filter: str | None = None,
-    min_release_date=None,
-    min_movie_id=None,
-    limit: int = 20,
-) -> dict[str, Any]:
-    profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
-    profiler.start()
-
-    profiler.start_section("initialization")
-    region = user.region or current_app.config.DEFAULT_REGION
-    language = user.language or current_app.config.DEFAULT_LANGUAGE
-
-    formatted_dates = {}
-
-    def fmt_date(date: datetime.date):
-        if not date:
-            return None
-
-        cache_key = str(date)
-        if cache_key not in formatted_dates:
-            formatted_dates[cache_key] = format_date(date, locale=language)
-
-        return formatted_dates[cache_key]
-
-    profiler.start_section("query_building")
+):
     query = (
         db.session.query(Movie, MovieRegionInfo, UserMovie)
         .join(
@@ -221,6 +200,88 @@ def get_movies_based_on_filter(
             query = query.filter(UserMovie.decision == "maybe")
         elif mode == "pending":
             query = query.filter(UserMovie.movie_id.is_(None))
+    return query
+
+
+def _get_preloaded_movie_data(movie_ids, region, language):
+    # Preload all necessary movie regions
+    movie_regions_query = (
+        db.session.query(MovieRegionInfo)
+        .join(Movie, Movie.id == MovieRegionInfo.movie_id)
+        .filter(MovieRegionInfo.movie_id.in_(movie_ids))
+        .filter(not MovieRegionInfo.is_fake)
+        .filter(
+            db.or_(
+                MovieRegionInfo.region == region,
+                func.find_in_set(MovieRegionInfo.region, Movie.origin_country) > 0,
+            )
+        )
+    )
+    movie_regions_dict = defaultdict(set)
+    for movie_region in movie_regions_query.all():
+        movie_regions_dict[movie_region.movie_id].add(movie_region)
+
+    # preload all necessary movie languages
+    movie_languages_query = (
+        db.session.query(MovieLangInfo)
+        .join(Movie, Movie.id == MovieLangInfo.movie_id)
+        .filter(MovieLangInfo.movie_id.in_(movie_ids))
+        .filter(
+            db.or_(
+                MovieLangInfo.language == language,
+                MovieLangInfo.language == Movie.original_language,
+                MovieLangInfo.language == "en",
+            )
+        )
+    )
+    movie_languages_dict = defaultdict(dict)
+    for mov_lang in movie_languages_query.all():
+        movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
+
+    return movie_regions_dict, movie_languages_dict
+
+
+@profile_function
+def get_movies_based_on_filter(
+    user: User,
+    mode: str,
+    need_imdb: bool = False,
+    need_poster: bool = False,
+    name_filter: str | None = None,
+    min_release_date=None,
+    min_movie_id=None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
+    profiler.start()
+
+    profiler.start_section("initialization")
+    region = user.region or current_app.config.DEFAULT_REGION
+    language = user.language or current_app.config.DEFAULT_LANGUAGE
+
+    formatted_dates = {}
+
+    def fmt_date(date: datetime.date):
+        if not date:
+            return None
+
+        cache_key = str(date)
+        if cache_key not in formatted_dates:
+            formatted_dates[cache_key] = format_date(date, locale=language)
+
+        return formatted_dates[cache_key]
+
+    profiler.start_section("query_building")
+    query = _build_movies_query(
+        user,
+        region,
+        language,
+        min_release_date,
+        min_movie_id,
+        need_imdb,
+        name_filter,
+        mode,
+    )
 
     # Order by release date for consistent pagination
     query = query.order_by(MovieRegionInfo.release_date, Movie.id)
@@ -244,40 +305,10 @@ def get_movies_based_on_filter(
 
     # Preload all necessary movie regions
     movie_ids = [r[0].id for r in results]
-    movie_regions_query = (
-        db.session.query(MovieRegionInfo)
-        .join(Movie, Movie.id == MovieRegionInfo.movie_id)
-        .filter(MovieRegionInfo.movie_id.in_(movie_ids))
-        .filter(not MovieRegionInfo.is_fake)
-        .filter(
-            db.or_(
-                MovieRegionInfo.region == region,
-                func.find_in_set(MovieRegionInfo.region, Movie.origin_country) > 0,
-            )
-        )
-    )
-    movie_regions_dict = defaultdict(set)
-    used_regions = set()
-    for movie_region in movie_regions_query.all():
-        movie_regions_dict[movie_region.movie_id].add(movie_region)
-        used_regions.add(movie_region.region)
 
-    # preload all necessary movie languages
-    movie_languages_query = (
-        db.session.query(MovieLangInfo)
-        .join(Movie, Movie.id == MovieLangInfo.movie_id)
-        .filter(MovieLangInfo.movie_id.in_(movie_ids))
-        .filter(
-            db.or_(
-                MovieLangInfo.language == language,
-                MovieLangInfo.language == Movie.original_language,
-                MovieLangInfo.language == "en",
-            )
-        )
+    movie_regions_dict, movie_languages_dict = _get_preloaded_movie_data(
+        movie_ids, region, language
     )
-    movie_languages_dict = defaultdict(dict)
-    for mov_lang in movie_languages_query.all():
-        movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
 
     tmdb_regions_dict = get_all_tmdb_regions_data_dict()
     region_flag_dict = get_all_region_flags()

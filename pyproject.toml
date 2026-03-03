@@ -54,7 +54,7 @@ select = [
   "W",  # Warnin
   "B",  # flake8-bugbear
   "C4", # flake8-comprehensions
-  # "C90", # mccabe # TODO
+  "C90", # mccabe # TODO
   "DTZ", # flake8-datetimez
   "F",   # Pyflakes
   "G",   # flake8-logging-format

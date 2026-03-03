@@ -322,6 +322,27 @@ def subscribe_push():
         )
 
 
+def _find_and_update_subscription(
+    push_channels: list[NotificationChannel],
+    endpoint: str,
+    days_in_advance: list[int] | None,
+    include_maybe_movies: bool | None,
+):
+    for channel in push_channels:
+        if (
+            channel.notification_data
+            and channel.notification_data.get("endpoint") == endpoint
+        ):
+            if days_in_advance is not None:
+                channel.days_in_advance = days_in_advance
+            if include_maybe_movies is not None:
+                channel.include_maybe_movies = include_maybe_movies
+            db.session.add(channel)
+            return True
+
+    return False
+
+
 @api.route("/update-push-settings", methods=["POST"])
 def update_push_settings():
     """Update push notification settings"""
@@ -348,21 +369,9 @@ def update_push_settings():
         user_id=user.id, mode="push"
     ).all()
 
-    found = False
-    for channel in push_channels:
-        if (
-            channel.notification_data
-            and channel.notification_data.get("endpoint") == endpoint
-        ):
-            if days_in_advance is not None:
-                channel.days_in_advance = days_in_advance
-            if include_maybe_movies is not None:
-                channel.include_maybe_movies = include_maybe_movies
-            db.session.add(channel)
-            found = True
-            break
-
-    if not found:
+    if not _find_and_update_subscription(
+        push_channels, endpoint, days_in_advance, include_maybe_movies
+    ):
         return jsonify({"success": False, "error": "Subscription not found"}), 404
 
     try:
