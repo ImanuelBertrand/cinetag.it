@@ -1,8 +1,8 @@
 import os
 
 import requests
-from PIL import Image
 from flask import current_app
+from PIL import Image
 
 from app.errors import ImageFetchError
 
