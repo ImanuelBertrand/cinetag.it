@@ -108,6 +108,13 @@ def send_web_push(
     if not vapid_claims:
         vapid_claims = {"sub": f"mailto:{email_sender}"}
 
+    if isinstance(subscription_info, str):
+        try:
+            subscription_info = json.loads(subscription_info)
+        except json.JSONDecodeError:
+            _logger.exception("Failed to parse subscription_info JSON")
+            return False
+
     try:
         webpush(
             subscription_info=subscription_info,

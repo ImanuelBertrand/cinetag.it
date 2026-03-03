@@ -202,7 +202,15 @@ def add_missing_notifications(
         if region_info.release_date <= today:
             continue
         for day in channel.days_in_advance:
-            scheduled_date = region_info.release_date - timedelta(days=int(day))
+            try:
+                days_val = int(day)
+            except ValueError, TypeError:
+                _logger.exception(
+                    "Invalid day value in notification channel %s: %s", channel.id, day
+                )
+                continue
+
+            scheduled_date = region_info.release_date - timedelta(days=days_val)
             scheduled_date = datetime.combine(scheduled_date, datetime.min.time())
             if scheduled_date < scheduled_at_threshold:
                 continue
