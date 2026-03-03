@@ -36,7 +36,6 @@ def review_movie():
     if decision == "remove":
         if user_movie:
             db.session.delete(user_movie)
-            db.session.commit()
         result_decision = None
     else:
         if not user_movie:
@@ -48,20 +47,16 @@ def review_movie():
         db.session.add(user_movie)
         result_decision = user_movie.decision
 
-    try:
-        db.session.commit()
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "decision_status": result_decision,
-                }
-            ),
-            201,
-        )
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 409
+    db.session.commit()
+    return (
+        jsonify(
+            {
+                "success": True,
+                "decision_status": result_decision,
+            }
+        ),
+        201,
+    )
 
 
 @api.route("/user/events", methods=["GET"])

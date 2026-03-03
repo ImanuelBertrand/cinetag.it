@@ -300,8 +300,6 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str):
 
     except jwt.ExpiredSignatureError, jwt.InvalidTokenError:
         _logger.warning("Refresh token verification failed.", exc_info=True)
-    except Exception:
-        _logger.warning("Refresh token verification failed.", exc_info=True)
 
 
 def _authenticate_as_guest_user(app: Flask, endpoint: str):

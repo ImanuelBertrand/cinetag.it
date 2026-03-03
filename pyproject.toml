@@ -51,6 +51,7 @@ exclude = [".git", "__pycache__", "venv_*"]
 [tool.ruff.lint]
 select = [
   "B",   # flake8-bugbear
+  "BLE",
   "C4",  # flake8-comprehensions
   "C90", # mccabe # TODO
   "DTZ", # flake8-datetimez

@@ -17,11 +17,7 @@ def purge_abandoned_guests(retention_days: int = 14, dry_run: bool = True) -> di
     Returns a result dict. If dry_run=True, does not delete, only reports.
     """
     # Ensure expired token entries are gone so the allowlist reflects reality
-    try:
-        AllowedRefreshToken.cleanup_expired_tokens()
-    except Exception:
-        # Best-effort cleanup; proceed even if cleanup failed
-        db.session.rollback()
+    AllowedRefreshToken.cleanup_expired_tokens()
 
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
 
