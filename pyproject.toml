@@ -50,29 +50,37 @@ exclude = [".git", "__pycache__", "venv_*"]
 
 [tool.ruff.lint]
 select = [
-  "B",   # flake8-bugbear
-  "BLE",
-  "C4",  # flake8-comprehensions
-  "C90", # mccabe # TODO
-  "DTZ", # flake8-datetimez
-  "E",   # Error
-  "F",   # Pyflakes
-  "G",   # flake8-logging-format
-  "I",   # isort
-  "PIE", # flake8-pie
-  "RET", # flake8-return
-  "RUF", # flake8-return
-  "S",   # flake8-bandit
-  "SIM", # flake8-simplify
-  "TC",  # flake8-type-checking
-  "TID", # flake8-tidy-imports
-  "TRY", # tryceratops
-  "UP",  # pyupgrade
-  "W",   # Warnin
+  "ASYNC", #flake8-async
+  "B",     # flake8-bugbear
+  "BLE",   # flake8-blind-except
+  "C4",    # flake8-comprehensions
+  "C90",   # mccabe # TODO
+  "DTZ",   # flake8-datetimez
+  "E",     # Error
+  "ERA",   #eradicate
+  "F",     # Pyflakes
+  "FURB",  # refurb
+  "G",     # flake8-logging-format
+  "I",     # isort
+  "ISC",   # flake8-implicit-str-concat
+  "LOG",   #flake8-logging
+  "PERF",  # Perflint
+  "PIE",   # flake8-pie
+  "RET",   # flake8-return
+  "RUF",   # flake8-return
+  "S",     # flake8-bandit
+  "SIM",   # flake8-simplify
+  "SLF",   # flake8-pytest-style
+  "TC",    # flake8-type-checking
+  "TID",   # flake8-tidy-imports
+  "TRY",   # tryceratops
+  "UP",    # pyupgrade
+  "W",     # Warnin
+  "PT",    # flake8-pytest-style
 ]
 extend-ignore = ["TRY003"]
 
-per-file-ignores = { "test_*" = ["S101"] } # S101 = assert
+per-file-ignores = { "test_*" = ["S101"], "migrations/env.py" = ["ERA001"] }
 
 [tool.ruff.format]
 

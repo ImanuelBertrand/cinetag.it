@@ -703,16 +703,13 @@ def get_movie_details(movie_id):
         )
 
         # Parse origin countries
-        origin_countries = []
         if movie.origin_country:
             country_codes = movie.origin_country.split(",")
             countries = TmdbRegion.query.filter(TmdbRegion.code.in_(country_codes))
             country_names = {
                 country.code: country.english_name for country in countries
             }
-
-            for code in country_codes:
-                origin_countries.append(country_names.get(code, code))
+            origin_countries = [country_names.get(code, code) for code in country_codes]
 
         # Get current user's decision for this movie (if any)
         user_movie = UserMovie.query.filter_by(

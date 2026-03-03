@@ -17,9 +17,11 @@ def register_cli(app: Flask):
 
         click.echo("Building assets...")
         # assets_env is registered in init_extensions, so it should be ready
-        for name, bundle in assets_env._named_bundles.items():
+        for name in assets_env:
             click.echo(f"Building bundle: {name}")
+            bundle = assets_env[name]
             bundle.build()
+
         click.echo("Assets built successfully.")
 
     @app.cli.command("purge-guests")
