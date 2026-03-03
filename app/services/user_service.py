@@ -9,7 +9,6 @@ from flask import current_app, g, url_for
 from flask_sqlalchemy.session import Session
 from sqlalchemy import func
 from sqlalchemy.orm.exc import UnmappedInstanceError
-from werkzeug.security import generate_password_hash
 
 from app.exceptions import UserFeedbackError
 from app.extensions import bcrypt, cache, db
@@ -28,22 +27,6 @@ from app.utils.email import queue_email
 from app.utils.profiler import Profiler, profile_function
 
 _logger = logging.getLogger(__name__)
-
-
-def register_user(data):
-    username = data.get("username")
-    email = data.get("email")
-    password = data.get("password")
-
-    if User.query.filter((User.username == username) | (User.email == email)).first():
-        raise UserFeedbackError("Username or email already exists.")
-
-    hashed_password = generate_password_hash(password)
-    user = User(username=username, email=email, password=hashed_password)
-    db.session.add(user)
-    db.session.commit()
-
-    return user
 
 
 def authenticate_user(data) -> User:
@@ -68,7 +51,7 @@ def generate_confirmation_token(user):
 def confirm_user_email(token):
     try:
         data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
-        user = User.query.get(data["confirmation"])
+        user = db.session.get(User, data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
         if not user.new_email or user.new_email != data["new_mail"]:
