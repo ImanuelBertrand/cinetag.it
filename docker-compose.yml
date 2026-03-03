@@ -68,6 +68,7 @@ services:
       - CACHE_TYPE=RedisCache
       - CACHE_REDIS_URL=redis://redis:6379/0
       - CACHE_DEFAULT_TIMEOUT=${CACHE_DEFAULT_TIMEOUT:-300}
+      - INSTANCE_PATH=/app/instance
     depends_on:
       db:
         condition: service_healthy
@@ -75,6 +76,7 @@ services:
         condition: service_healthy
     volumes:
       - ./data/storage:/app/storage
+      - ./data/instance:/app/instance
     networks:
       - cinetagit_network
 

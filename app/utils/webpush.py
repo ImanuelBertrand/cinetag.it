@@ -23,6 +23,11 @@ def get_vapid_key_path() -> str:
 
     # Use instance directory for storing key
     instance_path = current_app.instance_path
+    try:
+        if not os.path.exists(instance_path):
+            os.makedirs(instance_path, exist_ok=True)
+    except Exception:
+        _logger.exception("Error creating instance directory: %s", instance_path)
     return os.path.join(instance_path, "vapid.private.pem")
 
 

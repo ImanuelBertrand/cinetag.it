@@ -32,7 +32,18 @@ _logger = logging.getLogger(__name__)
 
 
 def create_app(config_name, start_scheduler=False):
-    app = Flask(__name__, template_folder="templates", static_folder="static")
+    import os
+
+    instance_path = os.environ.get("INSTANCE_PATH")
+    if instance_path and not os.path.isabs(instance_path):
+        instance_path = os.path.abspath(instance_path)
+
+    app = Flask(
+        __name__,
+        template_folder="templates",
+        static_folder="static",
+        instance_path=instance_path,
+    )
     config_class = config_by_name[config_name]
     app.config.from_object(config_class)
     config_class.init_app(app)
