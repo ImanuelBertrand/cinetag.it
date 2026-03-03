@@ -462,28 +462,6 @@ def fetch_user_events(
     return sorted(events, key=lambda x: x["sort_order"])
 
 
-def create_temporary_user() -> User:
-    """
-    Creates a temporary anonymous user account.
-
-    In CineTagIt, every visitor gets a user account automatically.
-    This function creates a new User object without email or password,
-    which serves as an anonymous account.
-    This allows visitors to use the application features without explicitly
-    registering first.
-
-    The temporary user becomes permanent when the user registers
-    by setting an email and password through the registration process.
-
-    Returns:
-        User: A new User object representing the anonymous user
-    """
-    user = User()
-    db.session.add(user)
-    db.session.commit()
-    return user
-
-
 def get_current_user() -> User | None:
     """
     Retrieves the current user from Flask's g object.

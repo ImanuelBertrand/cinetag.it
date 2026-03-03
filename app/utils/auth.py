@@ -32,6 +32,29 @@ def decode_refresh_token(encoded_token: str) -> dict:
     return jwt.decode(encoded_token, secret, algorithms=[algo])
 
 
+def _validate_refresh_identity_and_jti(identity, jti) -> bool:
+    if not identity:
+        # Ensure identity ('sub' claim) exists
+        raise jwt.InvalidTokenError("Refresh token missing 'sub' claim.")
+    if not jti:
+        # Ensure JTI claim exists for allowlist check
+        raise jwt.InvalidTokenError("Refresh token missing 'jti' claim.")
+
+    # 2. Check server-side allowlist using the JTI
+    # This requires the DB session to be active
+    if not AllowedRefreshToken.is_token_allowed(jti, identity):
+        _logger.warning(
+            "Refresh token JTI '%s' for user %s not "
+            "found in allowlist (revoked or invalid).",
+            jti,
+            identity,
+        )
+        # Treat non-existence in allowlist as an invalid token scenario.
+        raise jwt.InvalidTokenError(
+            "Refresh token is not allowed (revoked or invalid)."
+        )
+
+
 def verify_refresh_token_and_get_identity(
     encoded_token: str,
 ) -> tuple[int, str] | None:
@@ -43,7 +66,8 @@ def verify_refresh_token_and_get_identity(
         encoded_token: The JWT refresh token string received from the client.
 
     Returns:
-        The user identity (int) if the token is valid and allowed server-side.
+        The user identity (int) and the JTI (str)
+        if the token is valid and allowed server-side
 
     Raises:
         jwt.ExpiredSignatureError: If the token's signature has expired
@@ -59,27 +83,7 @@ def verify_refresh_token_and_get_identity(
 
         identity = payload.get("sub")
         jti = payload.get("jti")  # JTI (JWT ID) is crucial for revocation check
-
-        if not identity:
-            # Ensure identity ('sub' claim) exists
-            raise jwt.InvalidTokenError("Refresh token missing 'sub' claim.")
-        if not jti:
-            # Ensure JTI claim exists for allowlist check
-            raise jwt.InvalidTokenError("Refresh token missing 'jti' claim.")
-
-        # 2. Check server-side allowlist using the JTI
-        # This requires the DB session to be active
-        if not AllowedRefreshToken.is_token_allowed(jti, identity):
-            _logger.warning(
-                "Refresh token JTI '%s' for user %s not "
-                "found in allowlist (revoked or invalid).",
-                jti,
-                identity,
-            )
-            # Treat non-existence in allowlist as an invalid token scenario.
-            raise jwt.InvalidTokenError(
-                "Refresh token is not allowed (revoked or invalid)."
-            )
+        _validate_refresh_identity_and_jti(identity, jti)
 
     except jwt.ExpiredSignatureError:
         # Log expiry specifically
@@ -113,20 +117,40 @@ def verify_refresh_token_and_get_identity(
 
 
 def create_temporary_user():
-    """Creates and returns a guest User"""
+    """
+    Creates a temporary anonymous user account.
+
+    In CineTagIt, every visitor gets a user account automatically.
+    This function creates a new User object without email or password,
+    which serves as an anonymous account.
+    This allows visitors to use the application features without explicitly
+    registering first.
+
+    The temporary user becomes permanent when the user registers
+    by setting an email and password through the registration process.
+
+    Returns:
+        User: A new User object representing the anonymous user
+    """
     # Needs database interaction
     try:
         user = User()
         db.session.add(user)
         db.session.commit()
-    except Exception:
-        _logger.exception("Failed to create temporary user")
+    except Exception as e:
         # Ensure rollback in case of error during commit
         db.session.rollback()
-        return None
+        raise Exception("Failed to create temporary user") from e
     else:
         _logger.debug("Created temporary user %s", user.id)
         return user
+
+
+def _validate_token_generation(access_token: str | None, refresh_token: str | None):
+    """Abstracted check to satisfy TRY301."""
+    if not access_token or not refresh_token:
+        # Raising outside the 'try' block in the caller
+        raise ValueError("Token creation resulted in empty token(s).")
 
 
 def generate_new_tokens(
@@ -158,8 +182,7 @@ def generate_new_tokens(
         )
 
         # 4. Basic check if creation somehow failed silently (unlikely but safe)
-        if not access_token or not refresh_token:
-            raise ValueError("Token creation resulted in empty token(s).")
+        _validate_token_generation(access_token, refresh_token)
 
         # 5. Get the precise expiry from the generated refresh token
         # Use the configured secret (assuming single key based on prior discussion)
@@ -285,17 +308,10 @@ def _authenticate_as_guest_user(app: Flask, endpoint: str):
         # Create temporary user within app context for DB access
         with app.app_context():
             temp_user = create_temporary_user()
-        if not temp_user:
-            raise Exception(
-                f"Failed to create guest user object, result is falsy: {temp_user}"
-            )
-
         (g.new_access_token, g.new_refresh_token) = generate_new_tokens(temp_user.id)
-
+        g.current_user = temp_user
     except Exception:
         _logger.exception("Failed to create temporary user for endpoint %s", endpoint)
-    else:
-        g.current_user = temp_user
 
 
 def authenticate_request(app: Flask):

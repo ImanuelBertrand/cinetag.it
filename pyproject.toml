@@ -69,7 +69,7 @@ select = [
   "TID", # flake8-tidy-imports
   "TRY", # tryceratops
 ]
-extend-ignore = ["TRY002", "TRY003", "TRY301"]
+extend-ignore = ["TRY002", "TRY003"]
 
 per-file-ignores = { "test_*" = ["S101"] }
 
