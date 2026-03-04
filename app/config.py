@@ -16,9 +16,9 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
-    MAIL_USE_TLS = parse_bool(os.environ.get("MAIL_USE_TLS", True))
-    MAIL_USE_SSL = parse_bool(os.environ.get("MAIL_USE_SSL", False))
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USE_TLS = parse_bool(os.environ.get("MAIL_USE_TLS", "True"))
+    MAIL_USE_SSL = parse_bool(os.environ.get("MAIL_USE_SSL", "False"))
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
@@ -27,8 +27,10 @@ class Config:
     JWT_TOKEN_LOCATION = ("headers", "cookies")
     JWT_ACCESS_COOKIE_NAME = "access_token_cookie"
     JWT_ACCESS_COOKIE_PATH = "/"
-    JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 3600))
-    JWT_REFRESH_TOKEN_EXPIRES = int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES", 604800))
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", "3600"))
+    JWT_REFRESH_TOKEN_EXPIRES = int(
+        os.environ.get("JWT_REFRESH_TOKEN_EXPIRES", "604800")
+    )
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/"
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
@@ -55,7 +57,7 @@ class Config:
     TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
 
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
-    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 300))
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", "300"))
 
 
 class DevelopmentConfig(Config):

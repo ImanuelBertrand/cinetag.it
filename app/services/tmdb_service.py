@@ -1,3 +1,4 @@
+import http
 import logging
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -672,7 +673,7 @@ def check_movie_information(movie: Movie) -> None:
         movie.info_update_at = datetime.now(UTC)
         db.session.add(movie)
     except TMDbAPIError as e:
-        if e.status_code == 404:
+        if e.status_code == http.HTTPStatus.NOT_FOUND:
             _logger.exception("Movie %s not found on TMDb", movie)
             db.session.delete(movie)
         else:
@@ -706,9 +707,10 @@ def refresh_changed_movies() -> None:
         db.session.commit()
         return
 
-    start_date = datetime.fromisoformat(last_refresh_date).date()
-    if start_date < datetime.now(UTC).date() - timedelta(days=14):
-        start_date = datetime.now(UTC).date() - timedelta(days=14)
+    start_date = max(
+        datetime.fromisoformat(last_refresh_date).date(),
+        datetime.now(UTC).date() - timedelta(days=14),
+    )
     end_date = datetime.now(UTC).date()
     if start_date >= end_date:
         # Would be nice to fetch intraday updates, but TMDB only supports dates

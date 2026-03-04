@@ -28,6 +28,8 @@ from app.utils.profiler import Profiler, profile_function
 
 _logger = logging.getLogger(__name__)
 
+REGION_STR_LENGTH = 2
+
 
 def authenticate_user(data) -> User:
     email = data.get("email")
@@ -95,7 +97,7 @@ def reset_user_password(token, new_password) -> None:
 
 
 def get_region_flag(region: str) -> str | None:
-    if len(region) != 2 or not region.isalpha():
+    if len(region) != REGION_STR_LENGTH or not region.isalpha():
         return None
     a_ord = ord("A")
     first_flag_char = chr(ord(region[0].upper()) - a_ord + 0x1F1E6)

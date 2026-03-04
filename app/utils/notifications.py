@@ -10,6 +10,7 @@ from app.models.notification import Notification
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
 from app.utils.email import send_email
+from app.utils.webpush import send_web_push
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -131,7 +132,6 @@ def send_push_notification(notification: Notification):
     Returns:
         True if successful, False otherwise
     """
-    from app.utils.webpush import send_web_push
 
     _logger.info("Sending push notification for %s", notification.id)
 

@@ -5,7 +5,10 @@ from functools import partial
 
 from app.extensions import scheduler
 from app.models.allowed_refresh_token import AllowedRefreshToken
-from app.services.maintenance_service import purge_abandoned_guests
+from app.services.maintenance_service import (
+    purge_abandoned_guests,
+    purge_inactive_empty_guests_with_tokens,
+)
 from app.services.tmdb_service import (
     refresh_changed_movies,
     refresh_outdated_movies,
@@ -61,9 +64,6 @@ def job_purge_empty_guests() -> None:
         # Separate retention window for empty guests that still have tokens
         days = scheduler.app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
         # import locally to avoid expanding top-level imports
-        from app.services.maintenance_service import (
-            purge_inactive_empty_guests_with_tokens,
-        )
 
         purge_inactive_empty_guests_with_tokens(retention_days=days, dry_run=False)
     except Exception:

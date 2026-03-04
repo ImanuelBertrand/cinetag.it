@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import Flask, g
 from flask_jwt_extended import (
@@ -25,6 +26,8 @@ from app.models.user import User  # noqa F401
 from app.models.user_calendar import UserCalendar  # noqa F401
 from app.models.user_email import UserEmailQueue  # noqa F401
 from app.models.user_movie import UserMovie  # noqa F401
+from app.routes.api import api as api_blueprint
+from app.routes.html import html as html_blueprint
 from app.scheduler import setup_cron_jobs
 from app.utils.auth import authenticate_request
 
@@ -32,7 +35,6 @@ _logger = logging.getLogger(__name__)
 
 
 def create_app(config_name, start_scheduler=False):
-    import os
 
     instance_path = os.environ.get("INSTANCE_PATH")
     if instance_path and not os.path.isabs(instance_path):
@@ -82,9 +84,6 @@ def create_app(config_name, start_scheduler=False):
             g.pop("new_access_token", None)
             g.pop("new_refresh_token", None)
         return response
-
-    from app.routes.api import api as api_blueprint
-    from app.routes.html import html as html_blueprint
 
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")

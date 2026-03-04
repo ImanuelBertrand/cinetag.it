@@ -7,14 +7,16 @@ from app.services.maintenance_service import purge_abandoned_guests
 
 if TYPE_CHECKING:
     from flask import Flask
+from app.extensions import assets_env
+from app.services.maintenance_service import (
+    purge_inactive_empty_guests_with_tokens,
+)
 
 
 def register_cli(app: Flask) -> None:
     @app.cli.command("build-assets")
     def build_assets_cmd() -> None:
         """Precompile static assets."""
-        from app.extensions import assets_env
-
         click.echo("Building assets...")
         # assets_env is registered in init_extensions, so it should be ready
         for name in assets_env:
@@ -54,11 +56,6 @@ def register_cli(app: Flask) -> None:
     def purge_empty_guests_cmd(days: int, force: bool) -> None:
         """Delete guest users that still have a refresh token
         but no data and are older than N days."""
-        # import locally to avoid modifying top-level imports further
-        from app.services.maintenance_service import (
-            purge_inactive_empty_guests_with_tokens,
-        )
-
         result = purge_inactive_empty_guests_with_tokens(
             retention_days=days, dry_run=not force
         )

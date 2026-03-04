@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from app.extensions import db
+from app.models.user_calendar import UserCalendar
 
 
 class User(db.Model):
@@ -42,9 +43,6 @@ class User(db.Model):
         This method now uses the UserCalendar model to store calendar hashes,
         but also updates the legacy fields for backward compatibility.
         """
-        from app.models.user_calendar import UserCalendar
-
-        # Reset or create calendars using the UserCalendar model
         UserCalendar.reset_hash(self.id, "wanted")
         UserCalendar.reset_hash(self.id, "maybe")
         UserCalendar.reset_hash(self.id, "all")

@@ -1,3 +1,4 @@
+import http
 import logging
 import os
 from datetime import UTC, date, datetime
@@ -60,7 +61,7 @@ def _get(
     )
     _logger.debug("Response %s for GET %s", response.status_code, url)
 
-    if response.status_code != 200:
+    if response.status_code != http.HTTPStatus.OK:
         _logger.error(
             "TMDb API request failed with status code %s", response.status_code
         )
@@ -149,7 +150,7 @@ def uncached_fetch_movie_changes(start_date: str, end_date: str) -> list[int]:
         if data["page"] >= data["total_pages"]:
             break
         params["page"] += 1
-        if params["page"] >= 500:
+        if params["page"] >= http.HTTPStatus.INTERNAL_SERVER_ERROR:
             _logger.warning("Total pages exceeds 500, truncating")
             break
 
@@ -246,7 +247,7 @@ def fetch_release_dates(movie_id: int) -> list[dict[str, Any]]:
 
 def fetch_changed_movies(
     start_date: datetime | date | str, end_date: datetime | date | str
-) -> list[dict[str, Any]]:
+) -> list[int]:
     if isinstance(start_date, (datetime, date)):
         start_date = start_date.strftime("%Y-%m-%d")
     if isinstance(end_date, (datetime, date)):

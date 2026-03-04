@@ -1,4 +1,5 @@
 import base64
+import http
 import json
 import logging
 import os
@@ -124,7 +125,7 @@ def send_web_push(
         )
     except WebPushException as e:
         # Check if subscription is expired
-        if e.response and e.response.status_code == 410:
+        if e.response and e.response.status_code == http.HTTPStatus.GONE:
             raise WebPushSubscriptionExpiredError(
                 "Push subscription has expired or been unsubscribed",
                 subscription_info=subscription_info,

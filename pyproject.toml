@@ -70,6 +70,8 @@ select = [
   "LOG",    #flake8-logging
   "PERF",   # Perflint
   "PIE",    # flake8-pie
+  "PLC",    # Pylint
+  "PT",     # flake8-pytest-style
   "RET",    # flake8-return
   "RUF",    # flake8-return
   "S",      # flake8-bandit
@@ -80,11 +82,18 @@ select = [
   "TRY",    # tryceratops
   "UP",     # pyupgrade
   "W",      # Warnin
-  "PT",     # flake8-pytest-style
 ]
-extend-ignore = ["TRY003", "ANN401"]
 
-per-file-ignores = { "test_*" = ["S101"], "migrations/env.py" = ["ERA001"] }
+# TODO: PLR0913 and PLR2004
+extend-ignore = ["TRY003", "ANN401", "PLR0913", "PLR2004"]
+
+per-file-ignores = { "tests/*" = [
+  "S101",
+  "PLR2004",
+  "PLC0415",
+], "migrations/env.py" = [
+  "ERA001",
+] }
 
 [tool.ruff.format]
 

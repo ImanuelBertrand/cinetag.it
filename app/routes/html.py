@@ -47,6 +47,9 @@ from app.utils.ics import create_ics_file
 html = Blueprint("html", __name__)
 _logger = logging.getLogger(__name__)
 
+ONE_DAY = 86400
+MIN_PASSWORD_LENGTH = 8
+
 
 @html.route("/sw.js")
 def service_worker():
@@ -63,7 +66,7 @@ def _validate_email(email):
 
 
 def _validate_password(password):
-    return len(password) >= 8
+    return len(password) >= MIN_PASSWORD_LENGTH
 
 
 def validate_register_post(user: User, data: dict) -> bool:
@@ -79,7 +82,7 @@ def validate_register_post(user: User, data: dict) -> bool:
         flash("Please take a moment to complete the form.", "danger")
         return False
 
-    if form_ts and (now - form_ts) > 86400:
+    if form_ts and (now - form_ts) > ONE_DAY:
         flash("Something went wrong. Please try again.", "danger")
         return False
 
