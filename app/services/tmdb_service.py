@@ -535,7 +535,7 @@ def _parse_best_release_dates(
         if pure_release_dates:
             date_str = min(pure_release_dates)
         elif dates:  # Fallback to using any date if no "pure" ones exist
-            date_str = min([d["release_date"] for d in dates])
+            date_str = min(d["release_date"] for d in dates)
         else:
             continue  # Skip region if no dates are provided
 
