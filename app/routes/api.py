@@ -164,22 +164,22 @@ def reset_calendar_hashes():
 
 
 @api.errorhandler(400)
-def bad_request(error):
+def bad_request(error):  # pylint: disable=unused-argument
     return jsonify({"error": "Bad Request"}), 400
 
 
 @api.errorhandler(401)
-def unauthorized(error):
+def unauthorized(error):  # pylint: disable=unused-argument
     return jsonify({"error": "Unauthorized"}), 401
 
 
 @api.errorhandler(403)
-def forbidden(error):
+def forbidden(error):  # pylint: disable=unused-argument
     return jsonify({"error": "Forbidden"}), 403
 
 
 @api.errorhandler(404)
-def not_found(error):
+def not_found(error):  # pylint: disable=unused-argument
     return jsonify({"error": "Not Found"}), 404
 
 
@@ -459,5 +459,5 @@ def unsubscribe_push():
 
 
 @api.errorhandler(500)
-def internal_server_error(error):
+def internal_server_error(error):  # pylint: disable=unused-argument
     return jsonify({"error": "Internal Server Error"}), 500

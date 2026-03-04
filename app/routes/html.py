@@ -901,25 +901,25 @@ def privacy():
 
 
 @html.errorhandler(400)
-def bad_request(error):
+def bad_request(error):  # pylint: disable=unused-argument
     return render_template("400.html"), 400
 
 
 @html.errorhandler(401)
-def unauthorized(error):
+def unauthorized(error):  # pylint: disable=unused-argument
     return render_template("401.html"), 401
 
 
 @html.errorhandler(403)
-def forbidden(error):
+def forbidden(error):  # pylint: disable=unused-argument
     return render_template("403.html"), 403
 
 
 @html.errorhandler(404)
-def not_found(error):
+def not_found(error):  # pylint: disable=unused-argument
     return render_template("404.html"), 404
 
 
 @html.errorhandler(500)
-def internal_server_error(error):
+def internal_server_error(error):  # pylint: disable=unused-argument
     return render_template("500.html"), 500

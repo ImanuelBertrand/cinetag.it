@@ -37,6 +37,7 @@ dependencies = [
   "sqlalchemy>=2.0.48",
   "uuid>=1.30",
   "werkzeug>=3.1.6",
+  "pylint>=4.0.5",
 ]
 
 [dependency-groups]
@@ -101,3 +102,29 @@ per-file-ignores = { "tests/*" = [
 pythonpath = ["."]
 testpaths = ["tests"]
 python_files = "test_*.py"
+
+[tool.pylint.main]
+# Tell pylint to look in the current directory for the 'app' folder
+init-hook = "import sys; sys.path.append('.')"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+  "too-few-public-methods",     # R0903: Hates SQLAlchemy models
+  "missing-module-docstring",   # C0114
+  "missing-class-docstring",    # C0115
+  "missing-function-docstring", # C0116
+  "no-else-return",             # R1705
+  "no-else-raise",              # R1720
+  "fixme",                      # W0511: Stop flagging TODOs
+  "wrong-import-order",         # C0411: Ruff handles this
+  "wrong-import-position",      # C0413: Ruff handles this
+  "ungrouped-imports",          # C0412: Ruff handles this
+  "unused-import",              # W0611: Ruff handles this
+  "broad-exception-caught",     # W0718: TODO
+]
+
+[tool.pylint.DESIGN]
+max-args = 8
+max-positional-arguments = 8
+max-locals = 25
+max-attributes = 15
