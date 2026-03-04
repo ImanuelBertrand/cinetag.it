@@ -69,7 +69,7 @@ def _validate_password(password):
     return len(password) >= MIN_PASSWORD_LENGTH
 
 
-def validate_register_post(user: User, data: dict) -> bool:
+def validate_register_post(data: dict) -> bool:
     # --- Time-based check: too fast submission or too old form (using old data?) ---
     try:
         form_ts = int(data.get("form_rendered_at", "0"))
@@ -160,7 +160,7 @@ def register_post(user: User):
         flash("Thanks! Please check your email to confirm.", "success")
         return redirect(url_for("html.profile"))
 
-    if not validate_register_post(user, data):
+    if not validate_register_post(data):
         return None
 
     email = data.get("email")
