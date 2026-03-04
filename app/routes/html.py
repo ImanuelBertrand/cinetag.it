@@ -715,6 +715,8 @@ def get_movie_details(movie_id):
                 country.code: country.english_name for country in countries
             }
             origin_countries = [country_names.get(code, code) for code in country_codes]
+        else:
+            origin_countries = []
 
         # Get current user's decision for this movie (if any)
         user_movie = UserMovie.query.filter_by(
