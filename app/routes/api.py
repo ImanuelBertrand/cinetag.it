@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from flask import Blueprint, jsonify, request
 
@@ -23,6 +23,8 @@ _logger = logging.getLogger(__name__)
 @api.route("/user/movies/review", methods=["POST"])
 def review_movie():
     user = get_current_user()
+    if not user:
+        return jsonify({"error": "User not found."}), 404
 
     data = request.get_json()
     movie_id = data.get("movie_id")
@@ -64,12 +66,12 @@ def get_user_events():
     user = get_current_user()
     if not user:
         return jsonify({"error": "User not found."}), 404
-    start = request.args.get("start")
-    end = request.args.get("end")
-    if not start or not end:
+    start_str = request.args.get("start")
+    end_str = request.args.get("end")
+    if not start_str or not end_str:
         return jsonify({"error": "Invalid date range."}), 400
-    start = datetime.fromisoformat(start)
-    end = datetime.fromisoformat(end)
+    start = datetime.fromisoformat(start_str)
+    end = datetime.fromisoformat(end_str)
     events = fetch_user_events(user, start, end)
     return jsonify(events)
 
@@ -90,16 +92,18 @@ def get_movies_api(filter_mode):
         limit = int(request.args.get("limit", 50))
 
         # Convert min_release_date to datetime if provided
+        min_release_date_val: date | None = None
         if min_release_date:
-            min_release_date = (
+            min_release_date_val = (
                 datetime.strptime(min_release_date, "%Y-%m-%d")
                 .replace(tzinfo=UTC)
                 .date()
             )
 
         # Convert min_movie_id to int if provided
+        min_movie_id_val: int | None = None
         if min_movie_id:
-            min_movie_id = int(min_movie_id)
+            min_movie_id_val = int(min_movie_id)
 
         # Get movies with pagination
         result = get_movies_based_on_filter(
@@ -108,8 +112,8 @@ def get_movies_api(filter_mode):
             need_imdb,
             need_poster,
             name_filter=name_filter,
-            min_release_date=min_release_date,
-            min_movie_id=min_movie_id,
+            min_release_date=min_release_date_val,
+            min_movie_id=min_movie_id_val,
             limit=limit,
         )
 

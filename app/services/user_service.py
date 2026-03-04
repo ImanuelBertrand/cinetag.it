@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import jwt
@@ -119,15 +119,23 @@ def get_user_movie_ids(user: User, decision: str | None = None):
 
 @cache.cached(timeout=86400, key_prefix="get_all_tmdb_regions_data_dict")
 def get_all_tmdb_regions_data_dict() -> dict[str, dict[str, Any]]:
-    return {region.code: region.to_dict() for region in TmdbRegion.query.all()}
+    return {
+        str(region.code): region.to_dict()
+        for region in TmdbRegion.query.all()
+        if region.code is not None
+    }
 
 
 @cache.cached(timeout=86400, key_prefix="get_all_region_flags")
 def get_all_region_flags() -> dict[str, str]:
-    return {
-        region_code: get_region_flag(region_code)
-        for region_code in get_all_tmdb_regions_data_dict()
-    }
+    regions = get_all_tmdb_regions_data_dict()
+    result = {}
+    for region_code in regions:
+        if region_code is not None:
+            flag = get_region_flag(region_code)
+            if flag is not None:
+                result[str(region_code)] = flag
+    return result
 
 
 def _build_movies_query(
@@ -239,7 +247,7 @@ def _get_preloaded_movie_data(movie_ids, region, language):
             )
         )
     )
-    movie_languages_dict = defaultdict(dict)
+    movie_languages_dict: dict[int, dict[str, MovieLangInfo]] = defaultdict(dict)
     for mov_lang in movie_languages_query.all():
         movie_languages_dict[mov_lang.movie_id][mov_lang.language] = mov_lang
 
@@ -321,12 +329,12 @@ def get_movies_based_on_filter(
     profiler.start()
 
     profiler.start_section("initialization")
-    region = user.region or current_app.config.DEFAULT_REGION
-    language = user.language or current_app.config.DEFAULT_LANGUAGE
+    region = user.region or current_app.config["DEFAULT_REGION"]
+    language = user.language or current_app.config["DEFAULT_LANGUAGE"]
 
     formatted_dates = {}
 
-    def fmt_date(date: datetime.date):
+    def fmt_date(date: date | None):
         if not date:
             return None
 
@@ -445,8 +453,8 @@ def fetch_user_events(
 ) -> list[dict[str, str]]:
     if not user:
         raise ValueError("User not found.")
-    lang = user.language or current_app.config.DEFAULT_LANGUAGE
-    region = user.region or current_app.config.DEFAULT_REGION
+    lang = user.language or current_app.config["DEFAULT_LANGUAGE"]
+    region = user.region or current_app.config["DEFAULT_REGION"]
 
     def fmt_date(date):
         return format_date(date, locale=lang) if date else None
@@ -460,7 +468,7 @@ def fetch_user_events(
         MovieLangInfo.movie_id.in_(movie_ids)
     ).all()
 
-    lang_info_dict = defaultdict(dict)
+    lang_info_dict: dict[int, dict[str, MovieLangInfo]] = defaultdict(dict)
     for lang_info in all_lang_infos:
         lang_info_dict[lang_info.movie_id][lang_info.language] = lang_info
 

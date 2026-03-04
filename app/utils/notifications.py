@@ -51,7 +51,7 @@ def cron_send_notifications() -> None:
     )
     _logger.info("Sending %s notifications", len(scheduled_notifications))
 
-    sent_notifications = defaultdict(set)
+    sent_notifications: dict[int, set[int]] = defaultdict(set)
     for notification in scheduled_notifications:
         try:
             if not notification.channel.enabled:

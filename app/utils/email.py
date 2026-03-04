@@ -21,8 +21,10 @@ def send_email(to: str | list[str], subject: str, body: str) -> bool:
         sender = (sender_name, sender)
     try:
         if isinstance(to, str):
-            to = [to]
-        msg = Message(subject, recipients=to, body=body, sender=sender)
+            recipients: list[str | tuple[str, str]] = [to]
+        else:
+            recipients = list(to)
+        msg = Message(subject, recipients=recipients, body=body, sender=sender)
         mail.send(msg)
     except Exception:
         _logger.exception("Error sending email")

@@ -54,6 +54,7 @@ def _validate_refresh_identity_and_jti(identity, jti) -> bool:
         raise jwt.InvalidTokenError(
             "Refresh token is not allowed (revoked or invalid)."
         )
+    return True
 
 
 def verify_refresh_token_and_get_identity(
@@ -109,12 +110,9 @@ def verify_refresh_token_and_get_identity(
         _logger.exception("Unexpected error during refresh token verification")
         # Wrap unexpected errors in InvalidTokenError for consistent handling
         raise jwt.InvalidTokenError(f"Refresh token verification failed: {e}") from e
-    else:
-        # 3. If decoding passed and JTI is allowed, return the user identity
-        _logger.debug(
-            "Refresh token verified successfully for JTI '%s', user %s.", jti, identity
-        )
-        return int(identity), jti
+    if identity is None or jti is None:
+        return None
+    return int(identity), str(jti)
 
 
 def create_temporary_user():
@@ -270,10 +268,10 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
         return
 
     try:
-        (
-            refreshed_user_id,
-            old_jti,
-        ) = verify_refresh_token_and_get_identity(refresh_token)
+        result = verify_refresh_token_and_get_identity(refresh_token)
+        if not result:
+            return
+        refreshed_user_id, old_jti = result
 
         if not refreshed_user_id:
             _logger.warning(
@@ -350,19 +348,23 @@ def authenticate_request(app: Flask):
         return None
 
     # 3. Attempt Access Token Auth
-    _authenticate_via_auth_token(app, endpoint)
+    auth_token = request.cookies.get("access_token_cookie")
+    if auth_token:
+        _authenticate_via_auth_token(app, endpoint or "unknown")
 
     if g.current_user:
         return None
 
     # 4. Attempt Refresh Token Auth
-    _authenticate_via_refresh_token(app, endpoint)
+    refresh_token = request.cookies.get("refresh_token_cookie")
+    if refresh_token:
+        _authenticate_via_refresh_token(app, endpoint or "unknown")
 
     if g.current_user:
         return None
 
     # 5. Handle Guest User / Unauthenticated for Protected Route
-    _authenticate_as_guest_user(app, endpoint)
+    _authenticate_as_guest_user(app, endpoint or "unknown")
 
     if g.current_user:
         return None

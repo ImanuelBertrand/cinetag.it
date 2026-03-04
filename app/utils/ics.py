@@ -24,9 +24,9 @@ def create_ics_file(events: list[dict], calendar_name: str) -> bytes:
         ical_event = Event()
         ical_event.add("summary", event.get("title", "Movie Release"))
 
-        # Parse the start date
-        if isinstance(event.get("start"), str):
-            start_date = datetime.fromisoformat(event.get("start"))
+        start_str = event.get("start")
+        if isinstance(start_str, str):
+            start_date = datetime.fromisoformat(start_str)
         else:
             start_date = event.get("start", datetime.now(UTC))
 

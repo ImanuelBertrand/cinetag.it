@@ -74,9 +74,9 @@ def create_vapid() -> Vapid:
 def get_vapid() -> Vapid:
     """Gets the cached Vapid instance, creating it if necessary."""
     if not hasattr(current_app, "vapid"):
-        print("Initializing VAPID instance for this app context.")
-        current_app.vapid = create_vapid()
-    return current_app.vapid
+        _logger.debug("Initializing VAPID instance for this app context.")
+        current_app.vapid = create_vapid()  # type: ignore[attr-defined]
+    return current_app.vapid  # type: ignore[attr-defined]
 
 
 def get_vapid_public_key_for_js() -> str:
@@ -87,8 +87,8 @@ def get_vapid_public_key_for_js() -> str:
         VAPID public key in URL-safe base64 format
     """
     if not hasattr(current_app, "vapid_public_key_for_js"):
-        current_app.vapid_public_key_for_js = get_public_key_b64(get_vapid())
-    return current_app.vapid_public_key_for_js
+        current_app.vapid_public_key_for_js = get_public_key_b64(get_vapid())  # type: ignore[attr-defined]
+    return current_app.vapid_public_key_for_js  # type: ignore[attr-defined]
 
 
 def send_web_push(

@@ -271,8 +271,8 @@ def update_regions() -> None:
 def _process_movie(
     tmdb_movie: dict,
     existing_movies: dict[int, Movie],
-    existing_region_info: MovieRegionInfo,
-    existing_lang_info: MovieLanguageInfo,
+    existing_region_info: dict[int, MovieRegionInfo],
+    existing_lang_info: dict[int, MovieLanguageInfo],
     region: str,
     language: str,
 ) -> tuple[
@@ -293,7 +293,7 @@ def _process_movie(
         db.session.add(movie)
 
     res_region_info = None
-    region_info: MovieRegionInfo = existing_region_info.get(movie_id)
+    region_info = existing_region_info.get(movie_id)
     if not region_info:
         res_region_info = MovieRegionInfo.create_from_tmdb(
             movie_id, region, release_date
@@ -302,7 +302,7 @@ def _process_movie(
         db.session.add(region_info)
 
     res_language_info = None
-    language_info: MovieLanguageInfo = existing_lang_info.get(movie_id)
+    language_info = existing_lang_info.get(movie_id)
     if not language_info:
         res_language_info = MovieLanguageInfo.create_from_tmdb(
             movie_id, tmdb_movie, language

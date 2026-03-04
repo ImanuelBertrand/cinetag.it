@@ -115,7 +115,7 @@ def _cached_tmdb_call[T](
 
 
 def uncached_fetch_upcoming_movies(region: str, language: str) -> list[dict]:
-    params = {
+    params: dict[str, Any] = {
         "region": region,
         "language": language,
         "release_date.gte": datetime.now(UTC).strftime("%Y-%m-%d"),
@@ -130,13 +130,13 @@ def uncached_fetch_upcoming_movies(region: str, language: str) -> list[dict]:
             all_movies[movie["id"]] = movie
         if data["page"] >= data["total_pages"]:
             break
-        params["page"] += 1
+        params["page"] = int(params["page"]) + 1
 
     return list(all_movies.values())
 
 
 def uncached_fetch_movie_changes(start_date: str, end_date: str) -> list[int]:
-    params = {
+    params: dict[str, Any] = {
         "start_date": start_date,
         "end_date": end_date,
         "page": 1,
@@ -149,8 +149,8 @@ def uncached_fetch_movie_changes(start_date: str, end_date: str) -> list[int]:
             all_movies.add(item["id"])
         if data["page"] >= data["total_pages"]:
             break
-        params["page"] += 1
-        if params["page"] >= http.HTTPStatus.INTERNAL_SERVER_ERROR:
+        params["page"] = int(params["page"]) + 1
+        if int(params["page"]) >= 500:
             _logger.warning("Total pages exceeds 500, truncating")
             break
 

@@ -32,13 +32,13 @@ class Profiler:
     Can be used either as a context manager or with explicit start/stop calls.
     """
 
-    def __init__(self, name, log_level="info") -> None:
+    def __init__(self, name: str, log_level: str = "info") -> None:
         self.name = name
         self.log_level = log_level
-        self.start_time = None
-        self.sections = defaultdict(float)
-        self.current_section = None
-        self.section_start_time = None
+        self.start_time: float | None = None
+        self.sections: dict[str, float] = defaultdict(float)
+        self.current_section: str | None = None
+        self.section_start_time: float | None = None
         self.is_running = False
 
     def __enter__(self) -> Self:
@@ -56,7 +56,7 @@ class Profiler:
 
     def stop(self):
         """Stop the profiler and log the results."""
-        if not self.is_running:
+        if not self.is_running or self.start_time is None:
             _logger.warning("Profiler %s was stopped without being started", self.name)
             return self
 
@@ -97,7 +97,7 @@ class Profiler:
 
     def end_section(self):
         """End timing the current section."""
-        if not self.current_section:
+        if not self.current_section or self.section_start_time is None:
             return self
 
         if not self.is_running:

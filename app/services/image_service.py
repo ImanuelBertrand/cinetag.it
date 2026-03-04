@@ -10,13 +10,18 @@ from app.errors import ImageFetchError
 
 def get_image_base_path() -> str:
     path = current_app.config.get("POSTER_DIR")
+    if path is None:
+        raise ValueError("POSTER_DIR not configured")
     if not os.path.exists(path):
         os.makedirs(path)
     return path
 
 
 def get_tmdb_image_base_url() -> str:
-    return current_app.config.get("TMDB_IMAGE_BASE_URL").rstrip("/")
+    url = current_app.config.get("TMDB_IMAGE_BASE_URL")
+    if url is None:
+        raise ValueError("TMDB_IMAGE_BASE_URL not configured")
+    return url.rstrip("/")
 
 
 def get_tmdb_image_url(remote_filename: str) -> str:

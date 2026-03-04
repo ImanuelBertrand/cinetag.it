@@ -163,8 +163,8 @@ def register_post(user: User):
     if not validate_register_post(data):
         return None
 
-    email = data.get("email")
-    password = data.get("password")
+    email = data.get("email", "")
+    password = data.get("password", "")
     if not validate_register_post_credentials(email, password):
         return None
 
@@ -191,13 +191,17 @@ def register_post(user: User):
 @html.route("/register", methods=["GET", "POST"])
 def register():
     user = get_current_user()
-    form_data = defaultdict(str)
+    form_data: dict[str, str] = defaultdict(str)
 
     if request.method == "POST":
         form_data.update(request.form)
-        register_result = register_post(user)
-        if register_result:
-            return register_result
+        if user:
+            register_result = register_post(user)
+            if register_result:
+                return register_result
+        else:
+            flash("User not found.", "danger")
+            return redirect(url_for("html.profile"))
     else:
         # Provide a render timestamp for the template (UTC seconds)
         form_data["form_rendered_at"] = str(int(datetime.now(UTC).timestamp()))
@@ -275,9 +279,9 @@ def login():
     data = request.form
     try:
         user = authenticate_user(data)
-        if not pre_login_user.user_movies:
+        if pre_login_user and not pre_login_user.user_movies:
             db.session.delete(pre_login_user)
-        else:
+        elif pre_login_user:
             user.temporary_user_id = pre_login_user.id
             db.session.add(user)
             db.session.commit()
@@ -483,7 +487,8 @@ def profile_notifications_post(user) -> bool:
     An API endpoint handles push notifications."""
     data = dict(request.form)
     _logger.info("data: %s", data)
-    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", data.get("email_days")):
+    email_days = data.get("email_days") or ""
+    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", email_days):
         raise UserFeedbackError(
             "Please enter a comma-separated list of numbers in the 'days' field."
         )
@@ -498,7 +503,7 @@ def profile_notifications_post(user) -> bool:
 
     _logger.info(str(data))
 
-    days = re.split(r"\s*,\s*", data.get("email_days").strip())
+    days = re.split(r"\s*,\s*", email_days.strip())
 
     email_channel.enabled = bool(data.get("email_enabled", False))
     email_channel.days_in_advance = list(map(int, days))
@@ -677,8 +682,16 @@ def get_movies(filter_mode):
 def get_movie_details(movie_id):
     try:
         user = get_current_user()
-        language = user.language or current_app.config.DEFAULT_LANGUAGE
+        if not user:
+            flash("User not found.", "danger")
+            return redirect(url_for("html.profile"))
+
+        language = user.language or current_app.config["DEFAULT_LANGUAGE"]
         movie = Movie.query.get(movie_id)
+        if not movie:
+            flash("Movie not found.", "danger")
+            return redirect(url_for("html.profile"))
+
         lang_info = movie.get_localized_data(language)
         region_info = MovieRegionInfo.query.filter_by(
             movie_id=movie_id, region=user.region
@@ -689,7 +702,6 @@ def get_movie_details(movie_id):
         region_release_dates = {}
         region_names = {reg.code: reg.english_name for reg in TmdbRegion.query.all()}
         for ri in all_region_infos:
-            ri: MovieRegionInfo
             if ri.is_fake:
                 continue
             region_display = region_names.get(ri.region, ri.region)
@@ -758,6 +770,9 @@ def get_movie_details(movie_id):
 @html.route("/release-dates", methods=["GET"])
 def get_user_release_dates():
     user = get_current_user()
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("html.profile"))
     try:
         # four weeks ago
         start = datetime.now(UTC) - timedelta(weeks=4)
