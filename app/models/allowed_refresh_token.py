@@ -74,7 +74,7 @@ class AllowedRefreshToken(db.Model):
 
         new_token = AllowedRefreshToken(jti=jti, user_id=user_id, expires_at=expires_dt)
         db.session.add(new_token)
-        _logger.debug("Added refresh token %s for user %s to allowlist."), jti, user_id
+        _logger.debug("Added refresh token %s for user %s to allowlist.", jti, user_id)
         # Note: Commit should happen as part
         # of the transaction where the token is issued.
 
