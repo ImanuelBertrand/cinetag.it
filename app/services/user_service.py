@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jwt
 from babel.dates import format_date
@@ -25,6 +25,9 @@ from app.services.image_service import get_image_url
 from app.services.movie_service import get_region_infos
 from app.utils.email import queue_email
 from app.utils.profiler import Profiler, profile_function
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _logger = logging.getLogger(__name__)
 
@@ -243,6 +246,66 @@ def _get_preloaded_movie_data(movie_ids, region, language):
     return movie_regions_dict, movie_languages_dict
 
 
+def _map_movie_to_dict(
+    movie_tuple: tuple,
+    language: str,
+    ctx: dict[str, Any],
+    fmt_date: Callable,
+    need_poster: bool,
+) -> dict | None:
+    """Helper to transform a raw movie result into a dictionary."""
+    movie, main_region_info, user_movie = movie_tuple
+
+    movie_languages_dict = ctx["movie_languages"]
+    movie_regions_dict = ctx["movie_regions"]
+    tmdb_regions_dict = ctx["tmdb_regions"]
+    region_flag_dict = ctx["region_flags"]
+
+    # Get language info
+    lang_info = movie.get_localized_data(language, movie_languages_dict[movie.id])
+    if not lang_info or (need_poster and not lang_info.get("poster_path")):
+        return None
+
+    all_release_dates = [
+        {
+            "region": ri.region,
+            "region_info": tmdb_regions_dict.get(ri.region),
+            "date": ri.release_date,
+            "date_pretty": fmt_date(ri.release_date),
+            "flag": region_flag_dict.get(ri.region),
+        }
+        for ri in movie_regions_dict[movie.id]
+    ]
+
+    return {
+        "id": movie.id,
+        "title": lang_info["title"],
+        "original_title": movie.original_title,
+        "release_date_pretty": fmt_date(main_region_info.release_date),
+        "release_date": main_region_info.release_date,
+        "overview": lang_info["overview"],
+        "poster_url": get_image_url(lang_info["poster_path"], 500),
+        "popularity": movie.popularity,
+        "decision": user_movie.decision if user_movie else None,
+        "all_release_dates": all_release_dates,
+    }
+
+
+def _get_movie_context_data(
+    movie_ids: list[int], region: str, language: str
+) -> dict[str, Any]:
+    """Fetches all external data needed for movie mapping."""
+    movie_regions, movie_languages = _get_preloaded_movie_data(
+        movie_ids, region, language
+    )
+    return {
+        "movie_regions": movie_regions,
+        "movie_languages": movie_languages,
+        "tmdb_regions": get_all_tmdb_regions_data_dict(),
+        "region_flags": get_all_region_flags(),
+    }
+
+
 @profile_function
 def get_movies_based_on_filter(
     user: User,
@@ -307,51 +370,19 @@ def get_movies_based_on_filter(
 
     # Preload all necessary movie regions
     movie_ids = [r[0].id for r in results]
-
-    movie_regions_dict, movie_languages_dict = _get_preloaded_movie_data(
-        movie_ids, region, language
-    )
-
-    tmdb_regions_dict = get_all_tmdb_regions_data_dict()
-    region_flag_dict = get_all_region_flags()
+    ctx = _get_movie_context_data(movie_ids, region, language)
 
     result = []
     for movie_tuple in results:
-        movie, main_region_info, user_movie = movie_tuple
-
-        # Get language info
-        lang_info = movie.get_localized_data(language, movie_languages_dict[movie.id])
-        if not lang_info:
-            continue
-
-        if need_poster and not lang_info.get("poster_path"):
-            continue
-
-        all_release_dates = [
-            {
-                "region": ri.region,
-                "region_info": tmdb_regions_dict.get(ri.region),
-                "date": ri.release_date,
-                "date_pretty": fmt_date(ri.release_date),
-                "flag": region_flag_dict.get(ri.region),
-            }
-            for ri in movie_regions_dict[movie.id]
-        ]
-
-        result.append(
-            {
-                "id": movie.id,
-                "title": lang_info["title"],
-                "original_title": movie.original_title,
-                "release_date_pretty": fmt_date(main_region_info.release_date),
-                "release_date": main_region_info.release_date,
-                "overview": lang_info["overview"],
-                "poster_url": get_image_url(lang_info["poster_path"], 500),
-                "popularity": movie.popularity,
-                "decision": user_movie.decision if user_movie else None,
-                "all_release_dates": all_release_dates,
-            }
+        movie_dict = _map_movie_to_dict(
+            movie_tuple,
+            language,
+            ctx,
+            fmt_date,
+            need_poster,
         )
+        if movie_dict:
+            result.append(movie_dict)
 
     # Get the next cursor value if there are more results
     profiler.start_section("pagination_metadata")
