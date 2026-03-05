@@ -19,9 +19,8 @@ def register_cli(app: Flask) -> None:
         """Precompile static assets."""
         click.echo("Building assets...")
         # assets_env is registered in init_extensions, so it should be ready
-        for name in assets_env:
-            click.echo(f"Building bundle: {name}")
-            bundle = assets_env[name]
+        for bundle in assets_env:
+            click.echo(f"Building bundle: {bundle}")
             bundle.build()
 
         click.echo("Assets built successfully.")
