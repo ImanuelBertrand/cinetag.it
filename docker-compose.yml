@@ -81,7 +81,9 @@ services:
       - cinetagit_network
 
   nginx:
-    image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile.nginx # Replace with your actual Nginx Dockerfile name    image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
     container_name: cinetagit_nginx
     restart: always
     ports:
