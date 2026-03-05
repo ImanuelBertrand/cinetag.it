@@ -298,7 +298,7 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
         g.current_user = user
         _logger.debug("User %s authenticated via refresh token.", user.id)
 
-    except jwt.ExpiredSignatureError, jwt.InvalidTokenError:
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         _logger.warning("Refresh token verification failed.", exc_info=True)
 
 
