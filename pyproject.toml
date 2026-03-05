@@ -50,6 +50,7 @@ dev = [
   "types-PyYAML",
   "types-redis",
   "sqlalchemy[mypy]>=2.0.48",
+  "pytest-cov>=7.0.0",
 ]
 
 
