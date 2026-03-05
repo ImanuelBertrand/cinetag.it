@@ -4,7 +4,7 @@ services:
   web:
     # Use the root Dockerfile for the dev environment
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     volumes:
       - ..:/app:cached
