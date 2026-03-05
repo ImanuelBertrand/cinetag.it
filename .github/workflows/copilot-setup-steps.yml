@@ -1,0 +1,52 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: uv sync --frozen
+
+      - name: Build assets
+        env:
+          FLASK_APP: "app.create_app:create_app('testing')"
+        run: |
+          uv run flask build-assets
+          mkdir -p app/static/vendor/fullcalendar
+          cp node_modules/fullcalendar/index.global.min.js app/static/vendor/fullcalendar/
+          cp -r node_modules/@fullcalendar/core/locales app/static/vendor/fullcalendar/
