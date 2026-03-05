@@ -132,7 +132,7 @@ jobs:
 
       - name: Extract metadata (App)
         id: meta_app
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -143,7 +143,7 @@ jobs:
 
       - name: Extract metadata (Nginx)
         id: meta_nginx
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-nginx
           tags: |
