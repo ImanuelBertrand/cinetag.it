@@ -329,16 +329,21 @@ def delete_data():
 def _validate_profile_input(
     data, has_new_mail, has_new_pw, has_old_email, has_old_pw
 ) -> bool:
-    if (not has_old_email or not has_old_pw) and (has_new_pw or has_new_mail):
+    # Registration is only allowed on the registration page, but we only
+    # care if the user is actually trying to set credentials.
+    is_setting_credentials = (has_new_mail and not has_old_email) or (
+        has_new_pw and not has_old_pw
+    )
+    if is_setting_credentials:
         raise UserFeedbackError(
             "Registration is only possible on the registration page."
         )
 
-    if has_new_mail and not _validate_email(data.get("email")):
+    if has_new_mail and has_old_email and not _validate_email(data.get("email")):
         flash("Invalid email.", "danger")
         return False
 
-    if has_new_pw and not _validate_password(data.get("new_password")):
+    if has_new_pw and has_old_pw and not _validate_password(data.get("new_password")):
         flash("Password must be at least 8 characters.", "danger")
         return False
     return True
@@ -376,7 +381,12 @@ def _update_user_credentials(
         flash("Password changed successfully.", "success")
 
     # Changing the email address
-    if has_new_mail and has_old_email and data.get("email") != user.email:
+    if (
+        has_new_mail
+        and has_old_email
+        and data.get("email")
+        and data.get("email") != user.email
+    ):
         confirm_current_pw()
 
         existing_user = User.query.filter_by(email=data.get("email")).first()
@@ -412,7 +422,7 @@ def profile_post(user: User, form_data: dict[str, str]) -> None:
         user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
     )
 
-    user.name = data.get("name")
+    user.display_name = data.get("display_name")
     user.language = data.get("language")
     user.region = data.get("region")
 
