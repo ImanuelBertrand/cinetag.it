@@ -139,6 +139,15 @@ def get_all_region_flags() -> dict[str, str]:
     return result
 
 
+def validate_friendship(user_id: int, friend_id: int | None) -> None:
+    if friend_id is None:
+        return
+    # Verify that the friendship exists
+    friendship = Friendship.get_friendship(user_id, friend_id)
+    if not friendship:
+        raise UserFeedbackError("Friend not found or friendship does not exist.")
+
+
 def _build_movies_query(
     user: User,
     region: str,
@@ -165,27 +174,6 @@ def _build_movies_query(
         )
         .filter(MovieRegionInfo.release_date >= datetime.now(UTC).date())
     )
-
-    # Check if friend_id is provided and valid
-    friend_user_movie_alias = None
-    if friend_id:
-        # Verify that the friendship exists
-        friendship = Friendship.get_friendship(user.id, friend_id)
-        if not friendship:
-            raise UserFeedbackError("Friend not found or friendship does not exist.")
-
-        # Create an alias for the friend's UserMovie table
-        friend_user_movie_alias = db.aliased(UserMovie)
-
-    # Join with friend's UserMovie table if friend_id is provided
-    if friend_id and friend_user_movie_alias:
-        query = query.outerjoin(
-            friend_user_movie_alias,
-            db.and_(
-                friend_user_movie_alias.movie_id == Movie.id,
-                friend_user_movie_alias.user_id == friend_id,
-            ),
-        )
 
     # Apply pagination filter
     if min_release_date and min_movie_id:
@@ -227,25 +215,29 @@ def _build_movies_query(
         )
 
     # Apply friend filter if friend_id is provided
-    if friend_id and friend_user_movie_alias:
-        # Only show movies that the friend has approved
-        query = query.filter(friend_user_movie_alias.decision == "approve")
-        # Log the query for debugging
-        _logger.info("Applied friend filter for friend_id=%s", friend_id)
-    else:
-        # Apply mode filters only if not using friend filter
-        # When using friend filter, we want to show all movies the friend has approved
-        if mode != "all":
-            if mode == "approved":
-                query = query.filter(UserMovie.decision == "approve")
-            elif mode == "disapproved":
-                query = query.filter(UserMovie.decision == "disapprove")
-            elif mode == "maybe":
-                query = query.filter(UserMovie.decision == "maybe")
-            elif mode == "pending":
-                query = query.filter(UserMovie.movie_id.is_(None))
+    if friend_id:
+        validate_friendship(user.id, friend_id)
+        friend_user_movie_alias = db.aliased(UserMovie)
 
-    return query
+        _logger.debug("Applied friend filter for friend_id=%s", friend_id)
+
+        query = query.outerjoin(
+            friend_user_movie_alias,
+            db.and_(
+                friend_user_movie_alias.movie_id == Movie.id,
+                friend_user_movie_alias.user_id == friend_id,
+            ),
+        )
+        # Only show movies that the friend has approved
+        return query.filter(friend_user_movie_alias.decision == "approve")
+
+    if mode == "all":
+        return query
+
+    if mode == "pending":
+        return query.filter(UserMovie.movie_id.is_(None))
+
+    return query.filter(UserMovie.decision == mode.rstrip("d"))  # approved => approve
 
 
 def _get_preloaded_movie_data(movie_ids, region, language):
