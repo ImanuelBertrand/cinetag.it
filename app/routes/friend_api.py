@@ -108,22 +108,44 @@ def get_friend_requests():
 
     try:
         # Get pending friend requests received by the user
-        pending_requests = FriendRequest.query.filter_by(
+        received_requests = FriendRequest.query.filter_by(
             recipient_id=user.id, status="pending"
         ).all()
 
+        # Get pending friend requests sent by the user
+        sent_requests = FriendRequest.query.filter_by(
+            requester_id=user.id, status="pending"
+        ).all()
+
         requests = []
-        for request in pending_requests:
+        for request in received_requests:
             requester = db.session.get(User, request.requester_id)
             if requester:
                 requests.append(
                     {
                         "id": request.id,
-                        "requester_id": requester.id,
-                        "requester_name": requester.display_name or "User",
+                        "type": "received",
+                        "user_id": requester.id,
+                        "display_name": requester.display_name or "User",
                         "created_at": request.created_at.isoformat(),
                     }
                 )
+
+        for request in sent_requests:
+            recipient = db.session.get(User, request.recipient_id)
+            if recipient:
+                requests.append(
+                    {
+                        "id": request.id,
+                        "type": "sent",
+                        "user_id": recipient.id,
+                        "display_name": recipient.display_name or "User",
+                        "created_at": request.created_at.isoformat(),
+                    }
+                )
+
+        # Sort by date
+        requests.sort(key=lambda x: x["created_at"], reverse=True)
 
         return jsonify({"success": True, "requests": requests})
     except Exception:
@@ -170,6 +192,44 @@ def respond_to_friend_request(request_id):
         _logger.exception("Error responding to friend request")
         return (
             jsonify({"success": False, "error": "Error responding to friend request."}),
+            500,
+        )
+
+
+@friend_api.route("/requests/<int:request_id>", methods=["DELETE"])
+def cancel_friend_request(request_id):
+    """Cancel a friend request sent by the current user"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+
+    try:
+        # Find the friend request sent by the user
+        friend_request = FriendRequest.query.filter_by(
+            id=request_id, requester_id=user.id, status="pending"
+        ).first()
+
+        if not friend_request:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Friend request not found or not sent by you.",
+                    }
+                ),
+                404,
+            )
+
+        db.session.delete(friend_request)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Friend request cancelled."})
+
+    except Exception:
+        db.session.rollback()
+        _logger.exception("Error cancelling friend request")
+        return (
+            jsonify({"success": False, "error": "Error cancelling friend request."}),
             500,
         )
 

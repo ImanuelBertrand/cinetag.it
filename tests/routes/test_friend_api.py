@@ -119,7 +119,8 @@ def test_friend_request_flow(client, app):
         assert response.status_code == 200
         data = response.get_json()
         assert len(data["requests"]) == 1
-        assert data["requests"][0]["requester_name"] == "User 1"
+        assert data["requests"][0]["display_name"] == "User 1"
+        assert data["requests"][0]["type"] == "received"
         request_id = data["requests"][0]["id"]
 
     # 3. User 2 accepts request

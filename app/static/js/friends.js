@@ -80,13 +80,13 @@ function renderFriendsList(friends) {
 
   const friendsHtml = friends
     .map((friend) => {
-      const initials = getInitials(friend.display_name || "User");
+      const initials = getInitials(friend.display_name || friend.name || "User");
 
       return `
             <div class="friend-card" data-friend-id="${friend.id}">
                 <div class="friend-avatar">${initials}</div>
                 <div class="friend-info">
-                    <div class="friend-name">${friend.display_name || "User"}</div>
+                    <div class="friend-name">${friend.display_name || friend.name || "User"}</div>
                     <div class="friend-since">Friends since ${formatDate(friend.created_at)}</div>
                 </div>
                 <div class="friend-actions">
@@ -142,21 +142,37 @@ async function loadFriendRequests() {
 
 function renderFriendRequests(requests) {
   const requestsContainer = document.getElementById("friend-requests-container");
+  if (!requestsContainer) return;
+
+  if (requests.length === 0) {
+    requestsContainer.innerHTML = `<p>You don't have any pending friend requests.</p>`;
+    return;
+  }
 
   const requestsHtml = requests
     .map((request) => {
-      const initials = getInitials(request.requester_name || "User");
+      const initials = getInitials(request.display_name || "User");
+      const isReceived = request.type === "received";
 
       return `
             <div class="request-card" data-request-id="${request.id}">
                 <div class="friend-avatar">${initials}</div>
                 <div class="request-info">
-                    <div class="friend-name">${request.requester_name || "User"}</div>
+                    <div class="friend-name">${request.display_name || "User"}</div>
+                    <div class="request-type text-muted small">${isReceived ? "Received" : "Sent"}</div>
                     <div class="request-date">Requested on ${formatDate(request.created_at)}</div>
                 </div>
                 <div class="request-actions">
-                    <button class="accept-request-btn" data-request-id="${request.id}">Accept</button>
-                    <button class="reject-request-btn" data-request-id="${request.id}">Reject</button>
+                    ${
+                      isReceived
+                        ? `
+                        <button class="accept-request-btn" data-request-id="${request.id}">Accept</button>
+                        <button class="reject-request-btn" data-request-id="${request.id}">Reject</button>
+                    `
+                        : `
+                        <button class="cancel-request-btn" data-request-id="${request.id}">Cancel</button>
+                    `
+                    }
                 </div>
             </div>
         `;
@@ -172,6 +188,11 @@ function renderFriendRequests(requests) {
 
   document.querySelectorAll(".reject-request-btn").forEach((button) => {
     button.addEventListener("click", handleRejectRequest);
+  });
+
+  // Add event listeners to the cancel buttons
+  document.querySelectorAll(".cancel-request-btn").forEach((button) => {
+    button.addEventListener("click", handleCancelRequest);
   });
 }
 
@@ -355,7 +376,7 @@ async function handleRejectRequest(event) {
 
       // If no requests left, show the empty state
       const requestsContainer = document.getElementById("friend-requests-container");
-      if (requestsContainer.children.length === 0) {
+      if (requestsContainer && requestsContainer.querySelectorAll(".request-card").length === 0) {
         requestsContainer.innerHTML = `
                     <p>You don't have any pending friend requests.</p>
                 `;
@@ -366,6 +387,47 @@ async function handleRejectRequest(event) {
   } catch (error) {
     console.error("Error rejecting friend request:", error);
     CineTagIt.UI.displayMessage("Error rejecting friend request", "danger");
+  }
+}
+
+async function handleCancelRequest(event) {
+  const requestId = event.target.dataset.requestId;
+
+  if (!confirm("Are you sure you want to cancel this friend request?")) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/friends/requests/${requestId}`, {
+      method: "DELETE",
+      headers: {
+        "X-CSRF-TOKEN": CineTagIt.Utils.getCsrfToken(),
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      CineTagIt.UI.displayMessage(data.message || "Friend request cancelled", "success");
+      // Remove the request card from the DOM
+      const requestCard = document.querySelector(`.request-card[data-request-id="${requestId}"]`);
+      if (requestCard) {
+        requestCard.remove();
+      }
+
+      // If no requests left, show the empty state
+      const requestsContainer = document.getElementById("friend-requests-container");
+      if (requestsContainer && requestsContainer.querySelectorAll(".request-card").length === 0) {
+        requestsContainer.innerHTML = `
+                    <p>You don't have any pending friend requests.</p>
+                `;
+      }
+    } else {
+      CineTagIt.UI.displayMessage(data.error || "Error cancelling friend request", "danger");
+    }
+  } catch (error) {
+    console.error("Error cancelling friend request:", error);
+    CineTagIt.UI.displayMessage("Error cancelling friend request", "danger");
   }
 }
 
