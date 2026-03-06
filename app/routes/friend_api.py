@@ -6,6 +6,10 @@ from app.extensions import db
 from app.models.friend_request import FriendRequest
 from app.models.friendship import Friendship
 from app.models.user import User
+from app.services.friend_service import (
+    respond_to_friend_request_service,
+    send_friend_request_service,
+)
 from app.services.user_service import get_current_user
 
 friend_api = Blueprint("friend_api", __name__)
@@ -80,109 +84,18 @@ def send_friend_request():
         )
 
     try:
-        # Find the user with the given friend code
-        friend = User.query.filter_by(friend_code=friend_code).first()
-        if not friend:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "User with this friend code not found.",
-                    }
-                ),
-                404,
-            )
+        success, message, status_code = send_friend_request_service(user, friend_code)
 
-        # Check if the user is trying to add themselves
-        if friend.id == user.id:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "You cannot add yourself as a friend.",
-                    }
-                ),
-                400,
-            )
+        if not success:
+            return jsonify({"success": False, "error": message}), status_code
 
-        # Check if a friendship already exists
-        existing_friendship = Friendship.get_friendship(user.id, friend.id)
-
-        if existing_friendship:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "You are already friends with this user.",
-                    }
-                ),
-                400,
-            )
-
-        # Check if a friend request already exists
-        existing_request = FriendRequest.query.filter_by(
-            requester_id=user.id, recipient_id=friend.id
-        ).first()
-
-        if existing_request:
-            if existing_request.status == "pending":
-                return (
-                    jsonify(
-                        {"success": False, "error": "Friend request already sent."}
-                    ),
-                    400,
-                )
-            if existing_request.status == "rejected":
-                # Update the existing request to pending
-                existing_request.status = "pending"
-                db.session.add(existing_request)
-                db.session.commit()
-                return jsonify(
-                    {
-                        "success": True,
-                        "message": "Friend request sent successfully.",
-                    }
-                )
-
-        # Check if the other user has already sent a request
-        reverse_request = FriendRequest.query.filter_by(
-            requester_id=friend.id, recipient_id=user.id
-        ).first()
-
-        if reverse_request and reverse_request.status == "pending":
-            # Accept the reverse request automatically
-            reverse_request.status = "accepted"
-            db.session.add(reverse_request)
-
-            # Create a single friendship record representing
-            # the bidirectional relationship
-            friendship = Friendship.create_friendship(user.id, friend.id)
-            db.session.add(friendship)
-            db.session.commit()
-
-            return jsonify(
-                {
-                    "success": True,
-                    "message": "Friend request accepted. You are now friends.",
-                }
-            )
-
-        # Create a new friend request
-        friend_request = FriendRequest(
-            requester_id=user.id, recipient_id=friend.id, status="pending"
-        )
-        db.session.add(friend_request)
-        db.session.commit()
+        return jsonify({"success": True, "message": message}), status_code
     except Exception:
         db.session.rollback()
         _logger.exception("Error sending friend request")
         return (
             jsonify({"success": False, "error": "Error sending friend request."}),
             500,
-        )
-    else:
-        return jsonify(
-            {"success": True, "message": "Friend request sent successfully."}
         )
 
 
@@ -243,40 +156,14 @@ def respond_to_friend_request(request_id):
         )
 
     try:
-        # Find the friend request
-        friend_request = FriendRequest.query.filter_by(
-            id=request_id, recipient_id=user.id, status="pending"
-        ).first()
+        success, message, status_code = respond_to_friend_request_service(
+            user, request_id, action
+        )
 
-        if not friend_request:
-            return (
-                jsonify({"success": False, "error": "Friend request not found."}),
-                404,
-            )
+        if not success:
+            return jsonify({"success": False, "error": message}), status_code
 
-        if action == "accept":
-            # Update the request status
-            friend_request.status = "accepted"
-            db.session.add(friend_request)
-
-            # Create a single friendship record representing
-            # the bidirectional relationship
-            friendship = Friendship.create_friendship(
-                user.id, friend_request.requester_id
-            )
-            db.session.add(friendship)
-            db.session.commit()
-
-            return jsonify(
-                {
-                    "success": True,
-                    "message": "Friend request accepted. You are now friends.",
-                }
-            )
-        # reject
-        friend_request.status = "rejected"
-        db.session.add(friend_request)
-        db.session.commit()
+        return jsonify({"success": True, "message": message}), status_code
 
     except Exception:
         db.session.rollback()
@@ -285,8 +172,6 @@ def respond_to_friend_request(request_id):
             jsonify({"success": False, "error": "Error responding to friend request."}),
             500,
         )
-    else:
-        return jsonify({"success": True, "message": "Friend request rejected."})
 
 
 @friend_api.route("/list", methods=["GET"])
