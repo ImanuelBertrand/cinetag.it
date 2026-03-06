@@ -4,6 +4,7 @@ devenv/docker-config.yaml
 venv
 instance
 app/static/dist
+app/static/vendor
 app/static/.webassets-cache
 app/logs
 *.pem

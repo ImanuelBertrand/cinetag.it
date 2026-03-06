@@ -211,7 +211,9 @@ def add_missing_notifications(
                 continue
 
             scheduled_date = region_info.release_date - timedelta(days=days_val)
-            scheduled_date = datetime.combine(scheduled_date, datetime.min.time())
+            scheduled_date = datetime.combine(
+                scheduled_date, datetime.min.time(), tzinfo=UTC
+            )
             if scheduled_date < scheduled_at_threshold:
                 continue
             if (user_movie.movie_id, day) not in user_notification_dict:

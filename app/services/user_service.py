@@ -483,7 +483,7 @@ def fetch_user_events(
 
         start_datetime = datetime.combine(region_info.release_date, datetime.min.time())
 
-        movie = Movie.query.get(user_movie.movie_id)
+        movie = db.session.get(User, user_movie.movie_id)
 
         events.append(
             {
