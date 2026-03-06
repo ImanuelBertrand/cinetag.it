@@ -117,9 +117,7 @@ def test_queue_confirmation_mail_rate_limit(app) -> None:
         mock_mail.sent_at = now - timedelta(seconds=10)  # Recent mail
 
         with (
-            patch(
-                "app.services.user_service.SentConfMails.query"
-            ) as mock_sent_query,
+            patch("app.services.user_service.SentConfMails.query") as mock_sent_query,
         ):
             mock_sent_query.filter.return_value.delete.return_value = 0
             mock_sent_query.filter_by.return_value.all.return_value = [mock_mail]

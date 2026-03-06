@@ -141,9 +141,7 @@ def test_review_movie_no_user(client, app) -> None:
 def test_get_user_events_no_user(client, app) -> None:
     """Test GET /user/events returns 404 when no user."""
     with patch("app.routes.api.get_current_user", return_value=None):
-        response = client.get(
-            "/api/user/events?start=2025-01-01&end=2025-12-31"
-        )
+        response = client.get("/api/user/events?start=2025-01-01&end=2025-12-31")
 
     assert response.status_code == 404
 

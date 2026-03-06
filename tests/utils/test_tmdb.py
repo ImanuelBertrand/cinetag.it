@@ -46,6 +46,7 @@ def test_get_tmdb_api_token_from_config(app) -> None:
         with patch.dict("os.environ", {}, clear=False):
             # Remove TMDB_API_KEY from environment if set
             import os
+
             env_token = os.environ.pop("TMDB_API_KEY", None)
             try:
                 token = get_tmdb_api_token()
@@ -60,6 +61,7 @@ def test_get_tmdb_api_token_missing(app) -> None:
     with app.app_context():
         app.config["TMDB_API_KEY"] = None
         import os
+
         env_token = os.environ.pop("TMDB_API_KEY", None)
         try:
             with pytest.raises(TMDbAPIError, match="not configured"):

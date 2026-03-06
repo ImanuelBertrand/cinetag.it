@@ -164,7 +164,9 @@ def test_generate_new_tokens_with_old_jti_revocation(app, test_user) -> None:
         old_jti = token_entry.jti
 
         # Generate new tokens with rotation
-        new_access, new_refresh = generate_new_tokens(user.id, old_jti_to_revoke=old_jti)
+        new_access, new_refresh = generate_new_tokens(
+            user.id, old_jti_to_revoke=old_jti
+        )
 
         assert new_access is not None
         assert new_refresh is not None

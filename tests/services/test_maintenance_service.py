@@ -22,7 +22,9 @@ def _create_old_guest(app, days_old: int = 20) -> int:
         db.session.flush()
         # Manually set timestamps to simulate an old user
         db.session.execute(
-            db.text("UPDATE users SET created_at = :ts, updated_at = :ts WHERE id = :id"),
+            db.text(
+                "UPDATE users SET created_at = :ts, updated_at = :ts WHERE id = :id"
+            ),
             {"ts": cutoff, "id": guest.id},
         )
         db.session.commit()

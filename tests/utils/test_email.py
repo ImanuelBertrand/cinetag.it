@@ -66,9 +66,7 @@ def test_send_email_with_list_recipients(app) -> None:
         app.config["MAIL_DEFAULT_SENDER"] = "noreply@example.com"
 
         with patch("app.utils.email.mail") as mock_mail:
-            result = send_email(
-                ["a@example.com", "b@example.com"], "Subject", "Body"
-            )
+            result = send_email(["a@example.com", "b@example.com"], "Subject", "Body")
 
         assert result is True
         call_args = mock_mail.send.call_args[0][0]
@@ -94,9 +92,7 @@ def test_generate_confirmation_token(app, email_user) -> None:
         token = generate_confirmation_token(user)
 
         assert isinstance(token, str)
-        payload = jwt.decode(
-            token, app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         assert payload["confirmation"] == user.id
         assert payload["new_mail"] == user.new_email
 
@@ -139,9 +135,7 @@ def test_generate_password_reset_token(app, email_user) -> None:
         token = generate_password_reset_token(user)
 
         assert isinstance(token, str)
-        payload = jwt.decode(
-            token, app.config["SECRET_KEY"], algorithms=["HS256"]
-        )
+        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
         assert payload["reset_password"] == user.id
         assert "token" in payload
         assert user.password_reset_token is not None
