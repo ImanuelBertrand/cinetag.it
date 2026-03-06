@@ -18,7 +18,7 @@ def api_user(app):
     with app.app_context():
         hashed_pw = bcrypt.generate_password_hash("password123").decode("utf-8")
         user = User(
-            name="API User",
+            display_name="API User",
             email="api_user@example.com",
             password=hashed_pw,
             region="US",

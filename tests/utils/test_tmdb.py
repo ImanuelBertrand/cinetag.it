@@ -110,7 +110,7 @@ def test_fetch_upcoming_movies_cache_miss(app) -> None:
 def test_fetch_genre_list(app) -> None:
     """Test fetch_genre_list returns genres from the API."""
     with app.app_context():
-        genres_response = {"genres": [{"id": 28, "name": "Action"}]}
+        genres_response = {"genres": [{"id": 28, "display_name": "Action"}]}
 
         with patch("app.utils.tmdb.cache") as mock_cache:
             mock_cache.get.return_value = genres_response
@@ -119,7 +119,7 @@ def test_fetch_genre_list(app) -> None:
 
         assert len(result) == 1
         assert result[0]["id"] == 28
-        assert result[0]["name"] == "Action"
+        assert result[0]["display_name"] == "Action"
 
 
 def test_get_raises_tmdb_api_error_on_non_200(app) -> None:

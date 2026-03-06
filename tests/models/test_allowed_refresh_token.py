@@ -11,7 +11,7 @@ from app.models.user import User
 def test_allowed_refresh_user(app):
     """Create a user for AllowedRefreshToken tests."""
     with app.app_context():
-        user = User(name="Token Test User", email="token_test@example.com")
+        user = User(display_name="Token Test User", email="token_test@example.com")
         db.session.add(user)
         db.session.commit()
         user_id = user.id

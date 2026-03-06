@@ -4,9 +4,9 @@ from app.services.user_service import get_movies_based_on_filter
 
 
 def test_name_filter_with_pagination(app, test_user, test_movies) -> None:
-    """Test that name filter works correctly with pagination."""
+    """Test that display_name filter works correctly with pagination."""
     with app.app_context():
-        # Test case 1: First page with name filter
+        # Test case 1: First page with display_name filter
         result = get_movies_based_on_filter(
             user=test_user,
             mode="all",
@@ -19,7 +19,7 @@ def test_name_filter_with_pagination(app, test_user, test_movies) -> None:
         assert all("Star" in movie["title"] for movie in result["movies"])
         assert result["has_more"] is True  # Should have more pages
 
-        # Test case 2: Pagination with name filter
+        # Test case 2: Pagination with display_name filter
         # Get next page using pagination parameters from first result
         next_result = get_movies_based_on_filter(
             user=test_user,
@@ -45,7 +45,7 @@ def test_name_filter_with_pagination(app, test_user, test_movies) -> None:
 
 
 def test_name_filter_with_other_filters(app, test_user, test_movies) -> None:
-    """Test that name filter works correctly with other filters."""
+    """Test that display_name filter works correctly with other filters."""
     with app.app_context():
         # Test with mode filter
         approved_result = get_movies_based_on_filter(

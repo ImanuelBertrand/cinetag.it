@@ -14,17 +14,17 @@ def test_fetch_new_languages(app) -> None:
     with app.app_context():
         # Mock the API response
         mock_languages = [
-            {"iso_639_1": "en", "english_name": "English", "name": "English"},
-            {"iso_639_1": "fr", "english_name": "French", "name": "Français"},
-            {"iso_639_1": "es", "english_name": "Spanish", "name": "Español"},
+            {"iso_639_1": "en", "english_name": "English", "display_name": "English"},
+            {"iso_639_1": "fr", "english_name": "French", "display_name": "Français"},
+            {"iso_639_1": "es", "english_name": "Spanish", "display_name": "Español"},
         ]
 
         # Mock the database query result
         mock_db_languages = [
-            MagicMock(code="en", english_name="English", name="English"),
+            MagicMock(code="en", english_name="English", display_name="English"),
             # fr is missing from DB to test creation
             # Add a language that's not in the API response to test deletion
-            MagicMock(code="de", english_name="German", name="Deutsch"),
+            MagicMock(code="de", english_name="German", display_name="Deutsch"),
         ]
 
         # Set up the mocks
@@ -202,13 +202,13 @@ def test_sort_objects(app) -> None:
     with app.app_context():
         # Create test objects
         class TestObject:
-            def __init__(self, code, name) -> None:
+            def __init__(self, code, display_name) -> None:
                 self.code = code
-                self.name = name
+                self.display_name = display_name
                 self.sort_order = None
 
             def get_name(self):
-                return self.name
+                return self.display_name
 
         objects = [
             TestObject("en", "English"),

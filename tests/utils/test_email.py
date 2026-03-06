@@ -20,7 +20,7 @@ def email_user(app):
     """Create a test user for email tests."""
     with app.app_context():
         user = User(
-            name="Email Test User",
+            display_name="Email Test User",
             email="emailtest@example.com",
             new_email="new_email@example.com",
         )
@@ -45,7 +45,7 @@ def test_send_email_success(app, email_user) -> None:
 
 
 def test_send_email_with_sender_name(app) -> None:
-    """Test send_email uses sender name when configured."""
+    """Test send_email uses sender display_name when configured."""
     with app.app_context():
         app.config["MAIL_DEFAULT_SENDER"] = "noreply@example.com"
         app.config["MAIL_DEFAULT_SENDER_NAME"] = "CineTagIt"
@@ -54,7 +54,7 @@ def test_send_email_with_sender_name(app) -> None:
             result = send_email("recipient@example.com", "Test Subject", "Test body")
 
         assert result is True
-        # Verify sender contains both name and email
+        # Verify sender contains both display_name and email
         call_args = mock_mail.send.call_args[0][0]
         assert "CineTagIt" in str(call_args.sender)
         assert "noreply@example.com" in str(call_args.sender)
@@ -100,7 +100,7 @@ def test_generate_confirmation_token(app, email_user) -> None:
 def test_send_confirmation_email_no_new_email(app) -> None:
     """Test send_confirmation_email logs error when user has no new_email."""
     with app.app_context():
-        user = User(name="No Email User", email="noemail@example.com")
+        user = User(display_name="No Email User", email="noemail@example.com")
         db.session.add(user)
         db.session.commit()
 

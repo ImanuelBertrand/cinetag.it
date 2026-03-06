@@ -23,7 +23,7 @@ def registered_user(app):
     with app.app_context():
         hashed_pw = bcrypt.generate_password_hash("password123").decode("utf-8")
         user = User(
-            name="Test User",
+            display_name="Test User",
             email="testuser@example.com",
             password=hashed_pw,
             region="US",
@@ -92,7 +92,7 @@ def test_get_region_flag_non_alpha(app) -> None:
 def test_queue_confirmation_mail_success(app) -> None:
     """Test queue_confirmation_mail queues an email successfully."""
     with app.app_context():
-        user = User(name="Queued User", new_email="queue@example.com")
+        user = User(display_name="Queued User", new_email="queue@example.com")
         db.session.add(user)
         db.session.commit()
 
@@ -105,7 +105,9 @@ def test_queue_confirmation_mail_rate_limit(app) -> None:
     """Test queue_confirmation_mail raises UserFeedbackError when rate limited."""
 
     with app.app_context():
-        user = User(name="Rate Limited User", new_email="ratelimited@example.com")
+        user = User(
+            display_name="Rate Limited User", new_email="ratelimited@example.com"
+        )
         db.session.add(user)
         db.session.commit()
 
@@ -129,7 +131,7 @@ def user_with_movies(app):
     """Create a user with approved movies for event fetching tests."""
     with app.app_context():
         user = User(
-            name="Event User",
+            display_name="Event User",
             email="events@example.com",
             region="US",
             language="en",

@@ -24,7 +24,7 @@ def notification_user(app):
     """Create a user for notification tests."""
     with app.app_context():
         user = User(
-            name="Notif User",
+            display_name="Notif User",
             email="notif@example.com",
             region="US",
             language="en",

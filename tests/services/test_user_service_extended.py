@@ -4,7 +4,7 @@ import jwt
 import pytest
 from flask import current_app
 
-from app.exceptions import UserFeedbackError
+from app.errors import UserFeedbackError
 from app.extensions import db
 from app.models.movie import Movie
 from app.services.user_service import (

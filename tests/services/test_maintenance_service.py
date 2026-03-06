@@ -15,7 +15,7 @@ def _create_old_guest(app, days_old: int = 20) -> int:
     """Create a guest user older than the retention window."""
     with app.app_context():
         cutoff = datetime.now(UTC) - timedelta(days=days_old)
-        guest = User(name=None, email=None, password=None)
+        guest = User(display_name=None, email=None, password=None)
         db.session.add(guest)
         db.session.flush()
         # Manually set timestamps to simulate an old user
@@ -57,7 +57,7 @@ def test_purge_abandoned_guests_keeps_new_users(app) -> None:
     """Test purge_abandoned_guests does not delete recently created guests."""
     with app.app_context():
         # Create a recent guest (less than retention_days old)
-        recent_guest = User(name=None, email=None, password=None)
+        recent_guest = User(display_name=None, email=None, password=None)
         db.session.add(recent_guest)
         db.session.commit()
         recent_id = recent_guest.id
@@ -71,7 +71,7 @@ def test_purge_abandoned_guests_keeps_users_with_email(app) -> None:
     """Test purge_abandoned_guests does not delete users with emails."""
     with app.app_context():
         # Create a user with email (not a pure guest)
-        user = User(name="Registered", email="registered@example.com")
+        user = User(display_name="Registered", email="registered@example.com")
         db.session.add(user)
         db.session.commit()
         user_id = user.id
@@ -172,7 +172,7 @@ def test_purge_inactive_empty_guests_keeps_users_with_calendars(app) -> None:
 def test_purge_inactive_empty_guests_keeps_new_users(app) -> None:
     """Test purge_inactive_empty_guests_with_tokens keeps recently created guests."""
     with app.app_context():
-        recent_guest = User(name=None, email=None, password=None)
+        recent_guest = User(display_name=None, email=None, password=None)
         db.session.add(recent_guest)
         db.session.commit()
         recent_id = recent_guest.id

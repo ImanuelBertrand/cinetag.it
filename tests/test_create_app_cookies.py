@@ -1,5 +1,11 @@
+from typing import Any
+
 from flask import g
 from flask_jwt_extended import create_access_token, create_refresh_token
+
+
+class TestingError(Exception):
+    __test__ = False
 
 
 def test_unset_cookies_when_clear_flag(app):
@@ -47,8 +53,8 @@ def test_after_request_exception_handling(app, monkeypatch):
         # Mock set_access_cookies to raise an exception
         import flask_jwt_extended
 
-        def mock_set_access_cookies(*a, **k):
-            raise Exception("test exception")
+        def mock_set_access_cookies(*a: Any, **k: Any):
+            raise TestingError("test exception")
 
         monkeypatch.setattr(
             flask_jwt_extended,
