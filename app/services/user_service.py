@@ -221,15 +221,14 @@ def _build_movies_query(
 
         _logger.debug("Applied friend filter for friend_id=%s", friend_id)
 
-        query = query.outerjoin(
+        query = query.join(
             friend_user_movie_alias,
             db.and_(
                 friend_user_movie_alias.movie_id == Movie.id,
                 friend_user_movie_alias.user_id == friend_id,
+                friend_user_movie_alias.decision == "approve",
             ),
         )
-        # Only show movies that the friend has approved
-        return query.filter(friend_user_movie_alias.decision == "approve")
 
     if mode == "all":
         return query

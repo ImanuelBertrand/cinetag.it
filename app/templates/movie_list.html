@@ -25,6 +25,16 @@
         <div class="filter-group">
             <input type="text" id="name-filter" placeholder="Filter by name..." class="form-control">
         </div>
+        {% if friends %}
+        <div class="filter-group">
+            <select id="friend-filter-select" class="form-control">
+                <option value="">Filter by friend...</option>
+                {% for friend in friends %}
+                <option value="{{ friend.id }}">{{ friend.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
     </div>
 
     <style>

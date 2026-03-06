@@ -63,6 +63,26 @@ CineTagIt.Movies = {
         }, 500); // 500ms delay
       });
     }
+
+    const friendFilterSelect = document.getElementById("friend-filter-select");
+    if (friendFilterSelect) {
+      if (friendId) {
+        friendFilterSelect.value = friendId;
+      }
+
+      friendFilterSelect.addEventListener("change", (event) => {
+        const selectedFriendId = event.target.value;
+        const url = new URL(window.location);
+
+        if (selectedFriendId) {
+          url.searchParams.set("friend_id", selectedFriendId);
+        } else {
+          url.searchParams.delete("friend_id");
+        }
+
+        window.location.href = url.toString();
+      });
+    }
   },
 
   /**

@@ -22,6 +22,7 @@ from flask_jwt_extended import (
 
 from app.errors import UserFeedbackError
 from app.extensions import bcrypt, db
+from app.models.friendship import Friendship
 from app.models.movie import Movie
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification_channel import NotificationChannel
@@ -684,7 +685,13 @@ def get_movies(filter_mode):
         flash("Invalid filter mode.", "danger")
         return redirect(url_for("html.profile"))
 
-    return render_template("movie_list.html", filter_mode=filter_mode)
+    # Get the user's friends for the filter
+    friends = []
+    user = get_current_user()
+    if user:
+        friends = Friendship.get_friends_with_details(user.id)
+
+    return render_template("movie_list.html", filter_mode=filter_mode, friends=friends)
 
 
 @html.route("/movie/<int:movie_id>", methods=["GET"])
