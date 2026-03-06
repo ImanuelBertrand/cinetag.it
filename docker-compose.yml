@@ -14,9 +14,11 @@ services:
       - cinetagit_network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinetagit} -d ${POSTGRES_DB:-cinetagit_db}" ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
+      start_interval: 1s
 
   redis:
     image: redis:8-alpine
@@ -33,12 +35,16 @@ services:
       - cinetagit_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 2s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
     image: ghcr.io/imanuelbertrand/cinetag.it:latest
     container_name: cinetagit_app
     restart: always
@@ -69,10 +75,15 @@ services:
       - CACHE_REDIS_URL=redis://redis:6379/0
       - CACHE_DEFAULT_TIMEOUT=${CACHE_DEFAULT_TIMEOUT:-300}
       - INSTANCE_PATH=/app/instance
+      - HTTPS_PROXY=http://squid:3128
+      - HTTP_PROXY=http://squid:3128
+      - NO_PROXY=db,redis,nginx,localhost,127.0.0.1
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      squid:
         condition: service_healthy
     volumes:
       - ./data/storage:/app/storage
@@ -80,10 +91,29 @@ services:
     networks:
       - cinetagit_network
 
+  squid:
+    image: ubuntu/squid:6.13-25.04_beta
+    container_name: cinetagit_squid
+    restart: always
+    volumes:
+      - ./docker/squid/squid-prod.conf:/etc/squid/squid.conf:ro
+    networks:
+      - cinetagit_network
+      - cinetagit_external
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/3128'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
+
   nginx:
-    build: 
+    build:
       context: .
-      dockerfile: Dockerfile.nginx # Replace with your actual Nginx Dockerfile name    image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
+      dockerfile: docker/Dockerfile
+      target: nginx
+    image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
     container_name: cinetagit_nginx
     restart: always
     ports:
@@ -94,7 +124,11 @@ services:
       - web
     networks:
       - cinetagit_network
+      - cinetagit_external
 
 networks:
   cinetagit_network:
+    driver: bridge
+    internal: true
+  cinetagit_external:
     driver: bridge

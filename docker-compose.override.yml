@@ -1,4 +1,8 @@
 services:
+  squid:
+    volumes:
+      - ./docker/squid/squid-dev.conf:/etc/squid/squid.conf:ro
+
   mailhog:
     image: mailhog/mailhog:latest
     container_name: cinetagit_mailhog
@@ -9,6 +13,14 @@ services:
       - cinetagit_network
 
   web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    volumes:
+      - .:/app
+      - ./docker/.claude.json:/home/appuser/.claude.json
+      - ./docker/.claude/:/home/appuser/.claude/
     environment:
       - MAIL_SERVER=mailhog
       - MAIL_PORT=1025
@@ -17,5 +29,6 @@ services:
       - SERVER_NAME=${SERVER_NAME:-localhost:8000}
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-http}
       - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-noreply@cinetag.it}
+      - NO_PROXY=db,redis,nginx,mailhog,localhost,127.0.0.1
     depends_on:
       - mailhog

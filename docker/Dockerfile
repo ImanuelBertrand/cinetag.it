@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 3. Enable bytecode compilation for faster startups
 ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
+ENV UV_PROJECT_ENVIRONMENT=/venv
+ENV PATH="/venv/bin:$PATH"
 
 # 4. Copy only the lock and project files first
 COPY uv.lock pyproject.toml package.json package-lock.json* ./
@@ -34,15 +36,15 @@ RUN uv sync --frozen --no-dev
 # 8. Precompile assets
 # Use TestingConfig to avoid needing a real DB/Redis during build
 ENV FLASK_APP="app.create_app:create_app('testing')"
-RUN .venv/bin/python -m flask build-assets
+RUN python -m flask build-assets
 
 # Copy fullcalendar files to static directory
 RUN mkdir -p app/static/vendor/fullcalendar && \
     cp node_modules/fullcalendar/index.global.min.js app/static/vendor/fullcalendar/ && \
     cp -r node_modules/@fullcalendar/core/locales app/static/vendor/fullcalendar/
 
-# --- Final Runtime Stage ---
-FROM python:3.14-slim
+# --- Production Stage ---
+FROM python:3.14-slim AS production
 
 LABEL org.opencontainers.image.title="CineTagIt"
 LABEL org.opencontainers.image.description="Never miss a movie again!"
@@ -52,7 +54,7 @@ LABEL org.opencontainers.image.url="https://github.com/ImanuelBertrand/cinetag.i
 WORKDIR /app
 
 # Copy the virtual environment from the builder
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /venv /venv
 
 # Copy your application code
 COPY . .
@@ -63,11 +65,47 @@ COPY --from=builder /app/app/static/dist /app/app/static/dist
 COPY --from=builder /app/app/static/vendor /app/app/static/vendor
 
 # Place the virtual env on the PATH so 'python' and 'gunicorn' work automatically
-ENV PATH="/app/.venv/bin:$PATH"
+ENV UV_PROJECT_ENVIRONMENT=/venv
+ENV PATH="/venv/bin:$PATH"
 
 # Copy the entrypoint script
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+COPY docker/entrypoint.sh docker/entrypoint.sh
+RUN chmod +x docker/entrypoint.sh
 
 # Use the script to start the container
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./docker/entrypoint.sh"]
+
+# --- Nginx Stage ---
+FROM nginx:alpine AS nginx
+
+COPY --from=builder /app/app/static/dist    /usr/share/nginx/html/static/dist
+COPY --from=builder /app/app/static/vendor  /usr/share/nginx/html/static/vendor
+COPY --from=builder /app/app/static/img     /usr/share/nginx/html/static/img
+COPY --from=builder /app/app/static/js      /usr/share/nginx/html/static/js
+RUN mkdir -p /usr/share/nginx/html/posters
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+
+# --- Development Stage ---
+FROM production AS development
+
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+RUN uv sync --frozen
+
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create group (gid 1001) and user (uid 1000) matching typical host IDs
+RUN groupadd -g 1001 appgroup && \
+    useradd -u 1000 -g 1001 -m appuser
+
+RUN chown -R appuser:appgroup /venv
+
+# Install Claude Code as appuser so it lands in /home/appuser/.local/bin
+RUN su - appuser -c "curl -fsSL https://claude.ai/install.sh | bash"
+
+ENV PATH="/home/appuser/.local/bin:$PATH"
+ENV FLASK_ENV=development
+
+USER appuser
