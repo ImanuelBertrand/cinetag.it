@@ -33,10 +33,12 @@ def test_get_tmdb_url(app) -> None:
 
 def test_get_tmdb_api_token_from_env(app) -> None:
     """Test get_tmdb_api_token retrieves token from environment variable."""
-    with app.app_context():
-        with patch.dict("os.environ", {"TMDB_API_KEY": "env-test-token"}):
-            token = get_tmdb_api_token()
-            assert token == "env-test-token"
+    with (
+        app.app_context(),
+        patch.dict("os.environ", {"TMDB_API_KEY": "env-test-token"}),
+    ):
+        token = get_tmdb_api_token()
+        assert token == "env-test-token"  # noqa: S105
 
 
 def test_get_tmdb_api_token_from_config(app) -> None:
@@ -50,7 +52,7 @@ def test_get_tmdb_api_token_from_config(app) -> None:
             env_token = os.environ.pop("TMDB_API_KEY", None)
             try:
                 token = get_tmdb_api_token()
-                assert token == "config-test-token"
+                assert token == "config-test-token"  # noqa: S105
             finally:
                 if env_token:
                     os.environ["TMDB_API_KEY"] = env_token
@@ -134,9 +136,9 @@ def test_get_raises_tmdb_api_error_on_non_200(app) -> None:
         with (
             patch("requests.get", return_value=mock_response),
             patch.dict("os.environ", {"TMDB_API_KEY": "test-key"}),
+            pytest.raises(TMDbAPIError),
         ):
-            with pytest.raises(TMDbAPIError):
-                _get("movie/99999")
+            _get("movie/99999")
 
 
 def test_fetch_changed_movies_converts_dates(app) -> None:

@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import jwt
 import pytest
@@ -118,9 +118,11 @@ def test_send_confirmation_email_sends(app, email_user) -> None:
         app.config["PREFERRED_URL_SCHEME"] = "http"
         user = db.session.get(User, email_user.id)
 
-        with app.test_request_context():
-            with patch("app.utils.email.send_email") as mock_send:
-                send_confirmation_email(user)
+        with (
+            app.test_request_context(),
+            patch("app.utils.email.send_email") as mock_send,
+        ):
+            send_confirmation_email(user)
 
         mock_send.assert_called_once()
         call_args = mock_send.call_args
@@ -148,9 +150,11 @@ def test_send_password_reset_email(app, email_user) -> None:
         app.config["PREFERRED_URL_SCHEME"] = "http"
         user = db.session.get(User, email_user.id)
 
-        with app.test_request_context():
-            with patch("app.utils.email.send_email") as mock_send:
-                send_password_reset_email(user)
+        with (
+            app.test_request_context(),
+            patch("app.utils.email.send_email") as mock_send,
+        ):
+            send_password_reset_email(user)
 
         mock_send.assert_called_once()
         call_args = mock_send.call_args

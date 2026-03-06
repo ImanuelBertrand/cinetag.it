@@ -2,7 +2,6 @@ from app.extensions import db
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 
-
 # TmdbLanguage tests
 
 

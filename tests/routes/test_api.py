@@ -62,7 +62,7 @@ def api_movie(app, api_user):
         db.session.rollback()
 
 
-def _login(client, email="api_user@example.com", password="password123"):
+def _login(client, email="api_user@example.com", password="password123"):  # noqa: S107
     """Helper to log in a test user and return the client."""
     client.post("/login", data={"email": email, "password": password})
     return client

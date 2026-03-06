@@ -1,5 +1,4 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
 
 import jwt
 import pytest
@@ -54,23 +53,26 @@ def test_decode_refresh_token_invalid_secret(app) -> None:
 
 def test_validate_refresh_identity_and_jti_no_identity(app) -> None:
     """Test _validate_refresh_identity_and_jti raises when identity is missing."""
-    with app.app_context():
-        with pytest.raises(jwt.InvalidTokenError, match="missing 'sub' claim"):
-            _validate_refresh_identity_and_jti(None, "some-jti")
+    with (
+        app.app_context(),
+        pytest.raises(jwt.InvalidTokenError, match="missing 'sub' claim"),
+    ):
+        _validate_refresh_identity_and_jti(None, "some-jti")
 
 
 def test_validate_refresh_identity_and_jti_no_jti(app) -> None:
     """Test _validate_refresh_identity_and_jti raises when jti is missing."""
-    with app.app_context():
-        with pytest.raises(jwt.InvalidTokenError, match="missing 'jti' claim"):
-            _validate_refresh_identity_and_jti("1", None)
+    with (
+        app.app_context(),
+        pytest.raises(jwt.InvalidTokenError, match="missing 'jti' claim"),
+    ):
+        _validate_refresh_identity_and_jti("1", None)
 
 
 def test_validate_refresh_identity_and_jti_not_in_allowlist(app) -> None:
     """Test _validate_refresh_identity_and_jti raises when JTI not in allowlist."""
-    with app.app_context():
-        with pytest.raises(jwt.InvalidTokenError, match="not allowed"):
-            _validate_refresh_identity_and_jti("1", "nonexistent-jti")
+    with app.app_context(), pytest.raises(jwt.InvalidTokenError, match="not allowed"):
+        _validate_refresh_identity_and_jti("1", "nonexistent-jti")
 
 
 def test_validate_refresh_identity_and_jti_valid(app, test_user) -> None:
@@ -117,9 +119,8 @@ def test_verify_refresh_token_expired(app, test_user) -> None:
 
 def test_verify_refresh_token_invalid(app) -> None:
     """Test verify_refresh_token_and_get_identity raises for bad token."""
-    with app.app_context():
-        with pytest.raises(jwt.InvalidTokenError):
-            verify_refresh_token_and_get_identity("this.is.not.a.valid.token")
+    with app.app_context(), pytest.raises(jwt.InvalidTokenError):
+        verify_refresh_token_and_get_identity("this.is.not.a.valid.token")
 
 
 def test_create_temporary_user(app) -> None:

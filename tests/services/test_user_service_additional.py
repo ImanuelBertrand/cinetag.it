@@ -103,15 +103,13 @@ def test_queue_confirmation_mail_success(app) -> None:
 
 def test_queue_confirmation_mail_rate_limit(app) -> None:
     """Test queue_confirmation_mail raises UserFeedbackError when rate limited."""
-    from unittest.mock import MagicMock
 
     with app.app_context():
         user = User(name="Rate Limited User", new_email="ratelimited@example.com")
         db.session.add(user)
         db.session.commit()
 
-        # Mock SentConfMails.query to return a recent mail with timezone-aware sent_at,
-        # avoiding timezone mismatch between SQLite (naive) and datetime.now(UTC) (aware)
+        # Mock SentConfMails.query to return a recent mail with timezone-aware sent_at
         now = datetime.now(UTC)
         mock_mail = MagicMock()
         mock_mail.sent_at = now - timedelta(seconds=10)  # Recent mail

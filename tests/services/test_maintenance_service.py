@@ -1,7 +1,5 @@
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from app.extensions import db
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.user import User
