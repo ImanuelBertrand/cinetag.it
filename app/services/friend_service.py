@@ -35,12 +35,15 @@ def send_friend_request_service(user: User, friend_code: str):
     if existing_request:
         if existing_request.status == "pending":
             return False, "Friend request already sent.", 400
-        if existing_request.status == "rejected":
-            # Update the existing request to pending
-            existing_request.status = "pending"
-            db.session.add(existing_request)
-            db.session.commit()
-            return True, "Friend request sent successfully.", 200
+
+        # If the request was rejected or accepted (though it should be deleted now),
+        # we can just delete it and create a new one, or just update it to pending.
+        # Accepted/rejected requests should be deleted, but for robustness,
+        # we handle any non-pending existing request by resetting it.
+        existing_request.status = "pending"
+        db.session.add(existing_request)
+        db.session.commit()
+        return True, "Friend request sent successfully.", 200
 
     # Check if the other user has already sent a request (incoming)
     reverse_request = FriendRequest.query.filter_by(
@@ -48,9 +51,8 @@ def send_friend_request_service(user: User, friend_code: str):
     ).first()
 
     if reverse_request and reverse_request.status == "pending":
-        # Accept the reverse request automatically
-        reverse_request.status = "accepted"
-        db.session.add(reverse_request)
+        # Delete the reverse request as it's now fulfilled
+        db.session.delete(reverse_request)
 
         # Create a single friendship record representing the bidirectional relationship
         friendship = Friendship.create_friendship(user.id, friend.id)
@@ -83,9 +85,8 @@ def respond_to_friend_request_service(user: User, request_id: int, action: str):
         return False, "Friend request not found.", 404
 
     if action == "accept":
-        # Update the request status
-        friend_request.status = "accepted"
-        db.session.add(friend_request)
+        # Delete the request as it's now fulfilled
+        db.session.delete(friend_request)
 
         # Create a single friendship record representing the bidirectional relationship
         friendship = Friendship.create_friendship(user.id, friend_request.requester_id)
@@ -95,8 +96,7 @@ def respond_to_friend_request_service(user: User, request_id: int, action: str):
         return True, "Friend request accepted. You are now friends.", 200
 
     # If action is "reject"
-    friend_request.status = "rejected"
-    db.session.add(friend_request)
+    db.session.delete(friend_request)
     db.session.commit()
 
     return True, "Friend request rejected.", 200

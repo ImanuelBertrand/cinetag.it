@@ -136,10 +136,62 @@ def test_friend_request_flow(client, app):
         assert response.status_code == 200
         assert response.get_json()["success"] is True
 
-    # 4. Verify friendship exists
+    # 4. Verify friendship exists and request is deleted
     with app.app_context():
+        from app.models.friend_request import FriendRequest
+
         friendship = Friendship.get_friendship(u1_id, u2_id)
         assert friendship is not None
+        request = FriendRequest.query.filter_by(
+            requester_id=u1_id, recipient_id=u2_id
+        ).first()
+        assert request is None
+
+    # 5. User 1 removes friend
+    with (
+        patch("app.routes.friend_api.get_current_user") as mock_get_user,
+        app.app_context(),
+    ):
+        u1 = db.session.get(User, u1_id)
+        mock_get_user.return_value = u1
+        response = client.delete(f"/api/friends/{u2_id}")
+        assert response.status_code == 200
+
+    # 6. User 1 sends request again (should work now)
+    with (
+        patch("app.routes.friend_api.get_current_user") as mock_get_user,
+        app.app_context(),
+    ):
+        u1 = db.session.get(User, u1_id)
+        mock_get_user.return_value = u1
+        response = client.post("/api/friends/request", json={"friend_code": code2})
+        assert response.status_code == 200
+        assert response.get_json()["success"] is True
+
+    # 7. User 2 rejects request
+    with (
+        patch("app.routes.friend_api.get_current_user") as mock_get_user,
+        app.app_context(),
+    ):
+        u2 = db.session.get(User, u2_id)
+        mock_get_user.return_value = u2
+        response = client.get("/api/friends/requests")
+        request_id = response.get_json()["requests"][0]["id"]
+        response = client.post(
+            f"/api/friends/requests/{request_id}/respond", json={"action": "reject"}
+        )
+        assert response.status_code == 200
+
+    # 8. Verify request is deleted and User 1 can send again
+    with (
+        patch("app.routes.friend_api.get_current_user") as mock_get_user,
+        app.app_context(),
+    ):
+        u1 = db.session.get(User, u1_id)
+        mock_get_user.return_value = u1
+        response = client.post("/api/friends/request", json={"friend_code": code2})
+        assert response.status_code == 200
+        assert response.get_json()["success"] is True
 
 
 def test_remove_friend(client, app):
