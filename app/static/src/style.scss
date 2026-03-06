@@ -728,6 +728,26 @@ ul.release-list li {
 /* Friend Requests Styles */
 .request-card {
   border-left: 4px solid $neon-blue;
+
+  &.sent {
+    border-left: 4px solid $steel-gray;
+  }
+}
+
+.request-type {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  margin-bottom: 2px;
+  display: block;
+
+  &.received {
+    color: $neon-blue;
+  }
+
+  &.sent {
+    color: $steel-gray;
+  }
 }
 
 /* Add Friend Styles */

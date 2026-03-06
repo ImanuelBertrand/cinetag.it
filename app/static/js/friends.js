@@ -155,11 +155,11 @@ function renderFriendRequests(requests) {
       const isReceived = request.type === "received";
 
       return `
-            <div class="request-card" data-request-id="${request.id}">
+            <div class="request-card ${request.type}" data-request-id="${request.id}">
                 <div class="friend-avatar">${initials}</div>
                 <div class="request-info">
+                    <span class="request-type ${request.type}">${isReceived ? "Received" : "Sent"}</span>
                     <div class="friend-name">${request.display_name || "User"}</div>
-                    <div class="request-type text-muted small">${isReceived ? "Received" : "Sent"}</div>
                     <div class="request-date">Requested on ${formatDate(request.created_at)}</div>
                 </div>
                 <div class="request-actions">
@@ -170,7 +170,7 @@ function renderFriendRequests(requests) {
                         <button class="reject-request-btn" data-request-id="${request.id}">Reject</button>
                     `
                         : `
-                        <button class="cancel-request-btn" data-request-id="${request.id}">Cancel</button>
+                        <button class="cancel-request-btn danger" data-request-id="${request.id}">Cancel</button>
                     `
                     }
                 </div>
