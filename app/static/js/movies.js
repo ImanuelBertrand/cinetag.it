@@ -16,7 +16,13 @@ CineTagIt.Movies = {
    * Initialize the movies functionality
    */
   init: function () {
+    console.log("Initializing Movies module");
     const movieContainers = document.querySelectorAll(".movie-container");
+
+    if (movieContainers.length === 0) {
+      console.log("No movie containers found, skipping initialization");
+      return;
+    }
 
     // Get friend_id from URL if present
     const urlParams = new URLSearchParams(window.location.search);
@@ -54,11 +60,25 @@ CineTagIt.Movies = {
     const nameFilter = document.getElementById("name-filter");
 
     if (nameFilter) {
-      // Debounce function to delay filtering while typing
-      let nameFilterTimeout;
-      nameFilter.addEventListener("input", () => {
-        clearTimeout(nameFilterTimeout);
-        nameFilterTimeout = setTimeout(() => {
+      // Update URL with name filter
+      nameFilter.addEventListener("input", (event) => {
+        const nameFilterValue = event.target.value;
+        const url = new URL(window.location.href);
+
+        if (nameFilterValue) {
+          url.searchParams.set("name", nameFilterValue);
+        } else {
+          url.searchParams.delete("name");
+        }
+
+        // We use history.replaceState to update the URL without reloading
+        window.history.replaceState({}, "", url.toString());
+
+        // Debounce function to delay filtering while typing
+        if (this.nameFilterTimeout) {
+          clearTimeout(this.nameFilterTimeout);
+        }
+        this.nameFilterTimeout = setTimeout(() => {
           this.applyFilters();
         }, 500); // 500ms delay
       });
@@ -71,8 +91,9 @@ CineTagIt.Movies = {
       }
 
       friendFilterSelect.addEventListener("change", (event) => {
+        console.log("Friend filter changed:", event.target.value);
         const selectedFriendId = event.target.value;
-        const url = new URL(window.location);
+        const url = new URL(window.location.href);
 
         if (selectedFriendId) {
           url.searchParams.set("friend_id", selectedFriendId);
@@ -80,6 +101,13 @@ CineTagIt.Movies = {
           url.searchParams.delete("friend_id");
         }
 
+        // Also keep name filter if it's there
+        const nameFilterValue = document.getElementById("name-filter")?.value;
+        if (nameFilterValue) {
+          url.searchParams.set("name", nameFilterValue);
+        }
+
+        console.log("Redirecting to:", url.toString());
         window.location.href = url.toString();
       });
     }
@@ -509,5 +537,12 @@ CineTagIt.Movies = {
 // Register the module's initialization function
 CineTagIt.modules = CineTagIt.modules || {};
 CineTagIt.modules.Movies = function () {
+  console.log("CineTagIt.modules.Movies called");
   CineTagIt.Movies.init();
 };
+
+// If CineTagIt is already initialized, call the module init directly
+if (window.CineTagIt && window.CineTagIt.initialized) {
+  console.log("CineTagIt already initialized, calling Movies.init() immediately");
+  CineTagIt.Movies.init();
+}
