@@ -163,6 +163,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           target: production
           push: true
           tags: ${{ steps.meta_app.outputs.tags }}
@@ -174,6 +175,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           target: nginx
           push: true
           tags: ${{ steps.meta_nginx.outputs.tags }}
