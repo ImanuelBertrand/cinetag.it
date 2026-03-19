@@ -25,7 +25,7 @@ COPY uv.lock pyproject.toml package.json package-lock.json* ./
 # 5. Install dependencies (without the app itself)
 # --frozen ensures uv.lock is respected exactly
 RUN uv sync --frozen --no-install-project --no-dev
-RUN npm install
+RUN npm install --omit=dev
 
 # 6. Copy the rest of the app
 COPY . .
@@ -39,9 +39,10 @@ ENV FLASK_APP="app.create_app:create_app('testing')"
 RUN python -m flask build-assets
 
 # Copy fullcalendar files to static directory
-RUN mkdir -p app/static/vendor/fullcalendar && \
-    cp node_modules/fullcalendar/index.global.min.js app/static/vendor/fullcalendar/ && \
-    cp -r node_modules/@fullcalendar/core/locales app/static/vendor/fullcalendar/
+RUN target_dir="app/static/vendor/fullcalendar" && \
+    mkdir -p "$target_dir" && \
+    cp node_modules/fullcalendar/index.global.min.js "$target_dir/" && \
+    cp -r node_modules/@fullcalendar/core/locales "$target_dir/"
 
 # --- Production Stage ---
 FROM python:3.14-slim AS production
