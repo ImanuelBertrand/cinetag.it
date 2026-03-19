@@ -93,8 +93,10 @@ RUN uv sync --frozen
 
 
 RUN apt-get update && apt-get install -y \
-    curl git \
+    curl git nodejs npm \
     && rm -rf /var/lib/apt/lists/*
+
+RUN npm install
 
 # Create group (gid 1001) and user (uid 1000) matching typical host IDs
 RUN groupadd -g 1001 appgroup && \
