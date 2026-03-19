@@ -36,6 +36,7 @@ RUN uv sync --frozen --no-dev
 # 8. Precompile assets
 # Use TestingConfig to avoid needing a real DB/Redis during build
 ENV FLASK_APP="app.create_app:create_app('testing')"
+ENV DATABASE_URI="postgresql://placeholder:placeholder@localhost/placeholder"
 RUN python -m flask build-assets
 
 # Copy fullcalendar files to static directory
