@@ -1,7 +1,7 @@
 {
   "name": "cinetagit",
   "version": "1.0.0",
-  "description": "",
+  "description": "Self-hosted social movie tracking app — rate films, share preferences with friends, and get release notifications",
   "main": "index.js",
   "directories": {
     "test": "tests"
@@ -13,9 +13,9 @@
     "type": "git",
     "url": "git+https://github.com/ImanuelBertrand/cinetag.it.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["movies", "watchlist", "flask", "self-hosted"],
+  "author": "Imanuel Bertrand",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ImanuelBertrand/cinetag.it/issues"
   },
