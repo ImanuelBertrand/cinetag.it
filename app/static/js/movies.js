@@ -16,11 +16,9 @@ CineTagIt.Movies = {
    * Initialize the movies functionality
    */
   init: function () {
-    console.log("Initializing Movies module");
     const movieContainers = document.querySelectorAll(".movie-container");
 
     if (movieContainers.length === 0) {
-      console.log("No movie containers found, skipping initialization");
       return;
     }
 
@@ -91,7 +89,6 @@ CineTagIt.Movies = {
       }
 
       friendFilterSelect.addEventListener("change", (event) => {
-        console.log("Friend filter changed:", event.target.value);
         const selectedFriendId = event.target.value;
         const url = new URL(window.location.href);
 
@@ -107,7 +104,6 @@ CineTagIt.Movies = {
           url.searchParams.set("name", nameFilterValue);
         }
 
-        console.log("Redirecting to:", url.toString());
         window.location.href = url.toString();
       });
     }
@@ -177,10 +173,8 @@ CineTagIt.Movies = {
         url += `?${params.toString()}`;
       }
 
-      console.log(`Fetching movies from ${url}`);
       const response = await fetch(url);
       const data = await response.json();
-      console.log("API response:", data);
 
       if (data.success) {
         // Update state with new pagination data
@@ -284,22 +278,14 @@ CineTagIt.Movies = {
    * @param {boolean} append - Whether to append or replace the content
    */
   renderMovies: function (movieContainer, movies, append = false) {
-    console.log(`renderMovies called with ${movies.length} movies, append=${append}`);
-
     // Check if we need to display a friend filter
     let state = this.containerState.get(movieContainer);
-    console.log("Current state:", state);
 
     if (state && state.filters.friendId && !append) {
-      console.log(`Friend filter needed for friend_id=${state.filters.friendId}`);
-
       // Check if we already have friend info from the API response
       const friendFilterDiv = document.querySelector(".friend-filter");
-      console.log("Existing friend filter:", friendFilterDiv);
 
       if (!friendFilterDiv) {
-        console.log("Creating new friend filter");
-
         // Create friend filter UI
         const friendFilterContainer = document.createElement("div");
         friendFilterContainer.className = "friend-filter";
@@ -322,17 +308,14 @@ CineTagIt.Movies = {
 
         // Insert into the filter bar
         const filterBar = document.querySelector(".movie-filters");
-        console.log("Filter bar element:", filterBar);
 
         if (filterBar) {
-          console.log("Adding friend filter to filter bar");
           // Create a filter group for the friend filter
           const filterGroup = document.createElement("div");
           filterGroup.className = "filter-group";
           filterGroup.appendChild(friendFilterContainer);
           filterBar.appendChild(filterGroup);
         } else {
-          console.log("Filter bar not found, adding friend filter before movie container");
           // Fallback: insert before the movie container
           movieContainer.parentNode.insertBefore(friendFilterContainer, movieContainer);
         }
@@ -537,12 +520,10 @@ CineTagIt.Movies = {
 // Register the module's initialization function
 CineTagIt.modules = CineTagIt.modules || {};
 CineTagIt.modules.Movies = function () {
-  console.log("CineTagIt.modules.Movies called");
   CineTagIt.Movies.init();
 };
 
 // If CineTagIt is already initialized, call the module init directly
 if (window.CineTagIt && window.CineTagIt.initialized) {
-  console.log("CineTagIt already initialized, calling Movies.init() immediately");
   CineTagIt.Movies.init();
 }

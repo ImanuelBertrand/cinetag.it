@@ -18,7 +18,6 @@ CineTagIt.modules = new Proxy(CineTagIt.modules || {}, {
     if (CineTagIt.initialized && typeof value === "function") {
       try {
         value();
-        console.log(`Module '${property}' was loaded and initialized after app startup`);
       } catch (error) {
         console.error(`Error initializing late-loaded module '${property}':`, error);
       }
@@ -258,7 +257,6 @@ CineTagIt.Events = {
               const category = data.message_category || "danger";
               CineTagIt.UI.displayMessage(data.error, category);
             } else {
-              console.log("Received data:", data);
               if (data.success === true) {
                 CineTagIt.UI.displayMessage("Operation successful.", "success");
               }
