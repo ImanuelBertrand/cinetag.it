@@ -96,7 +96,7 @@ def upgrade():
         friend_code = f"user-{user_id}-{random_string}"
         conn.execute(
             sa.text("UPDATE users SET friend_code = :friend_code WHERE id = :user_id"),
-            {"friend_code": friend_code, "id": int(user_id)},
+            {"friend_code": friend_code, "user_id": int(user_id)},
         )
 
 
