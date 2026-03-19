@@ -68,6 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -97,7 +99,7 @@ jobs:
           POSTGRES_PASSWORD: test
           POSTGRES_DB: test_db
         options: >-
-          --health-cmd pg_isready -U test -d test_db
+          --health-cmd "pg_isready -U test -d test_db"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -107,6 +109,8 @@ jobs:
       DATABASE_URI: postgresql://test:test@localhost:5432/test_db
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
