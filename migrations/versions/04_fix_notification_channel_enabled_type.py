@@ -23,7 +23,7 @@ def upgrade():
         existing_type=sa.Integer(),
         type_=sa.Boolean(),
         existing_nullable=True,
-        postgresql_using="enabled::boolean",
+        postgresql_using="enabled != 0",
     )
 
 

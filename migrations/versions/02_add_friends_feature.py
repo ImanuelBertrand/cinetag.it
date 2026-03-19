@@ -105,4 +105,4 @@ def downgrade():
     op.drop_table("friendships")
     op.drop_table("friend_requests")
     op.drop_column("users", "friend_code")
-    op.drop_column("users", "display_name")
+    op.alter_column("users", "display_name", new_column_name="name")
