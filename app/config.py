@@ -1,4 +1,7 @@
 import os
+from typing import ClassVar
+
+from sqlalchemy.pool import NullPool
 
 
 def parse_bool(value):
@@ -39,7 +42,7 @@ class Config:
     CACHE_TYPE = os.environ.get(
         "CACHE_TYPE", "flask_caching.backends.simplecache.SimpleCache"
     )
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI") or "sqlite:///app.db"
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI")
 
     COUNT_TOP_SELECT_OPTION = 5
 
@@ -74,7 +77,8 @@ class TestingConfig(Config):
     JWT_COOKIE_SECURE = False
     DEBUG = True
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # NullPool closes connections immediately so tests don't exhaust max_connections.
+    SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict] = {"poolclass": NullPool}
     SERVER_NAME = None
     # Disable scheduler for testing
     SCHEDULER_API_ENABLED = False

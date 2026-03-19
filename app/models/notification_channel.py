@@ -8,7 +8,7 @@ class NotificationChannel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    enabled = db.Column(db.Integer)
+    enabled = db.Column(db.Boolean)
     days_in_advance = db.Column(db.JSON, nullable=False)
     mode = db.Column(
         db.Enum("email", "push", name="user_notification_mode"), nullable=False

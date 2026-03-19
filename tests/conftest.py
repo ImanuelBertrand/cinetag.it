@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import text
 
 from app.create_app import create_app
 from app.extensions import db
@@ -11,39 +12,43 @@ from app.models.user import User
 from app.models.user_movie import UserMovie
 
 
+def _drop_pg_enums() -> None:
+    """Drop all user-defined PostgreSQL ENUM types (which drop_all() skips)."""
+    with db.engine.connect() as conn:
+        conn.execute(
+            text(
+                "DO $$ DECLARE r RECORD; BEGIN "
+                "FOR r IN ("
+                "  SELECT typname FROM pg_type "
+                "  JOIN pg_namespace ON pg_type.typnamespace = pg_namespace.oid "
+                "  WHERE typtype = 'e' AND nspname = 'public'"
+                ") LOOP "
+                "  EXECUTE 'DROP TYPE IF EXISTS ' "
+                "|| quote_ident(r.typname) || ' CASCADE'; "
+                "END LOOP; END $$;"
+            )
+        )
+        conn.commit()
+
+
 @pytest.fixture
 def app():
     """Create and configure a Flask app for testing."""
     app = create_app("testing")
-
-    # Check if we're running in Docker by looking for the
-    # CONFIG_FILE environment variable
-    import os
-
-    if not os.environ.get(
-        "CONFIG_FILE"
-    ) or "docker-config-test.yaml" not in os.environ.get("CONFIG_FILE"):
-        # If not running in Docker, use in-memory SQLite
-        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-
     app.config["TESTING"] = True
-
     with app.app_context():
-        db.create_all()
         yield app
-        # Clean up by removing the session and dropping all tables
         db.session.remove()
         db.drop_all()
+        _drop_pg_enums()
 
 
 @pytest.fixture(autouse=True)
 def clean_test_db(app) -> None:
     with app.app_context():
-        # Only run this cleanup if we're using a real database, not in-memory SQLite
-        if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///:memory:"):
-            # Drop all tables and recreate them
-            db.drop_all()
-            db.create_all()
+        db.drop_all()
+        _drop_pg_enums()
+        db.create_all()
 
 
 @pytest.fixture

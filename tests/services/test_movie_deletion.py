@@ -7,7 +7,9 @@ from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification import Notification
+from app.models.notification_channel import NotificationChannel
 from app.models.tmdb_genre import MovieGenre, TmdbGenre
+from app.models.user import User
 from app.models.user_movie import UserMovie
 from app.services.tmdb_service import check_movie_information
 
@@ -18,6 +20,22 @@ def test_movie_deletion_on_404(app) -> None:
     with app.app_context():
         # 1. Setup: Create a movie with various related records
         movie_id = 12345
+
+        # Create the user and notification channel required by FK constraints
+        user = User(
+            display_name="Test User",
+            email="del@example.com",
+            region="US",
+            language="en",
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        channel = NotificationChannel(user_id=user.id, mode="push", enabled=True)
+        channel.days_in_advance = [1, 3, 7]
+        db.session.add(channel)
+        db.session.flush()
+
         movie = Movie(
             id=movie_id,
             original_title="Test Movie",
@@ -46,18 +64,13 @@ def test_movie_deletion_on_404(app) -> None:
         db.session.add(lang_info)
 
         # Add user movie decision
-        user_movie = UserMovie(user_id=1, movie_id=movie_id, decision="approve")
-        # Need a user for this to not fail if there are constraints,
-        # but UserMovie only has user_id FK.
-        # conftest.py's app fixture might not have users.
-        # Let's see if we can just add it without a real user
-        # if FK is not strictly enforced in SQLite memory
+        user_movie = UserMovie(user_id=user.id, movie_id=movie_id, decision="approve")
         db.session.add(user_movie)
 
         # Add notification
         notification = Notification(
-            user_id=1,
-            channel_id=1,
+            user_id=user.id,
+            channel_id=channel.id,
             movie_id=movie_id,
             days_in_advance=1,
             scheduled_at=datetime.now(UTC),
