@@ -44,7 +44,7 @@ def test_decode_refresh_token_invalid_secret(app) -> None:
     with app.app_context():
         token = jwt.encode(
             {"sub": "1", "jti": "jti"},
-            "wrong_secret",
+            "wrong_secret_but_long_enough_to_satisfy_hmac_sha256_requirements",
             algorithm="HS256",
         )
         with pytest.raises(jwt.InvalidTokenError):
