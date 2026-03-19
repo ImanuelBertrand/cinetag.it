@@ -13,7 +13,12 @@
     "type": "git",
     "url": "git+https://github.com/ImanuelBertrand/cinetag.it.git"
   },
-  "keywords": ["movies", "watchlist", "flask", "self-hosted"],
+  "keywords": [
+    "movies",
+    "watchlist",
+    "flask",
+    "self-hosted"
+  ],
   "author": "Imanuel Bertrand",
   "license": "MIT",
   "bugs": {
