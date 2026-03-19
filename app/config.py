@@ -75,6 +75,7 @@ class TestingConfig(Config):
     DEBUG = True
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SERVER_NAME = None
     # Disable scheduler for testing
     SCHEDULER_API_ENABLED = False
     SCHEDULER_ENABLED = False

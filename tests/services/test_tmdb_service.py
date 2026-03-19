@@ -118,6 +118,7 @@ def test_save_movie_list(app) -> None:
 
         # Set up the mocks
         with (
+            patch("app.services.tmdb_service.sync_genre_names"),
             patch("app.models.movie.Movie.query") as mock_movie_query,
             patch("app.services.tmdb_service.get_lang_infos") as mock_get_lang_infos,
             patch(
