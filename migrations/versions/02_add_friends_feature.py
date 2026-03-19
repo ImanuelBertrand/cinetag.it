@@ -91,7 +91,7 @@ def upgrade():
         user_id = user[0]
         # Generate a simple friend code based on user ID and a random string
         random_string = conn.execute(
-            sa.text("SELECT SUBSTRING(MD5(RAND()), 1, 8)")
+            sa.text("SELECT SUBSTRING(MD5(RANDOM()::text), 1, 8)")
         ).scalar()
         friend_code = f"user-{user_id}-{random_string}"
         conn.execute(
