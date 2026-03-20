@@ -1,7 +1,26 @@
 import os
 from typing import ClassVar
+from urllib.parse import urlparse, urlunparse
 
 from sqlalchemy.pool import NullPool
+
+
+def _build_test_db_uri() -> str | None:
+    """Always return a URI pointing at a dedicated test database.
+
+    Priority:
+    1. TEST_DATABASE_URI env var (explicit override)
+    2. DATABASE_URI env var with the db name suffixed with '_test'
+
+    Never falls back to DATABASE_URI as-is — that would risk wiping dev/prod.
+    """
+    if test_uri := os.environ.get("TEST_DATABASE_URI"):
+        return test_uri
+    if base_uri := os.environ.get("DATABASE_URI"):
+        parsed = urlparse(base_uri)
+        # parsed.path is e.g. '/cinetagit_db' → append '_test'
+        return urlunparse(parsed._replace(path=parsed.path + "_test"))
+    return None
 
 
 def parse_bool(value):
@@ -93,6 +112,17 @@ class TestingConfig(Config):
         "JWT_SECRET_KEY",
         "your-even-longer-and-even-more-secure-jwt-secret-key-that-is-very-long",
     )
+    # Always use a dedicated test database — never the dev/prod one.
+    SQLALCHEMY_DATABASE_URI = _build_test_db_uri()
+
+    @staticmethod
+    def init_app(app) -> None:
+        uri = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
+        if "test" not in uri:
+            raise RuntimeError(
+                f"TestingConfig refuses to connect to '{uri}': the URI must "
+                "contain 'test'. Set TEST_DATABASE_URI to a dedicated test database."
+            )
 
 
 config_by_name = {
