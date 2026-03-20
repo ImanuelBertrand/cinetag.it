@@ -118,17 +118,24 @@ def get_user_movie_ids(user: User, decision: str | None = None):
     return user_movies_query
 
 
-@cache.cached(timeout=86400, key_prefix="get_all_tmdb_regions_data_dict")
 def get_all_tmdb_regions_data_dict() -> dict[str, dict[str, Any]]:
-    return {
+    cached = cache.get("get_all_tmdb_regions_data_dict")
+    if cached is not None:
+        return cached
+    result = {
         str(region.code): region.to_dict()
         for region in TmdbRegion.query.all()
         if region.code is not None
     }
+    if result:
+        cache.set("get_all_tmdb_regions_data_dict", result, timeout=86400)
+    return result
 
 
-@cache.cached(timeout=86400, key_prefix="get_all_region_flags")
 def get_all_region_flags() -> dict[str, str]:
+    cached = cache.get("get_all_region_flags")
+    if cached is not None:
+        return cached
     regions = get_all_tmdb_regions_data_dict()
     result = {}
     for region_code in regions:
@@ -136,6 +143,8 @@ def get_all_region_flags() -> dict[str, str]:
             flag = get_region_flag(region_code)
             if flag is not None:
                 result[str(region_code)] = flag
+    if result:
+        cache.set("get_all_region_flags", result, timeout=86400)
     return result
 
 
