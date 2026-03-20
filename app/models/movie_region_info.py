@@ -1,25 +1,32 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from sqlalchemy import Date, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 
 if TYPE_CHECKING:
     import datetime
 
+    from app.models.movie import Movie
+
 
 class MovieRegionInfo(db.Model):
     __tablename__ = "movie_region_info"
 
-    id = db.Column(db.Integer, primary_key=True)
-    movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
-    region = db.Column(db.String(2), nullable=False)
-    release_date = db.Column(db.Date, nullable=False)
-    is_fake = db.Column(db.Boolean, default=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"))
+    region: Mapped[str] = mapped_column(String(2))
+    release_date: Mapped[datetime.date] = mapped_column(Date)
+    is_fake: Mapped[bool | None] = mapped_column(default=False)
 
-    movie = db.relationship("Movie", back_populates="region_infos")
+    movie: Mapped[Movie] = relationship(back_populates="region_infos")
 
     __table_args__ = (
-        db.UniqueConstraint("movie_id", "region", name="movie_region_info_idx"),
-        db.Index("movie_region_info_release_date_idx", "release_date"),
+        UniqueConstraint("movie_id", "region", name="movie_region_info_idx"),
+        Index("movie_region_info_release_date_idx", "release_date"),
     )
 
     def __repr__(self) -> str:

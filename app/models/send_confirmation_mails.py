@@ -1,5 +1,8 @@
 from datetime import UTC, datetime
 
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.extensions import db
 
 
@@ -11,6 +14,8 @@ class SentConfirmationMails(db.Model):
 
     __tablename__ = "sent_confirmation_mails"
 
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), nullable=False)
-    sent_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(120))
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )

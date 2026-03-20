@@ -1,16 +1,19 @@
 from typing import Any
 
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.extensions import db
 
 
 class TmdbRegion(db.Model):
     __tablename__ = "tmdb_regions"
 
-    id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(2), nullable=False, unique=True)
-    english_name = db.Column(db.String(50), nullable=False)
-    native_name = db.Column(db.String(50), nullable=False)
-    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(2), unique=True)
+    english_name: Mapped[str] = mapped_column(String(50))
+    native_name: Mapped[str] = mapped_column(String(50))
+    sort_order: Mapped[int] = mapped_column(default=0)
 
     def get_name(self) -> str:
         return self.native_name or self.english_name

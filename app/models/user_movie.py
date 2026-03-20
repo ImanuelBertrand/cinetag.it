@@ -1,25 +1,35 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+
+if TYPE_CHECKING:
+    from app.models.movie import Movie
+    from app.models.user import User
 
 
 class UserMovie(db.Model):
     __tablename__ = "user_movies"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
-    decision = db.Column(db.String(10), nullable=False)  # 'approve' or 'disapprove'
-    created_at = db.Column(
-        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"))
+    decision: Mapped[str] = mapped_column(String(10))  # 'approve' or 'disapprove'
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    updated_at = db.Column(
-        db.DateTime(timezone=True),
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
 
-    user = db.relationship("User", back_populates="user_movies")
-    movie = db.relationship("Movie", back_populates="user_movies")
+    user: Mapped[User] = relationship(back_populates="user_movies")
+    movie: Mapped[Movie] = relationship(back_populates="user_movies")
 
-    __table_args__ = (db.Index("user_movie_idx", "user_id", "movie_id", unique=True),)
+    __table_args__ = (Index("user_movie_idx", "user_id", "movie_id", unique=True),)

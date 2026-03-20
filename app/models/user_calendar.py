@@ -1,8 +1,14 @@
 import secrets
 from datetime import UTC, datetime
-from typing import Self
+from typing import TYPE_CHECKING, Self
+
+from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class UserCalendar(db.Model):
@@ -19,25 +25,25 @@ class UserCalendar(db.Model):
 
     __tablename__ = "user_calendars"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    calendar_type = db.Column(
-        db.String(10), nullable=False
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    calendar_type: Mapped[str] = mapped_column(
+        String(10)
     )  # 'wanted', 'maybe', or 'all'
-    calendar_hash = db.Column(db.String(64), unique=True, nullable=False)
-    created_at = db.Column(
-        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    calendar_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    updated_at = db.Column(
-        db.DateTime(timezone=True),
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
 
-    user = db.relationship("User", back_populates="calendars")
+    user: Mapped[User] = relationship(back_populates="calendars")
 
     __table_args__ = (
-        db.Index("user_calendar_idx", "user_id", "calendar_type", unique=True),
+        Index("user_calendar_idx", "user_id", "calendar_type", unique=True),
     )
 
     @classmethod

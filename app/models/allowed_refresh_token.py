@@ -1,9 +1,18 @@
+from __future__ import annotations
+
 import logging
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from app.extensions import db
 
 _logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class AllowedRefreshToken(db.Model):
@@ -14,29 +23,25 @@ class AllowedRefreshToken(db.Model):
 
     __tablename__ = "allowed_refresh_tokens"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     # JTI (JWT ID) claim, usually a UUID string. Indexed for fast lookups.
-    jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    jti: Mapped[str] = mapped_column(String(36), unique=True, index=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
 
-    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        nullable=False,
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
     )
 
-    user = db.relationship(
-        "User",
-        backref=db.backref(
+    user: Mapped[User] = relationship(
+        backref=backref(
             "allowed_refresh_tokens", lazy=True, cascade="all, delete-orphan"
         ),
     )

@@ -1,22 +1,32 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.extensions import db
+
+if TYPE_CHECKING:
+    from app.models.movie import Movie
 
 
 class MovieLanguageInfo(db.Model):
     __tablename__ = "movie_language_info"
 
-    id = db.Column(db.Integer, primary_key=True)
-    movie_id = db.Column(db.Integer, db.ForeignKey("movies.id"), nullable=False)
-    language = db.Column(db.String(5), nullable=False)
-    title = db.Column(db.String(255), nullable=False)
-    poster_path = db.Column(db.String(255), nullable=True)
-    overview = db.Column(db.Text, nullable=True)
-    tagline = db.Column(db.String(255), nullable=True)
-    runtime = db.Column(db.Integer, nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"))
+    language: Mapped[str] = mapped_column(String(5))
+    title: Mapped[str] = mapped_column(String(255))
+    poster_path: Mapped[str | None] = mapped_column(String(255))
+    overview: Mapped[str | None] = mapped_column(Text)
+    tagline: Mapped[str | None] = mapped_column(String(255))
+    runtime: Mapped[int | None] = mapped_column()
 
-    movie = db.relationship("Movie", back_populates="language_infos")
+    movie: Mapped[Movie] = relationship(back_populates="language_infos")
 
     __table_args__ = (
-        db.UniqueConstraint("movie_id", "language", name="movie_language_info_idx"),
+        UniqueConstraint("movie_id", "language", name="movie_language_info_idx"),
     )
 
     def __repr__(self) -> str:

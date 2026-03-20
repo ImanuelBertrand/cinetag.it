@@ -1,40 +1,51 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, Float, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from app.models.movie_language_info import MovieLanguageInfo
+    from app.models.movie_region_info import MovieRegionInfo
+    from app.models.notification import Notification
+    from app.models.tmdb_genre import MovieGenre
+    from app.models.user_movie import UserMovie
 
 
 class Movie(db.Model):
     __tablename__ = "movies"
 
-    id = db.Column(db.Integer, primary_key=True)
-    original_title = db.Column(db.String(255), nullable=False)
-    popularity = db.Column(db.Float, nullable=True)
-    original_language = db.Column(db.String(2), nullable=True)
-    info_update_at = db.Column(db.DateTime(timezone=True), nullable=True)
-    imdb_id = db.Column(db.String(20), nullable=True)
-    origin_country = db.Column(db.String(255), nullable=True)
-    runtime = db.Column(db.Integer, nullable=True)
-    spoken_languages = db.Column(db.String(255), nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    original_title: Mapped[str] = mapped_column(String(255))
+    popularity: Mapped[float | None] = mapped_column(Float)
+    original_language: Mapped[str | None] = mapped_column(String(2))
+    info_update_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    imdb_id: Mapped[str | None] = mapped_column(String(20))
+    origin_country: Mapped[str | None] = mapped_column(String(255))
+    runtime: Mapped[int | None] = mapped_column()
+    spoken_languages: Mapped[str | None] = mapped_column(String(255))
 
-    region_infos = db.relationship(
-        "MovieRegionInfo", back_populates="movie", cascade="all, delete-orphan"
+    region_infos: Mapped[list[MovieRegionInfo]] = relationship(
+        back_populates="movie", cascade="all, delete-orphan"
     )
-    language_infos = db.relationship(
-        "MovieLanguageInfo", back_populates="movie", cascade="all, delete-orphan"
-    )
-
-    user_movies = db.relationship(
-        "UserMovie", back_populates="movie", cascade="all, delete-orphan"
+    language_infos: Mapped[list[MovieLanguageInfo]] = relationship(
+        back_populates="movie", cascade="all, delete-orphan"
     )
 
-    notifications = db.relationship(
-        "Notification", back_populates="movie", cascade="all, delete-orphan"
+    user_movies: Mapped[list[UserMovie]] = relationship(
+        back_populates="movie", cascade="all, delete-orphan"
     )
 
-    genres = db.relationship("MovieGenre", cascade="all, delete-orphan")
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="movie", cascade="all, delete-orphan"
+    )
+
+    genres: Mapped[list[MovieGenre]] = relationship(cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Movie {self.id} ({self.original_title})>"

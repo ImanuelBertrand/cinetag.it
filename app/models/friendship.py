@@ -1,4 +1,9 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from app.extensions import db
 from app.models.user import User
@@ -18,37 +23,35 @@ class Friendship(db.Model):
 
     __tablename__ = "friendships"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     # Always the lower user ID of the two friends
-    user1_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user1_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     # Always the higher user ID of the two friends
-    user2_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(
-        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    user2_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    updated_at = db.Column(
-        db.DateTime(timezone=True),
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
 
     # Relationships to the User model
-    user1 = db.relationship(
-        "User",
+    user1: Mapped[User] = relationship(
         foreign_keys=[user1_id],
-        backref=db.backref("friendships_as_user1", lazy="dynamic"),
+        backref=backref("friendships_as_user1", lazy="dynamic"),
     )
-    user2 = db.relationship(
-        "User",
+    user2: Mapped[User] = relationship(
         foreign_keys=[user2_id],
-        backref=db.backref("friendships_as_user2", lazy="dynamic"),
+        backref=backref("friendships_as_user2", lazy="dynamic"),
     )
 
     __table_args__ = (
         # Ensure uniqueness of the friendship pair
-        db.Index("friendship_idx", "user1_id", "user2_id", unique=True),
+        Index("friendship_idx", "user1_id", "user2_id", unique=True),
         # Enforce user1_id < user2_id
-        db.CheckConstraint("user1_id < user2_id", name="check_user_order"),
+        CheckConstraint("user1_id < user2_id", name="check_user_order"),
     )
 
     @classmethod

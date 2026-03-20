@@ -1,51 +1,61 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.exc
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from app.models.user_calendar import UserCalendar
 from app.utils.friend_code import generate_friend_code
 
+if TYPE_CHECKING:
+    from app.models.notification import Notification
+    from app.models.notification_channel import NotificationChannel
+    from app.models.user_movie import UserMovie
+
 
 class User(db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     # User's display name, used throughout the application
-    display_name = db.Column(db.String(200), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(200))
     # Unique code for adding friends, only for registered users
-    friend_code = db.Column(db.String(64), unique=True, nullable=True)
-    email = db.Column(db.String(120), unique=True, nullable=True)
-    new_email = db.Column(db.String(120), unique=True, nullable=True)
-    password = db.Column(db.String(255), nullable=True)
-    region = db.Column(db.String(2), nullable=True, default="US")
-    language = db.Column(db.String(5), nullable=True, default="en")
+    friend_code: Mapped[str | None] = mapped_column(String(64), unique=True)
+    email: Mapped[str | None] = mapped_column(String(120), unique=True)
+    new_email: Mapped[str | None] = mapped_column(String(120), unique=True)
+    password: Mapped[str | None] = mapped_column(String(255))
+    region: Mapped[str | None] = mapped_column(String(2), default="US")
+    language: Mapped[str | None] = mapped_column(String(5), default="en")
     # Relationship to a temporary user (if the user liked a move before logging in)
-    temporary_user_id = db.Column(db.Integer, nullable=True)
-    password_reset_token = db.Column(db.String(32), nullable=True)
-    created_at = db.Column(
-        db.DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    temporary_user_id: Mapped[int | None] = mapped_column()
+    password_reset_token: Mapped[str | None] = mapped_column(String(32))
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    updated_at = db.Column(
-        db.DateTime(timezone=True),
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
 
-    user_movies = db.relationship(
-        "UserMovie", back_populates="user", cascade="all, delete-orphan"
+    user_movies: Mapped[list[UserMovie]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
-    calendars = db.relationship(
-        "UserCalendar", back_populates="user", cascade="all, delete-orphan"
+    calendars: Mapped[list[UserCalendar]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
-    notification_channels = db.relationship(
-        "NotificationChannel", back_populates="user", cascade="all, delete-orphan"
+    notification_channels: Mapped[list[NotificationChannel]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
-    notifications = db.relationship(
-        "Notification", back_populates="user", cascade="all, delete-orphan"
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
     def reset_calendar_hashes(self):

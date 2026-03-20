@@ -1,12 +1,15 @@
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.extensions import db
 
 
 class MiscData(db.Model):
     __tablename__ = "misc_data"
 
-    id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(50), nullable=False, unique=True)
-    value = db.Column(db.String(255), nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(50), unique=True)
+    value: Mapped[str] = mapped_column(String(255))
 
     @staticmethod
     def save(key, value, commit=False) -> None:
