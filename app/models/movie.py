@@ -44,7 +44,8 @@ class Movie(db.Model):
     ) -> dict[str, str]:
         if language_infos is None:
             language_infos = {
-                lang_info.language: lang_info for lang_info in self.language_infos
+                lang_info.language: lang_info
+                for lang_info in self.language_infos  # type: ignore[not-iterable]
             }
 
         langs = [lang, "en", self.original_language]

@@ -155,7 +155,7 @@ def send_push_notification(notification: Notification):
             "Push subscription expired for channel %s, disabling channel", channel.id
         )
         # Disable the notification channel
-        channel.enabled = False
+        channel.enabled = False  # type: ignore[assignment]
         db.session.add(channel)
         db.session.commit()
         return False

@@ -2,6 +2,7 @@ import atexit
 import logging
 from datetime import UTC, datetime
 from functools import partial
+from typing import Any, cast
 
 from app.extensions import scheduler
 from app.models.allowed_refresh_token import AllowedRefreshToken
@@ -37,7 +38,10 @@ atexit.register(shutdown_scheduler_if_running)
 
 
 def run_with_context(func) -> None:
-    with scheduler.app.app_context():
+    app = scheduler.app
+    if app is None:
+        raise RuntimeError("Scheduler app is not initialized")
+    with app.app_context():
         func()
 
 
@@ -53,7 +57,10 @@ def job_purge_abandoned_guests() -> None:
     try:
         # Allow configuration override;
         # default 21 days to be safer than refresh lifetime
-        days = scheduler.app.config.get("GUEST_RETENTION_DAYS", 21)
+        app = scheduler.app
+        if app is None:
+            return
+        days = app.config.get("GUEST_RETENTION_DAYS", 21)
         purge_abandoned_guests(retention_days=days, dry_run=False)
     except Exception:
         _logger.exception("Error purging abandoned guests")
@@ -62,7 +69,10 @@ def job_purge_abandoned_guests() -> None:
 def job_purge_empty_guests() -> None:
     try:
         # Separate retention window for empty guests that still have tokens
-        days = scheduler.app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
+        app = scheduler.app
+        if app is None:
+            return
+        days = app.config.get("GUEST_EMPTY_RETENTION_DAYS", 21)
         # import locally to avoid expanding top-level imports
 
         purge_inactive_empty_guests_with_tokens(retention_days=days, dry_run=False)
@@ -134,7 +144,7 @@ def setup_cron_jobs() -> None:
             max_instances=1,
             coalesce=True,
             func=partial(run_with_context, job_definition["func"]),
-            **job_definition["options"],
+            **cast("dict[str, Any]", job_definition["options"]),
         )
 
     # Only start the scheduler if it's not already running

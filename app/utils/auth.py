@@ -343,7 +343,7 @@ def authenticate_request(app: Flask):
         return None
 
     # 2. Check for Bot
-    if CrawlerDetect(user_agent=request.headers.get("User-Agent")).isCrawler():
+    if CrawlerDetect(user_agent=request.headers.get("User-Agent") or "").isCrawler():
         _logger.info("Bot detected, skipping auth.")
         return None
 

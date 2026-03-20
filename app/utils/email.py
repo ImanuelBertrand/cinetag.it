@@ -2,6 +2,7 @@ import logging
 import os
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 import jwt
 from flask import current_app, url_for
@@ -23,7 +24,7 @@ def send_email(to: str | list[str], subject: str, body: str) -> bool:
         if isinstance(to, str):
             recipients: list[str | tuple[str, str]] = [to]
         else:
-            recipients = list(to)
+            recipients = cast("list[str | tuple[str, str]]", to)
         msg = Message(subject, recipients=recipients, body=body, sender=sender)
         mail.send(msg)
     except Exception:
