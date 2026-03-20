@@ -203,10 +203,12 @@ def test_sort_objects(app) -> None:
     with app.app_context():
         # Create test objects
         class TestObject:
+            sort_order: int
+
             def __init__(self, code, display_name) -> None:
                 self.code = code
                 self.display_name = display_name
-                self.sort_order = None
+                self.sort_order = 0
 
             def get_name(self):
                 return self.display_name

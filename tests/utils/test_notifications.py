@@ -72,6 +72,7 @@ def notification_channel(app, notification_user):
     """Create a notification channel for tests."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = NotificationChannel(user_id=user.id, mode="push", enabled=True)
         channel.days_in_advance = [1, 3, 7]
         channel.include_maybe_movies = True
@@ -103,7 +104,9 @@ def test_setup_notifications_creates_notifications(
     """Test setup_notifications creates notifications for approved movies."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
 
         # Create approved user movie
         user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
@@ -123,7 +126,9 @@ def test_setup_notifications_with_maybe_movies(
     """Test setup_notifications includes maybe movies when configured."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
         channel.include_maybe_movies = True
         db.session.commit()
 
@@ -144,7 +149,9 @@ def test_delete_outdated_notifications(
     """Test delete_outdated_notifications removes outdated notifications."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
 
         # Create a notification for a movie that the user has removed from their list
         movie = Movie(
@@ -185,7 +192,9 @@ def test_add_missing_notifications(
     """Test add_missing_notifications adds new notifications."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
 
         user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
         db.session.add(user_movie)

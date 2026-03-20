@@ -89,6 +89,7 @@ def test_generate_confirmation_token(app, email_user) -> None:
     """Test generate_confirmation_token creates a valid JWT token."""
     with app.app_context():
         user = db.session.get(User, email_user.id)
+        assert user is not None
         token = generate_confirmation_token(user)
 
         assert isinstance(token, str)
@@ -117,6 +118,7 @@ def test_send_confirmation_email_sends(app, email_user) -> None:
         app.config["SERVER_NAME"] = "localhost:8000"
         app.config["PREFERRED_URL_SCHEME"] = "http"
         user = db.session.get(User, email_user.id)
+        assert user is not None
 
         with (
             app.test_request_context(),
@@ -134,6 +136,7 @@ def test_generate_password_reset_token(app, email_user) -> None:
     """Test generate_password_reset_token creates a valid JWT with reset claims."""
     with app.app_context():
         user = db.session.get(User, email_user.id)
+        assert user is not None
         token = generate_password_reset_token(user)
 
         assert isinstance(token, str)
@@ -149,6 +152,7 @@ def test_send_password_reset_email(app, email_user) -> None:
         app.config["SERVER_NAME"] = "localhost:8000"
         app.config["PREFERRED_URL_SCHEME"] = "http"
         user = db.session.get(User, email_user.id)
+        assert user is not None
 
         with (
             app.test_request_context(),
@@ -166,6 +170,7 @@ def test_queue_email_invalid_type(app, email_user) -> None:
     """Test queue_email raises ValueError for unknown mail type."""
     with app.app_context():
         user = db.session.get(User, email_user.id)
+        assert user is not None
 
         with pytest.raises(ValueError, match="Unknown mail type"):
             queue_email(user, "unknown_type")

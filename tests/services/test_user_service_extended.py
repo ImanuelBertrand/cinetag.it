@@ -54,6 +54,7 @@ def test_get_movies_based_on_filter_advanced(app, test_user, test_movies):
         # Manually add imdb_id to one movie and make it release in the future
         movie_id = test_movies[0].id
         movie = db.session.get(Movie, movie_id)
+        assert movie is not None
         movie.imdb_id = "tt1234567"
 
         from app.models.movie_region_info import MovieRegionInfo

@@ -24,6 +24,7 @@ def test_add_token_and_is_token_allowed(app, test_allowed_refresh_user) -> None:
     """Test adding a token and checking if it is allowed."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         jti = "test-jti-12345"
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
 
@@ -39,6 +40,7 @@ def test_is_token_allowed_returns_false_for_unknown_jti(
     """Test that is_token_allowed returns False for unknown JTI."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         assert AllowedRefreshToken.is_token_allowed("nonexistent-jti", user.id) is False
 
 
@@ -46,6 +48,7 @@ def test_revoke_token(app, test_allowed_refresh_user) -> None:
     """Test that revoke_token removes a token from the allowlist."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         jti = "revoke-test-jti"
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
 
@@ -72,6 +75,7 @@ def test_revoke_all_for_user(app, test_allowed_refresh_user) -> None:
     """Test that revoke_all_for_user removes all tokens for a user."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
 
         for i in range(3):
@@ -95,6 +99,7 @@ def test_revoke_all_for_user_returns_false_when_no_tokens(
     """Test that revoke_all_for_user returns False when no tokens exist."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         result = AllowedRefreshToken.revoke_all_for_user(user.id)
         assert result is False
 
@@ -103,6 +108,7 @@ def test_cleanup_expired_tokens(app, test_allowed_refresh_user) -> None:
     """Test that cleanup_expired_tokens removes expired tokens."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         expired_at = (datetime.now(UTC) - timedelta(days=1)).timestamp()
         future_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
 
@@ -134,6 +140,7 @@ def test_repr(app, test_allowed_refresh_user) -> None:
     """Test the __repr__ method."""
     with app.app_context():
         user = db.session.get(User, test_allowed_refresh_user.id)
+        assert user is not None
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
 
         AllowedRefreshToken.add_token("repr-jti", user.id, expires_at)

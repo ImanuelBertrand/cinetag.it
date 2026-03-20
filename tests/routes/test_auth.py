@@ -128,6 +128,7 @@ def test_email_confirmation(client, app) -> None:
 
     with app.app_context():
         user = db.session.get(User, user_id)
+        assert user is not None
         assert user.email == "confirm@example.com"
         assert user.new_email is None
 

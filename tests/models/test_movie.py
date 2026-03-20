@@ -177,6 +177,7 @@ def test_movie_get_localized_data_without_language_infos_dict(app) -> None:
         # Refresh to load relationships
         db.session.expire_all()
         movie = db.session.get(Movie, 105)
+        assert movie is not None
 
         result = movie.get_localized_data("en")
 

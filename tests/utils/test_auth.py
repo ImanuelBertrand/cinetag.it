@@ -79,6 +79,7 @@ def test_validate_refresh_identity_and_jti_valid(app, test_user) -> None:
     """Test _validate_refresh_identity_and_jti returns True for a valid token."""
     with app.app_context():
         user = db.session.get(User, test_user.id)
+        assert user is not None
         jti = "valid-jti-abc"
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
         AllowedRefreshToken.add_token(jti, user.id, expires_at)
@@ -92,6 +93,7 @@ def test_verify_refresh_token_and_get_identity_valid(app, test_user) -> None:
     """Test verify_refresh_token_and_get_identity with a valid token."""
     with app.app_context():
         user = db.session.get(User, test_user.id)
+        assert user is not None
         jti = "verify-test-jti"
         expires_at = (datetime.now(UTC) + timedelta(days=1)).timestamp()
         AllowedRefreshToken.add_token(jti, user.id, expires_at)
@@ -110,6 +112,7 @@ def test_verify_refresh_token_expired(app, test_user) -> None:
     """Test verify_refresh_token_and_get_identity raises ExpiredSignatureError."""
     with app.app_context():
         user = db.session.get(User, test_user.id)
+        assert user is not None
         jti = "expired-jti"
         token = _make_refresh_token(app, user.id, jti, expired=True)
 
@@ -137,6 +140,7 @@ def test_generate_new_tokens(app, test_user) -> None:
     """Test generate_new_tokens creates valid access and refresh tokens."""
     with app.app_context():
         user = db.session.get(User, test_user.id)
+        assert user is not None
         access_token, refresh_token = generate_new_tokens(user.id)
 
         assert access_token is not None
@@ -155,6 +159,7 @@ def test_generate_new_tokens_with_old_jti_revocation(app, test_user) -> None:
     """Test generate_new_tokens revokes old JTI during rotation."""
     with app.app_context():
         user = db.session.get(User, test_user.id)
+        assert user is not None
 
         # First, generate initial tokens
         _, _ = generate_new_tokens(user.id)

@@ -14,6 +14,7 @@ def test_profile_save_display_name(client, app, test_user):
     ):
         # Fetch the user within the request context to avoid session conflicts
         user = db.session.get(User, user_id)
+        assert user is not None
         mock_get_user.return_value = user
 
         # Define new profile data
@@ -39,6 +40,7 @@ def test_profile_save_display_name(client, app, test_user):
         # Verify changes in the database
         db.session.expire_all()
         updated_user = db.session.get(User, user_id)
+        assert updated_user is not None
 
         assert updated_user.language == new_language
         assert updated_user.region == new_region
@@ -54,6 +56,7 @@ def test_profile_save_variants(client, app, test_user):
         app.app_context(),
     ):
         user = db.session.get(User, user_id)
+        assert user is not None
         mock_get_user.return_value = user
 
         # 1. Change only display name
@@ -69,6 +72,7 @@ def test_profile_save_variants(client, app, test_user):
         )
         db.session.expire_all()
         updated_user = db.session.get(User, user_id)
+        assert updated_user is not None
         assert updated_user.display_name == new_name
 
         # 2. Change only language
@@ -84,6 +88,7 @@ def test_profile_save_variants(client, app, test_user):
         )
         db.session.expire_all()
         updated_user = db.session.get(User, user_id)
+        assert updated_user is not None
         assert updated_user.language == new_lang
 
         # 3. Change only region
@@ -99,4 +104,5 @@ def test_profile_save_variants(client, app, test_user):
         )
         db.session.expire_all()
         updated_user = db.session.get(User, user_id)
+        assert updated_user is not None
         assert updated_user.region == new_reg

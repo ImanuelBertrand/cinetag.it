@@ -37,6 +37,7 @@ def test_get_friend_code(client, app, test_user):
     with app.app_context():
         # Ensure user is registered (has email)
         u = db.session.get(User, test_user.id)
+        assert u is not None
         u.email = "registered@example.com"
         db.session.commit()
         user_id = u.id
@@ -46,6 +47,7 @@ def test_get_friend_code(client, app, test_user):
         app.app_context(),
     ):
         user = db.session.get(User, user_id)
+        assert user is not None
         mock_get_user.return_value = user
 
         response = client.get("/api/friends/code")
@@ -60,6 +62,7 @@ def test_reset_friend_code(client, app, test_user):
     """Test resetting the friend code."""
     with app.app_context():
         u = db.session.get(User, test_user.id)
+        assert u is not None
         u.email = "registered@example.com"
         u.ensure_friend_code()
         old_code = u.friend_code
@@ -71,6 +74,7 @@ def test_reset_friend_code(client, app, test_user):
         app.app_context(),
     ):
         user = db.session.get(User, user_id)
+        assert user is not None
         mock_get_user.return_value = user
 
         response = client.post("/api/friends/code/reset")

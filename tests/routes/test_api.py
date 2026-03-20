@@ -90,6 +90,7 @@ def test_review_movie_remove(client, app, api_user, api_movie) -> None:
     """Test POST /user/movies/review removes a movie decision."""
     with app.app_context():
         user = db.session.get(User, api_user.id)
+        assert user is not None
 
         # First add a decision
         user_movie = UserMovie(user_id=user.id, movie_id=5001, decision="approve")
