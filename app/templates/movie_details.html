@@ -68,5 +68,5 @@
 
 {% block scripts %}
     {{ super() }}
-    <script src="{{ url_for('static', filename='js/movie_details.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/movie_details.js') }}?v={{ static_version }}"></script>
 {% endblock %}

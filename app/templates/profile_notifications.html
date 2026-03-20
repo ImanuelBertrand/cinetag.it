@@ -74,7 +74,7 @@
             </div>
         </div>
 
-        <script src="{{ url_for('static', filename='js/profile_notifications.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/profile_notifications.js') }}?v={{ static_version }}"></script>
     {% endif %}
 
 {% endblock %}

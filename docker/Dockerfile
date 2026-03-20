@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 
+# Build-time version stamp for static asset cache-busting
+ARG STATIC_VERSION=dev
+ENV STATIC_VERSION=${STATIC_VERSION}
+
 # 3. Enable bytecode compilation for faster startups
 ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
@@ -65,6 +69,10 @@ COPY . .
 # (This ensures we get the compiled dist/style.css)
 COPY --from=builder /app/app/static/dist /app/app/static/dist
 COPY --from=builder /app/app/static/vendor /app/app/static/vendor
+
+# Carry the version stamp into the production image
+ARG STATIC_VERSION=dev
+ENV STATIC_VERSION=${STATIC_VERSION}
 
 # Place the virtual env on the PATH so 'python' and 'gunicorn' work automatically
 ENV UV_PROJECT_ENVIRONMENT=/venv

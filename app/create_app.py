@@ -101,6 +101,9 @@ def create_app(config_name, start_scheduler=False):
     @app.context_processor
     def inject_context():
         # g.current_user is set (or None) by before_request
-        return {"current_user": g.get("current_user")}
+        return {
+            "current_user": g.get("current_user"),
+            "static_version": app.config.get("STATIC_VERSION", "dev"),
+        }
 
     return app
