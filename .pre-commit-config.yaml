@@ -13,3 +13,9 @@ repos:
         language: system
         types_or: [javascript, css, scss, html, json]
         pass_filenames: true
+      - id: ty
+        name: ty
+        entry: ty check
+        language: system
+        types: [python]
+        pass_filenames: false

@@ -45,11 +45,7 @@ dev = [
   "ruff>=0.15.7",
   "taplo>=0.9.3",
   "pre-commit>=4.5.1",
-  "mypy>=1.19.1",
-  "types-requests",
-  "types-PyYAML",
-  "types-redis",
-  "sqlalchemy[mypy]>=2.0.48",
+  "ty>=0.0.0a1",
   "pytest-cov>=7.0.0",
 ]
 
@@ -139,13 +135,10 @@ max-positional-arguments = 8
 max-locals = 25
 max-attributes = 15
 
-[tool.mypy]
-python_version = "3.14"
-ignore_missing_imports = true
-check_untyped_defs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-show_error_codes = true
-explicit_package_bases = true
-mypy_path = "."
-plugins = ["sqlalchemy.ext.mypy.plugin"]
+[tool.ty.environment]
+python-version = "3.14"
+root = ["."]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unused-ignore-comment = "warn"
