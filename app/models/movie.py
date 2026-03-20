@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Float, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,8 +9,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.extensions import db
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from app.models.movie_language_info import MovieLanguageInfo
     from app.models.movie_region_info import MovieRegionInfo
     from app.models.notification import Notification
@@ -52,14 +51,15 @@ class Movie(db.Model):
 
     def get_localized_data(
         self, lang: str, language_infos: dict[str, MovieLanguageInfo] | None = None
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         if language_infos is None:
             language_infos = {
-                lang_info.language: lang_info
-                for lang_info in self.language_infos  # type: ignore[not-iterable]
+                lang_info.language: lang_info for lang_info in self.language_infos
             }
 
-        langs = [lang, "en", self.original_language]
+        langs: list[str] = [
+            lng for lng in [lang, "en", self.original_language] if lng is not None
+        ]
         info_sources = [language_infos.get(key) for key in langs]
         fields = ["title", "overview", "tagline", "runtime", "poster_path"]
         fallbacks = {"title": self.original_title, "runtime": self.runtime}

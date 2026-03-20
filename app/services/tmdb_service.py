@@ -215,7 +215,7 @@ def calculate_language_sort_orders() -> None:
         .group_by(User.language)
         .all()
     )
-    lang_counts = dict(user_counts)
+    lang_counts = {row[0]: row[1] for row in user_counts}
     _sort_objects(languages, lang_counts)
 
 
@@ -232,7 +232,8 @@ def calculate_region_sort_orders() -> None:
         .group_by(User.region)
         .all()
     )
-    region_counts = dict(user_counts)
+
+    region_counts = {row[0]: row[1] for row in user_counts}
     _sort_objects(regions, region_counts)
 
 

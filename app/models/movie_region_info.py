@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Index, String, UniqueConstraint
@@ -8,8 +9,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.extensions import db
 
 if TYPE_CHECKING:
-    import datetime
-
     from app.models.movie import Movie
 
 

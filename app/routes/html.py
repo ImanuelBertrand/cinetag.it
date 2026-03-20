@@ -238,7 +238,7 @@ def merge_temporary_user():
         return redirect(url_for("html.profile"))
 
     if merge:
-        user_movies = {movie.movie_id: movie for movie in user.user_movies}  # type: ignore[not-iterable]
+        user_movies = {movie.movie_id: movie for movie in user.user_movies}
         for temp_movie in temp_user.user_movies:
             user_movie = user_movies.get(temp_movie.movie_id)
             if not user_movie:

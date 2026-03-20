@@ -155,7 +155,7 @@ def send_push_notification(notification: Notification):
             "Push subscription expired for channel %s, disabling channel", channel.id
         )
         # Disable the notification channel
-        channel.enabled = False  # type: ignore[assignment]
+        channel.enabled = False
         db.session.add(channel)
         db.session.commit()
         return False
@@ -166,9 +166,13 @@ def send_push_notification(notification: Notification):
 
 def send_email_notification(notification: Notification):
     user_mail = notification.user.email
-    movie_data = notification.movie.get_localized_data(notification.user.region)
+    if not user_mail:
+        _logger.error("No email address for user %s", notification.user_id)
+        return False
+    user_region = notification.user.region or "en"
+    movie_data = notification.movie.get_localized_data(user_region)
     movie_region_info = MovieRegionInfo.query.filter_by(
-        movie_id=notification.movie_id, region=notification.user.region
+        movie_id=notification.movie_id, region=user_region
     ).first()
     movie_title = movie_data["title"]
     release_date = movie_region_info.release_date
@@ -241,6 +245,7 @@ def delete_outdated_notifications(
         if (
             notification.movie_id not in user_movie_ids
             or notification.days_in_advance not in channel.days_in_advance
+            or notification.scheduled_at is None
             or notification.scheduled_at < scheduled_at_threshold
         ):
             db.session.delete(notification)

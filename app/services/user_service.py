@@ -245,11 +245,12 @@ def _get_preloaded_movie_data(movie_ids, region, language):
         db.session.query(MovieRegionInfo)
         .join(Movie, Movie.id == MovieRegionInfo.movie_id)
         .filter(MovieRegionInfo.movie_id.in_(movie_ids))
-        .filter(not MovieRegionInfo.is_fake)
+        .filter(MovieRegionInfo.is_fake.isnot(True))
         .filter(
             db.or_(
                 MovieRegionInfo.region == region,
-                func.find_in_set(MovieRegionInfo.region, Movie.origin_country) > 0,
+                MovieRegionInfo.region
+                == func.any_(func.string_to_array(Movie.origin_country, ",")),
             )
         )
     )
