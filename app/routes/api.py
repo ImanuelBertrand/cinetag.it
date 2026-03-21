@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import UTC, date, datetime
 
@@ -252,6 +253,18 @@ def check_push_subscription():
     return jsonify({"success": True, "exists": False})
 
 
+def _parse_days_in_advance(data: dict) -> list:
+    days = data.get("days_in_advance", [1, 3, 7])
+    if isinstance(days, str):
+        try:
+            days = json.loads(days)
+        except json.JSONDecodeError, ValueError:
+            days = [1, 3, 7]
+    if not isinstance(days, list):
+        days = [1, 3, 7]
+    return days
+
+
 @api.route("/subscribe", methods=["POST"])
 def subscribe_push():
     """Subscribe to push notifications"""
@@ -267,12 +280,8 @@ def subscribe_push():
         )
 
     # Extract notification settings if provided
-    days_in_advance = data.get(
-        "days_in_advance", [1, 3, 7]
-    )  # Default values if not provided
-    include_maybe_movies = data.get(
-        "include_maybe_movies", True
-    )  # Default value if not provided
+    days_in_advance = _parse_days_in_advance(data)
+    include_maybe_movies = data.get("include_maybe_movies", True)
 
     # Check if the user already has a push channel with this endpoint
     push_channels = NotificationChannel.query.filter_by(

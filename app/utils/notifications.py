@@ -1,3 +1,4 @@
+import json
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
@@ -44,7 +45,7 @@ def cron_send_notifications() -> None:
         .filter(
             Notification.is_sent.is_(False),
             Notification.scheduled_at <= datetime.now(UTC),
-            NotificationChannel.enabled == 1,
+            NotificationChannel.enabled.is_(True),
         )
         .order_by(Notification.scheduled_at.asc())
         .all()
@@ -205,7 +206,13 @@ def add_missing_notifications(
             continue
         if region_info.release_date <= today:
             continue
-        for day in channel.days_in_advance:
+        days_in_advance = channel.days_in_advance
+        if isinstance(days_in_advance, str):
+            try:
+                days_in_advance = json.loads(days_in_advance)
+            except json.JSONDecodeError, ValueError:
+                days_in_advance = []
+        for day in days_in_advance:
             try:
                 days_val = int(day)
             except ValueError, TypeError:
