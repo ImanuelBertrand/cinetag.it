@@ -157,7 +157,6 @@ jobs:
     needs: pytest
     if: |
       github.ref == 'refs/heads/main' || 
-      github.ref == 'refs/heads/docker' || 
       github.event_name == 'release'
 
     permissions:
@@ -203,6 +202,17 @@ jobs:
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
+      - name: Extract metadata (Squid)
+        id: meta_squid
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-squid
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
       - name: Build and push App
         uses: docker/build-push-action@v7
         with:
@@ -224,5 +234,17 @@ jobs:
           push: true
           tags: ${{ steps.meta_nginx.outputs.tags }}
           labels: ${{ steps.meta_nginx.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Squid
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: squid
+          push: true
+          tags: ${{ steps.meta_squid.outputs.tags }}
+          labels: ${{ steps.meta_squid.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
