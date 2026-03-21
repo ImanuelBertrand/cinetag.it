@@ -95,6 +95,10 @@ COPY --from=builder /app/app/static/js      /usr/share/nginx/html/static/js
 RUN mkdir -p /usr/share/nginx/html/posters
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
+# --- Squid Stage ---
+FROM ubuntu/squid:6.13-25.04_beta AS squid
+COPY docker/squid/squid-prod.conf /etc/squid/squid.conf
+
 # --- Development Stage ---
 FROM production AS development
 

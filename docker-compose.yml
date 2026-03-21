@@ -41,10 +41,6 @@ services:
       start_period: 10s
 
   web:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: production
     image: ghcr.io/imanuelbertrand/cinetag.it:latest
     container_name: cinetagit_app
     restart: always
@@ -92,11 +88,9 @@ services:
       - cinetagit_network
 
   squid:
-    image: ubuntu/squid:6.13-25.04_beta
+    image: ghcr.io/imanuelbertrand/cinetag.it-squid:latest
     container_name: cinetagit_squid
     restart: always
-    volumes:
-      - ./docker/squid/squid-prod.conf:/etc/squid/squid.conf:ro
     networks:
       - cinetagit_network
       - cinetagit_external
@@ -109,10 +103,6 @@ services:
       start_interval: 1s
 
   nginx:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: nginx
     image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
     container_name: cinetagit_nginx
     restart: always
