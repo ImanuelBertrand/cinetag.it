@@ -1,4 +1,8 @@
 services:
+  db:
+    volumes:
+      - ./docker/postgres/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh:ro
+
   squid:
     volumes:
       - ./docker/squid/squid-dev.conf:/etc/squid/squid.conf:ro
