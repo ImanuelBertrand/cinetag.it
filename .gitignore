@@ -2,6 +2,7 @@
 config.yaml
 devenv/docker-config.yaml
 venv
+.venv
 instance
 app/static/dist
 app/static/vendor
