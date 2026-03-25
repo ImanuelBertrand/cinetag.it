@@ -2,8 +2,6 @@ import os
 from typing import ClassVar
 from urllib.parse import urlparse, urlunparse
 
-from sqlalchemy.pool import NullPool
-
 
 def _build_test_db_uri() -> str | None:
     """Always return a URI pointing at a dedicated test database.
@@ -97,8 +95,7 @@ class TestingConfig(Config):
     JWT_COOKIE_SECURE = False
     DEBUG = True
     TESTING = True
-    # NullPool closes connections immediately so tests don't exhaust max_connections.
-    SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict] = {"poolclass": NullPool}
+    SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict] = {"pool_size": 2, "max_overflow": 0}
     SERVER_NAME = None
     # Disable scheduler for testing
     SCHEDULER_API_ENABLED = False

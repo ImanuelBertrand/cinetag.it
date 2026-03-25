@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -31,24 +32,26 @@ def _drop_pg_enums() -> None:
         conn.commit()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def app():
-    """Create and configure a Flask app for testing."""
+    """Create and configure a Flask app once for the entire test session."""
     app = create_app("testing")
-    app.config["TESTING"] = True
     with app.app_context():
+        db.create_all()
         yield app
-        db.session.remove()
         db.drop_all()
         _drop_pg_enums()
 
 
 @pytest.fixture(autouse=True)
 def clean_test_db(app) -> None:
-    with app.app_context():
-        db.drop_all()
-        _drop_pg_enums()
-        db.create_all()
+    """Delete all rows between tests. Schema is created once per session."""
+    yield
+    db.session.rollback()
+    for table in reversed(db.metadata.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()
+    db.session.remove()
 
 
 @pytest.fixture
@@ -60,90 +63,59 @@ def client(app):
 @pytest.fixture
 def test_user(app):
     """Create a test user."""
-    with app.app_context():
-        # First, clean up any existing test users to avoid duplicate email errors
-        User.query.filter(User.email.like("test%@example.com")).delete()
-        db.session.commit()
-
-        # Create a new user with a unique email
-        import uuid
-
-        unique_id = str(uuid.uuid4())[:8]
-        user = User(
-            display_name="Test User",
-            email=f"test{unique_id}@example.com",
-            region="US",
-            language="en",
-        )
-        db.session.add(user)
-        db.session.commit()
-
-        # Refresh the user to ensure it's attached to the session
-        user_id = user.id
-        db.session.expunge_all()  # Clear the session
-        user = db.session.get(User, user_id)  # Re-fetch the user
-
-        yield user  # Use yield instead of return to keep the context active
-
-        # Clean up
-        db.session.rollback()
+    user = User(
+        display_name="Test User",
+        email=f"test{str(uuid.uuid4())[:8]}@example.com",
+        region="US",
+        language="en",
+    )
+    db.session.add(user)
+    db.session.commit()
+    db.session.refresh(user)
+    return user
 
 
 @pytest.fixture
 def test_movies(app, test_user):
     """Create test movies with different titles."""
-    with app.app_context():
-        today = datetime.now(UTC).date()
+    today = datetime.now(UTC).date()
 
-        # Create movies with different titles
-        movie_ids = []
-        for i in range(30):  # Create 30 movies for pagination testing
-            # Every 5th movie will have "Star" in the title
-            has_star = i % 5 == 0
-            title = f"Star Movie {i}" if has_star else f"Regular Movie {i}"
+    movie_ids = []
+    for i in range(30):  # Create 30 movies for pagination testing
+        has_star = i % 5 == 0
+        title = f"Star Movie {i}" if has_star else f"Regular Movie {i}"
 
-            movie = Movie(
-                id=i + 1,
-                original_title=title,
-                popularity=float(i),
-                original_language="en",
-            )
-            db.session.add(movie)
+        movie = Movie(
+            id=i + 1,
+            original_title=title,
+            popularity=float(i),
+            original_language="en",
+        )
+        db.session.add(movie)
 
-            # Add region info (release dates spread across next 30 days)
-            region_info = MovieRegionInfo(
-                movie_id=i + 1, region="US", release_date=today + timedelta(days=i)
-            )
-            db.session.add(region_info)
+        region_info = MovieRegionInfo(
+            movie_id=i + 1, region="US", release_date=today + timedelta(days=i)
+        )
+        db.session.add(region_info)
 
-            # Add language info
-            lang_info = MovieLanguageInfo(
-                movie_id=i + 1,
-                language="en",
-                title=title,
-                overview=f"Overview for {title}",
-                poster_path=f"/path/to/poster/{i + 1}.jpg",
-            )
-            db.session.add(lang_info)
+        lang_info = MovieLanguageInfo(
+            movie_id=i + 1,
+            language="en",
+            title=title,
+            overview=f"Overview for {title}",
+            poster_path=f"/path/to/poster/{i + 1}.jpg",
+        )
+        db.session.add(lang_info)
 
-            movie_ids.append(i + 1)
+        movie_ids.append(i + 1)
 
-        # Add user decisions for some movies
-        for i in range(5):
-            user_movie = UserMovie(
-                user_id=test_user.id,
-                movie_id=i + 1,
-                decision="approve" if i % 2 == 0 else "disapprove",
-            )
-            db.session.add(user_movie)
+    for i in range(5):
+        user_movie = UserMovie(
+            user_id=test_user.id,
+            movie_id=i + 1,
+            decision="approve" if i % 2 == 0 else "disapprove",
+        )
+        db.session.add(user_movie)
 
-        db.session.commit()
-
-        # Refresh the session to ensure all objects are attached
-        db.session.expunge_all()
-        movies = [db.session.get(Movie, movie_id) for movie_id in movie_ids]
-
-        yield movies
-
-        # Clean up
-        db.session.rollback()
+    db.session.commit()
+    return [db.session.get(Movie, movie_id) for movie_id in movie_ids]
