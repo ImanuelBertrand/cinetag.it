@@ -30,6 +30,7 @@ dependencies = [
   "py-vapid>=1.9.4",
   "pyjwt>=2.12.1",
   "pytest>=9.0.2",
+  "pytest-timeout>=2.3.1",
   "python-dotenv>=1.2.2",
   "pywebpush>=2.3.0",
   "pyyaml>=6.0.3",
@@ -110,6 +111,7 @@ per-file-ignores = { "tests/*" = [
 pythonpath = ["."]
 testpaths = ["tests"]
 python_files = "test_*.py"
+timeout = 10
 
 [tool.pylint.main]
 # Tell pylint to look in the current directory for the 'app' folder
