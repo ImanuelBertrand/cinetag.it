@@ -55,13 +55,13 @@ def test_send_queued_emails_with_server_name(app, test_user) -> None:
 def test_send_queued_emails_fails_without_server_name(app, test_user) -> None:
     """Test that send_queued_emails raises
     RuntimeError when SERVER_NAME is NOT configured."""
+    # Must be set before pushing the app context — Flask creates the URL adapter
+    # at AppContext.push() time, so setting it inside the context is too late.
+    app.config["SERVER_NAME"] = None
     with app.app_context():
         # Re-fetch user in this context
         user = db.session.get(test_user.__class__, test_user.id)
         assert user is not None
-
-        # Ensure SERVER_NAME is NOT set
-        app.config["SERVER_NAME"] = None
 
         # Prepare user for confirmation email
         user.new_email = "new@example.com"
