@@ -86,6 +86,7 @@ def create_app(config_name, start_scheduler=False):
             # Ensure g attributes are cleaned up even if response setting fails
             g.pop("new_access_token", None)
             g.pop("new_refresh_token", None)
+            g.pop("clear_auth_cookies", None)
         return response
 
     app.register_blueprint(html_blueprint)
