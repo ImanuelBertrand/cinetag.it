@@ -1,7 +1,11 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 from sqlalchemy import text
 
 from app.create_app import create_app
@@ -44,7 +48,7 @@ def app():
 
 
 @pytest.fixture(autouse=True)
-def clean_test_db(app) -> None:
+def clean_test_db(app) -> Generator[None]:
     """Delete all rows between tests. Schema is created once per session."""
     yield
     db.session.rollback()
