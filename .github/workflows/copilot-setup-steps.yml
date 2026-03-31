@@ -44,7 +44,7 @@ jobs:
 
       - name: Build assets
         env:
-          FLASK_APP: "app.create_app:create_app('testing')"
+          FLASK_APP: "app.create_app:create_app('development')"
         run: |
           uv run flask build-assets
           mkdir -p app/static/vendor/fullcalendar
