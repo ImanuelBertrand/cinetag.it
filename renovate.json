@@ -4,9 +4,6 @@
   "rangeStrategy": "bump",
   "minimumReleaseAge": "14 days",
   "internalChecksFilter": "strict",
-  "lockFileMaintenance": {
-    "enabled": true
-  },
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
