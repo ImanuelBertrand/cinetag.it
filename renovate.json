@@ -1,5 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "rangeStrategy": "bump"
+  "rangeStrategy": "bump",
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ]
 }
