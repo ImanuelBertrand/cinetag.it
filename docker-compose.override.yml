@@ -35,6 +35,7 @@ services:
       - .:/app
       - ./docker/.claude.json:/home/appuser/.claude.json
       - ./docker/.claude/:/home/appuser/.claude/
+      - claude_local:/home/appuser/.local
     environment:
       - MAIL_SERVER=mailhog
       - MAIL_PORT=1025
@@ -46,3 +47,6 @@ services:
       - NO_PROXY=db,redis,nginx,mailhog,localhost,127.0.0.1
     depends_on:
       - mailhog
+
+volumes:
+  claude_local:

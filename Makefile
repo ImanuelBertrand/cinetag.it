@@ -42,7 +42,7 @@ shell:
 	$(EXEC) bash
 
 claude:
-	$(EXEC) claude --dangerously-skip-permissions
+	$(EXEC) bash docker/claude.sh
 
 migrate:
 	$(EXEC) bash -c 'FLASK_APP=wsgi.py python -m flask db upgrade'
