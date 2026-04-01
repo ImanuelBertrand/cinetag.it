@@ -115,6 +115,18 @@ def get_push_notification_content(
     release_date = movie_region_info.release_date
     days_till_release = (release_date - datetime.now(UTC).date()).days
 
+    if abs(days_till_release - notification.days_in_advance) > max(
+        notification.days_in_advance, 3
+    ):
+        _logger.warning(
+            "Skipping push notification %s: days_till_release=%s "
+            "but days_in_advance=%s",
+            notification.id,
+            days_till_release,
+            notification.days_in_advance,
+        )
+        return None
+
     return {
         "title": f"Upcoming movie: {movie_title}",
         "body": f"In {days_till_release} days!",
@@ -170,14 +182,32 @@ def send_email_notification(notification: Notification):
     if not user_mail:
         _logger.error("No email address for user %s", notification.user_id)
         return False
-    user_region = notification.user.region or "en"
+    user_region = notification.user.region or "US"
     movie_data = notification.movie.get_localized_data(user_region)
     movie_region_info = MovieRegionInfo.query.filter_by(
         movie_id=notification.movie_id, region=user_region
     ).first()
+
+    if not movie_region_info:
+        _logger.error("No region info found for movie %s", notification.movie_id)
+        return False
+
     movie_title = movie_data["title"]
     release_date = movie_region_info.release_date
     days_till_release = (release_date - datetime.now(UTC).date()).days
+
+    if abs(days_till_release - notification.days_in_advance) > max(
+        notification.days_in_advance, 3
+    ):
+        _logger.warning(
+            "Skipping email notification %s: days_till_release=%s "
+            "but days_in_advance=%s",
+            notification.id,
+            days_till_release,
+            notification.days_in_advance,
+        )
+        return False
+
     body = (
         f"Hello! You have a movie '{movie_title}' "
         f"coming up in {days_till_release} days."
@@ -245,6 +275,22 @@ def delete_outdated_notifications(
 ) -> None:
     scheduled_at_threshold = datetime.now(UTC) - timedelta(days=7)
     user_movie_ids = {m.movie_id for m in user_movies}
+    user_region = channel.user.region
+
+    # Batch-load region infos to avoid N+1 queries
+    notification_movie_ids = {n.movie_id for n in user_notifications if not n.is_sent}
+    region_infos = (
+        {
+            ri.movie_id: ri
+            for ri in MovieRegionInfo.query.filter(
+                MovieRegionInfo.movie_id.in_(notification_movie_ids),
+                MovieRegionInfo.region == user_region,
+            ).all()
+        }
+        if notification_movie_ids and user_region
+        else {}
+    )
+
     for notification in user_notifications:
         if notification.is_sent:
             continue
@@ -255,6 +301,22 @@ def delete_outdated_notifications(
             or notification.scheduled_at is None
             or notification.scheduled_at < scheduled_at_threshold
         ):
+            db.session.delete(notification)
+            continue
+
+        # Delete notifications whose schedule no longer matches the current
+        # release date (e.g. release date was pushed back or pulled forward)
+        region_info = region_infos.get(notification.movie_id)
+        if region_info is None:
+            db.session.delete(notification)
+            continue
+
+        expected_scheduled = datetime.combine(
+            region_info.release_date - timedelta(days=notification.days_in_advance),
+            datetime.min.time(),
+            tzinfo=UTC,
+        )
+        if notification.scheduled_at != expected_scheduled:
             db.session.delete(notification)
 
 

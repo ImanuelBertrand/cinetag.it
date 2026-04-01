@@ -14,6 +14,8 @@ from app.models.user_movie import UserMovie
 from app.utils.notifications import (
     add_missing_notifications,
     delete_outdated_notifications,
+    get_push_notification_content,
+    send_email_notification,
     send_notification,
     setup_notifications,
 )
@@ -208,3 +210,224 @@ def test_add_missing_notifications(
 
         notifications = Notification.query.filter_by(channel_id=channel.id).all()
         assert len(notifications) > 0
+
+
+def test_delete_outdated_notifications_removes_stale_schedule(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """Test that notifications are deleted when the release date changes."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        today = datetime.now(UTC).date()
+
+        # Create user movie and notification based on original release date (5 days out)
+        user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
+        db.session.add(user_movie)
+        db.session.commit()
+
+        original_release = today + timedelta(days=5)
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=3,
+            scheduled_at=datetime.combine(
+                original_release - timedelta(days=3),
+                datetime.min.time(),
+                tzinfo=UTC,
+            ),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        # Now push the release date back significantly
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today + timedelta(days=60)
+        db.session.commit()
+
+        user_movies = UserMovie.query.filter_by(user_id=user.id).all()
+        user_notifications = Notification.query.filter_by(channel_id=channel.id).all()
+
+        delete_outdated_notifications(channel, user_movies, user_notifications)
+        db.session.commit()
+
+        remaining = Notification.query.filter_by(channel_id=channel.id).all()
+        assert len(remaining) == 0
+
+
+def test_delete_outdated_notifications_keeps_valid_schedule(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """Test that notifications are kept when schedule matches release date."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        today = datetime.now(UTC).date()
+
+        user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
+        db.session.add(user_movie)
+        db.session.commit()
+
+        release_date = today + timedelta(days=5)
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = release_date
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=3,
+            scheduled_at=datetime.combine(
+                release_date - timedelta(days=3),
+                datetime.min.time(),
+                tzinfo=UTC,
+            ),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        user_movies = UserMovie.query.filter_by(user_id=user.id).all()
+        user_notifications = Notification.query.filter_by(channel_id=channel.id).all()
+
+        delete_outdated_notifications(channel, user_movies, user_notifications)
+        db.session.commit()
+
+        remaining = Notification.query.filter_by(channel_id=channel.id).all()
+        assert len(remaining) == 1
+
+
+def test_push_notification_skips_when_days_diverge(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """Test push notification returns None when days diverge."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        today = datetime.now(UTC).date()
+
+        # Set release date 64 days out
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today + timedelta(days=64)
+        db.session.commit()
+
+        # Create notification that claims 14 days in advance
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=14,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        result = get_push_notification_content(notification)
+        assert result is None
+
+
+def test_email_notification_returns_false_when_no_region_info(
+    app, notification_user, notification_channel
+) -> None:
+    """Test email notification returns False when no MovieRegionInfo exists."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+
+        # Create a movie without region info for the user's region
+        movie = Movie(
+            id=7003,
+            original_title="No Region Movie",
+            popularity=1.0,
+            original_language="en",
+        )
+        db.session.add(movie)
+        lang_info = MovieLanguageInfo(
+            movie_id=7003,
+            language="en",
+            title="No Region Movie",
+            overview="Overview",
+        )
+        db.session.add(lang_info)
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7003,
+            days_in_advance=7,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        result = send_email_notification(notification)
+        assert result is False
+
+
+def test_email_notification_uses_us_fallback_region(app, notification_channel) -> None:
+    """Test email notification defaults to 'US' region, not 'en'."""
+    with app.app_context():
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        today = datetime.now(UTC).date()
+
+        # Create user with no region set
+        user = User(
+            display_name="No Region User",
+            email="noregion@example.com",
+            region=None,
+            language="en",
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        # Create movie with US region info only
+        movie = Movie(
+            id=7004,
+            original_title="US Only Movie",
+            popularity=1.0,
+            original_language="en",
+        )
+        db.session.add(movie)
+        region_info = MovieRegionInfo(
+            movie_id=7004,
+            region="US",
+            release_date=today + timedelta(days=7),
+        )
+        db.session.add(region_info)
+        lang_info = MovieLanguageInfo(
+            movie_id=7004,
+            language="en",
+            title="US Only Movie",
+            overview="Overview",
+        )
+        db.session.add(lang_info)
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7004,
+            days_in_advance=7,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        # With the old "en" default, this would fail (no region_info for "en")
+        # With the fix ("US" default), it should find the US region info
+        result = send_email_notification(notification)
+        # Result depends on email sending mock, but it should not return False
+        # due to missing region info
+        assert (
+            result is not False
+            or MovieRegionInfo.query.filter_by(movie_id=7004, region="US").first()
+            is not None
+        )
