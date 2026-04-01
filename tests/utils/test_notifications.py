@@ -218,7 +218,9 @@ def test_delete_outdated_notifications_removes_stale_schedule(
     """Test that notifications are deleted when the release date changes."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
         today = datetime.now(UTC).date()
 
         # Create user movie and notification based on original release date (5 days out)
@@ -264,7 +266,9 @@ def test_delete_outdated_notifications_keeps_valid_schedule(
     """Test that notifications are kept when schedule matches release date."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
         today = datetime.now(UTC).date()
 
         user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
@@ -308,7 +312,9 @@ def test_push_notification_skips_when_days_diverge(
     """Test push notification returns None when days diverge."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
         today = datetime.now(UTC).date()
 
         # Set release date 64 days out
@@ -339,7 +345,9 @@ def test_email_notification_returns_false_when_no_region_info(
     """Test email notification returns False when no MovieRegionInfo exists."""
     with app.app_context():
         user = db.session.get(User, notification_user.id)
+        assert user is not None
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
 
         # Create a movie without region info for the user's region
         movie = Movie(
@@ -376,6 +384,7 @@ def test_email_notification_uses_us_fallback_region(app, notification_channel) -
     """Test email notification defaults to 'US' region, not 'en'."""
     with app.app_context():
         channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
         today = datetime.now(UTC).date()
 
         # Create user with no region set
