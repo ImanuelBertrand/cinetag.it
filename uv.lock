@@ -352,7 +352,7 @@ requires-dist = [
     { name = "py-vapid", specifier = ">=1.9.4" },
     { name = "pyjwt", specifier = ">=2.12.1" },
     { name = "pylint", specifier = ">=4.0.5" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-timeout", specifier = ">=2.4.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "pywebpush", specifier = ">=2.3.0" },
