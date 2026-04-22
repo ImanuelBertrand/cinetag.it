@@ -28,7 +28,7 @@
   "devDependencies": {
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "prettier-plugin-jinja-template": "^2.1.0"
   },
   "dependencies": {
