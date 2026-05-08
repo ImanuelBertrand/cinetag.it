@@ -29,7 +29,7 @@
     "eslint": "10.3.0",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.8.3",
-    "prettier-plugin-jinja-template": "2.1.0"
+    "prettier-plugin-jinja-template": "2.2.0"
   },
   "dependencies": {
     "fullcalendar": "6.1.20"
