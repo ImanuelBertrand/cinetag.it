@@ -344,7 +344,7 @@ requires-dist = [
     { name = "flask-script", specifier = "==2.0.6" },
     { name = "flask-sqlalchemy", specifier = "==3.1.1" },
     { name = "gunicorn", specifier = "==25.3.0" },
-    { name = "icalendar", specifier = "==7.0.3" },
+    { name = "icalendar", specifier = "==7.1.0" },
     { name = "libsass", specifier = "==0.23.0" },
     { name = "natsort", specifier = "==8.4.0" },
     { name = "pillow", specifier = "==12.2.0" },
@@ -616,6 +616,7 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/51/16/96b101f18cba17ecce3225ab07bc4c8f23e6befd8552dbbed87482e7c7fb/flask_jwt_extended-4.7.1.tar.gz", hash = "sha256:8085d6757505b6f3291a2638c84d207e8f0ad0de662d1f46aa2f77e658a0c976", size = 34411, upload-time = "2024-11-20T23:44:41.044Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/34/9a91da47b1565811ab4aa5fb134632c8d1757960bfa7d457f486947c4d75/Flask_JWT_Extended-4.7.1-py2.py3-none-any.whl", hash = "sha256:52f35bf0985354d7fb7b876e2eb0e0b141aaff865a22ff6cc33d9a18aa987978", size = 22588, upload-time = "2024-11-20T23:44:39.435Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/73/919244a6460bc87e3d2bc6028699fb0cf651274d5d07b530701a61d528f1/flask_jwt_extended-4.7.1-py2.py3-none-any.whl", hash = "sha256:17ac0d4bfe8b060b9c60d61bf98b703192a0090874e83c8eaa73653372656a5b", size = 22699, upload-time = "2026-05-08T16:30:59.808Z" },
 ]
 
 [[package]]
@@ -767,15 +768,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/7c/af/249d1576653b69c20
 
 [[package]]
 name = "icalendar"
-version = "7.0.3"
+version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-dateutil" },
     { name = "tzdata" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/60/6b0356a2ed1c9689ae14bd8e44f22eac67c420a0ecca4df8306b70906600/icalendar-7.0.3.tar.gz", hash = "sha256:95027ece087ab87184d765f03761f25875821f74cdd18d3b57e9c868216d8fde", size = 443788, upload-time = "2026-03-03T12:00:10.952Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/4c/ea2ca8ea012a2bf486657ebc5704d97bd9628e1cb85130b3f5298ac08f60/icalendar-7.1.0.tar.gz", hash = "sha256:10cd223c792fcc43bee4c3ebe3149d4cf32406c85cfef146624df5a0d414260f", size = 467258, upload-time = "2026-04-30T23:25:20.282Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/c6/431fbf9063a6a4306d4cedae7823d69baf0979ba6ca57ab24a9d898cd0aa/icalendar-7.0.3-py3-none-any.whl", hash = "sha256:8c9fea6d3a89671bba8b6938d8565b4d0ec465c6a2796ef0f92790dcb9e627cd", size = 442406, upload-time = "2026-03-03T12:00:09.228Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/df/68d5aa80188ad0880f12e2fc60d5df10fc831fdb11ef1d91e417e24ef4ee/icalendar-7.1.0-py3-none-any.whl", hash = "sha256:6de875370d22fc4aff172ad7c439b39fb109dc2eab9ce358fcb95e8689ad7b56", size = 471220, upload-time = "2026-04-30T23:25:18.584Z" },
 ]
 
 [[package]]
