@@ -724,7 +724,7 @@ def update_all_upcoming_movies() -> None:
     _logger.info("Updating all upcoming movies")
 
     used_regions_by_users = db.session.query(User.region).distinct().all()
-    used_regions_by_users = {region for (region,) in used_regions_by_users}
+    used_regions_by_users = {region for (region,) in used_regions_by_users if region}
     used_regions_by_users = used_regions_by_users | {"US", "DE", "GB", "FR"}
 
     sync_genre_names("en")
