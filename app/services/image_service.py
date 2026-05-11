@@ -1,4 +1,5 @@
 import http
+import logging
 import os
 
 import requests
@@ -6,6 +7,10 @@ from flask import current_app
 from PIL import Image
 
 from app.errors import ImageFetchError
+
+_logger = logging.getLogger(__name__)
+
+POSTER_WIDTHS = (500,)
 
 
 def get_image_base_path() -> str:
@@ -61,3 +66,32 @@ def get_image_url(filename: str | None, width: int) -> str | None:
     if not filename:
         return None
     return f"/poster/{width}/{filename.lstrip('/')}"
+
+
+def delete_local_poster(filename: str | None) -> None:
+    """Remove the cached original and all resized variants of a poster file."""
+    if not filename:
+        return
+    base_path = get_image_base_path()
+    paths = [f"{base_path}/original/{filename}"]
+    paths.extend(f"{base_path}/w{w}/{filename}" for w in POSTER_WIDTHS)
+    for path in paths:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            _logger.exception("Failed to delete cached poster %s", path)
+
+
+def prefetch_poster(filename: str | None) -> None:
+    """Download and resize the poster so it is warm on disk before any request."""
+    if not filename:
+        return
+    for width in POSTER_WIDTHS:
+        try:
+            ensure_image_exists(filename, width)
+        except Exception:
+            _logger.exception(
+                "Failed to prefetch poster %s at width %s", filename, width
+            )

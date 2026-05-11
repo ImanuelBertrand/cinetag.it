@@ -17,6 +17,7 @@ from app.models.tmdb_genre import MovieGenre, TmdbGenre, TmdbGenreName
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
+from app.services.image_service import delete_local_poster, prefetch_poster
 from app.services.movie_service import get_lang_infos, get_region_infos
 from app.utils.tmdb import (
     fetch_changed_movies,
@@ -498,12 +499,46 @@ def update_movie_posters(movie: Movie) -> None:
 
     us_poster = best_posters.get("en") or next(iter(best_posters.values()), None)
 
+    replaced_paths: set[str] = set()
+    new_paths: set[str] = set()
     for lang_info in language_infos:
-        poster = best_posters.get(lang_info.language) or us_poster
+        poster: dict[str, Any] | None = (
+            best_posters.get(lang_info.language) or us_poster
+        )
         if not poster:
             continue
-        lang_info.poster_path = poster["file_path"]
-        db.session.add(lang_info)
+        new_path = poster["file_path"]
+        if lang_info.poster_path != new_path:
+            if lang_info.poster_path:
+                replaced_paths.add(lang_info.poster_path)
+            lang_info.poster_path = new_path
+            db.session.add(lang_info)
+        new_paths.add(new_path)
+
+    _refresh_local_poster_cache(replaced_paths, new_paths)
+
+
+def _refresh_local_poster_cache(replaced_paths: set[str], new_paths: set[str]) -> None:
+    """Drop locally cached files for stale paths and prefetch the new ones.
+
+    A "stale" poster is one whose TMDB file_path has changed — TMDB uses
+    content-addressed paths, so the old local file is now unreachable. We still
+    confirm no other lang_info references the path before deleting.
+    """
+    orphan_paths = replaced_paths - new_paths
+    if orphan_paths:
+        still_referenced = {
+            path
+            for (path,) in db.session.query(MovieLanguageInfo.poster_path)
+            .filter(MovieLanguageInfo.poster_path.in_(orphan_paths))
+            .distinct()
+            .all()
+        }
+        for path in orphan_paths - still_referenced:
+            delete_local_poster(path)
+
+    for path in new_paths:
+        prefetch_poster(path)
 
 
 def fetch_theatrical_releases(movie: Movie) -> list[dict[str, Any]]:
