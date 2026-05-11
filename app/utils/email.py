@@ -1,6 +1,5 @@
 import logging
 import os
-from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
@@ -102,11 +101,39 @@ def queue_email(user, mail_type) -> None:
 
 # cron job to send mail
 def send_queued_emails() -> None:
-    send_dict = defaultdict(list)
-    for item in UserEmailQueue.query.all():
-        send_dict[(item.user, item.mail_type)].append(item)
+    """Drain the email queue atomically.
 
-    for (user, mail_type), items in send_dict.items():
+    Claims pending rows with SELECT FOR UPDATE SKIP LOCKED, deletes them, and
+    commits before sending — so a concurrent caller (another worker, or a
+    future manual trigger) either picks a disjoint set or gets nothing.
+
+    Trade-off: if the process crashes after commit but before the SMTP send
+    completes, that email is lost. The user can re-trigger the confirmation
+    or password-reset flow to enqueue another. Avoiding a double-send is more
+    important than guaranteeing delivery on the first attempt for these flows.
+    """
+    items = (
+        UserEmailQueue.query.order_by(UserEmailQueue.id)
+        .with_for_update(skip_locked=True)
+        .all()
+    )
+    if not items:
+        db.session.rollback()
+        return
+
+    # Capture the user references before committing the delete — after commit,
+    # SQLAlchemy expires attributes by default, and the queue row itself is gone.
+    unique_sends: dict[tuple[int, str], tuple] = {}
+    for item in items:
+        unique_sends.setdefault(
+            (item.user_id, item.mail_type), (item.user, item.mail_type)
+        )
+
+    for item in items:
+        db.session.delete(item)
+    db.session.commit()
+
+    for user, mail_type in unique_sends.values():
         try:
             if mail_type == "confirm":
                 send_confirmation_email(user)
@@ -114,10 +141,5 @@ def send_queued_emails() -> None:
                 send_password_reset_email(user)
             else:
                 _logger.error("Unknown mail type: %s", mail_type)
-
-            for item in items:
-                db.session.delete(item)
-            db.session.commit()
         except Exception:
-            db.session.rollback()
-            _logger.exception("Error sending mail")
+            _logger.exception("Error sending %s mail to user %s", mail_type, user.id)

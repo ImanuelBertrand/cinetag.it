@@ -40,8 +40,20 @@ def cron_setup_notifications() -> None:
 
 
 def cron_send_notifications() -> None:
-    scheduled_notifications = (
-        Notification.query.join(NotificationChannel)
+    """Send pending notifications atomically.
+
+    Loads candidate IDs without locking, then processes each one in its own
+    short transaction: SELECT FOR UPDATE SKIP LOCKED, re-check is_sent, send,
+    mark sent, commit. A concurrent caller either picks disjoint rows
+    (SKIP LOCKED) or sees is_sent=True after our commit and filters it out.
+
+    Failed sends leave is_sent=False so the next cron tick re-attempts —
+    preserving the existing retry-on-failure semantic.
+    """
+    pending_ids = [
+        nid
+        for (nid,) in db.session.query(Notification.id)
+        .join(NotificationChannel)
         .filter(
             Notification.is_sent.is_(False),
             Notification.scheduled_at <= datetime.now(UTC),
@@ -49,32 +61,54 @@ def cron_send_notifications() -> None:
         )
         .order_by(Notification.scheduled_at.asc())
         .all()
-    )
-    _logger.info("Sending %s notifications", len(scheduled_notifications))
+    ]
+    db.session.rollback()
+    _logger.info("Sending %s notifications", len(pending_ids))
 
     sent_notifications: dict[int, set[int]] = defaultdict(set)
-    for notification in scheduled_notifications:
+    for notification_id in pending_ids:
         try:
-            if not notification.channel.enabled:
-                # In case the channel was disabled by a
-                # failed notification earlier in the loop
-                continue
-
-            if notification.movie_id in sent_notifications[notification.user_id]:
-                # In case multiple notifications are scheduled
-                # for the same movie and user, only send one
-                is_sent = True
-            else:
-                is_sent = send_notification(notification)
-
-            if is_sent:
-                notification.is_sent = True
-                notification.sent_at = datetime.now(UTC)
-                db.session.add(notification)
-                db.session.commit()
-                sent_notifications[notification.user_id].add(notification.movie_id)
+            _claim_and_send_notification(notification_id, sent_notifications)
         except Exception:
-            _logger.exception("Failed to send notification %s", notification.id)
+            db.session.rollback()
+            _logger.exception("Failed to send notification %s", notification_id)
+
+
+def _claim_and_send_notification(
+    notification_id: int, sent_notifications: dict[int, set[int]]
+) -> None:
+    """Claim one notification with SKIP LOCKED, send it, and commit."""
+    notification = (
+        Notification.query.filter(
+            Notification.id == notification_id,
+            Notification.is_sent.is_(False),
+        )
+        .with_for_update(skip_locked=True)
+        .first()
+    )
+    if notification is None:
+        # Already sent by a concurrent caller, or currently locked by one.
+        db.session.rollback()
+        return
+
+    if not notification.channel.enabled:
+        # Channel may have been disabled (possibly by an earlier failed
+        # send in this loop hitting WebPushSubscriptionExpiredError).
+        db.session.rollback()
+        return
+
+    if notification.movie_id in sent_notifications[notification.user_id]:
+        # Multiple reminders for the same user+movie collapse to one send.
+        is_sent = True
+    else:
+        is_sent = send_notification(notification)
+
+    if is_sent:
+        notification.is_sent = True
+        notification.sent_at = datetime.now(UTC)
+        db.session.add(notification)
+        sent_notifications[notification.user_id].add(notification.movie_id)
+    db.session.commit()
 
 
 def send_notification(notification: Notification):
