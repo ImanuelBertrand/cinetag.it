@@ -36,7 +36,8 @@ def _email_app_context(app):
 
 @pytest.mark.usefixtures("_email_app_context")
 def test_send_queued_emails_skips_rows_locked_by_another_transaction(test_user):
-    user = db.session.get(test_user.__class__, test_user.id)
+    user = db.session.get(User, test_user.id)
+    assert user is not None
     user.new_email = "new@example.com"
     db.session.commit()
 
@@ -88,7 +89,8 @@ def test_send_queued_emails_skips_rows_locked_by_another_transaction(test_user):
 @pytest.mark.usefixtures("_email_app_context")
 def test_send_queued_emails_dedupes_multiple_rows_per_user_and_type(test_user):
     """Two rows for the same (user, mail_type) result in one send."""
-    user = db.session.get(test_user.__class__, test_user.id)
+    user = db.session.get(User, test_user.id)
+    assert user is not None
     user.new_email = "new@example.com"
     db.session.commit()
 
@@ -188,5 +190,9 @@ def test_cron_send_notifications_skips_rows_locked_by_another_transaction(app):
                 trans.rollback()
 
         # The free row was marked sent; the locked row is still pending.
-        assert db.session.get(Notification, free_id).is_sent is True
-        assert db.session.get(Notification, locked_id).is_sent is False
+        free_row = db.session.get(Notification, free_id)
+        locked_row = db.session.get(Notification, locked_id)
+        assert free_row is not None
+        assert locked_row is not None
+        assert free_row.is_sent is True
+        assert locked_row.is_sent is False
