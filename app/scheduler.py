@@ -1,5 +1,7 @@
 import atexit
+import fcntl
 import logging
+import os
 from datetime import UTC, datetime
 from functools import partial
 from typing import Any, cast
@@ -25,6 +27,35 @@ from app.utils.notifications import (
 )
 
 _logger = logging.getLogger(__name__)
+
+# Holds the lock fd for the process lifetime so the kernel-level flock stays
+# held until the process exits. Module-global so setup_cron_jobs is idempotent
+# within a single worker.
+_scheduler_lock_fd: int | None = None
+
+
+def _acquire_scheduler_lock(instance_path: str) -> bool:
+    """Acquire an exclusive lock so only one worker per container runs cron jobs.
+
+    Uses fcntl.flock on a lockfile in the instance dir. The fd is intentionally
+    leaked for the lifetime of the process; the kernel releases the lock on
+    process exit, so a worker restart hands the lock to whichever sibling
+    re-enters this function first.
+    """
+    global _scheduler_lock_fd
+    if _scheduler_lock_fd is not None:
+        return True
+
+    os.makedirs(instance_path, exist_ok=True)
+    lock_path = os.path.join(instance_path, "scheduler.lock")
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
+        return False
+    _scheduler_lock_fd = fd
+    return True
 
 
 def shutdown_scheduler_if_running() -> None:
@@ -96,6 +127,21 @@ def setup_cron_jobs() -> None:
     ):
         _logger.info("Scheduler is disabled in config, skipping cron job setup")
         return
+
+    app = scheduler.app
+    if app is None:
+        _logger.warning("Scheduler has no app attached; skipping cron job setup")
+        return
+
+    if not _acquire_scheduler_lock(app.instance_path):
+        _logger.info(
+            "Scheduler lock held by another worker (pid %s); "
+            "skipping cron job setup in this process",
+            os.getpid(),
+        )
+        return
+
+    _logger.info("Acquired scheduler lock in pid %s", os.getpid())
 
     job_definitions = {
         "update_regions": {

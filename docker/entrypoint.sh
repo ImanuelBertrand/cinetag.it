@@ -13,7 +13,7 @@ echo "Running in $CONFIG_MODE mode..."
 python -m flask db upgrade
 
 # 4. Start Gunicorn
-GUNICORN_WORKERS=${GUNICORN_WORKERS:-1}
+GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
 GUNICORN_THREADS=${GUNICORN_THREADS:-8}
 echo "Starting Gunicorn (workers=$GUNICORN_WORKERS, threads=$GUNICORN_THREADS)..."
 exec python -m gunicorn \
