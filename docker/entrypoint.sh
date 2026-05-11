@@ -13,5 +13,12 @@ echo "Running in $CONFIG_MODE mode..."
 python -m flask db upgrade
 
 # 4. Start Gunicorn
-echo "Starting Gunicorn..."
-exec python -m gunicorn --bind 0.0.0.0:8000 "wsgi:app"
+GUNICORN_WORKERS=${GUNICORN_WORKERS:-1}
+GUNICORN_THREADS=${GUNICORN_THREADS:-8}
+echo "Starting Gunicorn (workers=$GUNICORN_WORKERS, threads=$GUNICORN_THREADS)..."
+exec python -m gunicorn \
+    --bind 0.0.0.0:8000 \
+    --worker-class gthread \
+    --workers "$GUNICORN_WORKERS" \
+    --threads "$GUNICORN_THREADS" \
+    "wsgi:app"

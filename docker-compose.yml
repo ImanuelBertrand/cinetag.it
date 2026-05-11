@@ -74,6 +74,8 @@ services:
       - HTTPS_PROXY=http://squid:3128
       - HTTP_PROXY=http://squid:3128
       - NO_PROXY=db,redis,nginx,localhost,127.0.0.1
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-1}
+      - GUNICORN_THREADS=${GUNICORN_THREADS:-8}
     depends_on:
       db:
         condition: service_healthy
