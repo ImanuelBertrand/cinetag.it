@@ -57,6 +57,21 @@ LABEL org.opencontainers.image.description="Never miss a movie again!"
 LABEL org.opencontainers.image.authors="Imanuel Bertrand"
 LABEL org.opencontainers.image.url="https://github.com/ImanuelBertrand/cinetag.it"
 
+# Install postgresql-client-18 from PGDG for scheduled DB backups.
+# pg_dump must match the server major version; Debian trixie only ships v17.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl gnupg \
+    && install -d -m 0755 /etc/apt/keyrings \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        -o /etc/apt/keyrings/postgresql.asc \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client-18 \
+    && apt-get purge -y --auto-remove curl gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy the virtual environment from the builder

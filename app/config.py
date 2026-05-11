@@ -79,6 +79,14 @@ class Config:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", "300"))
 
+    BACKUP_ENABLED = parse_bool(os.environ.get("BACKUP_ENABLED", "True"))
+    BACKUP_MIN_INTERVAL_HOURS = float(
+        os.environ.get("BACKUP_MIN_INTERVAL_HOURS", "23.5")
+    )
+    BACKUP_KEEP_DAYS = int(os.environ.get("BACKUP_KEEP_DAYS", "14"))
+    BACKUP_KEEP_WEEKS = int(os.environ.get("BACKUP_KEEP_WEEKS", "4"))
+    BACKUP_COMPRESSION = int(os.environ.get("BACKUP_COMPRESSION", "6"))
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False
@@ -98,6 +106,7 @@ class TestingConfig(Config):
     # Disable scheduler for testing
     SCHEDULER_API_ENABLED = False
     SCHEDULER_ENABLED = False
+    BACKUP_ENABLED = False
     JWT_COOKIE_CSRF_PROTECT = False
     SECRET_KEY = os.environ.get(
         "SECRET_KEY",

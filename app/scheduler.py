@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from app.extensions import scheduler
 from app.models.allowed_refresh_token import AllowedRefreshToken
+from app.services.backup_service import run_backup_if_due
 from app.services.maintenance_service import (
     purge_abandoned_guests,
     purge_inactive_empty_guests_with_tokens,
@@ -64,6 +65,13 @@ def job_purge_abandoned_guests() -> None:
         purge_abandoned_guests(retention_days=days, dry_run=False)
     except Exception:
         _logger.exception("Error purging abandoned guests")
+
+
+def job_run_backup() -> None:
+    try:
+        run_backup_if_due()
+    except Exception:
+        _logger.exception("Error running scheduled DB backup")
 
 
 def job_purge_empty_guests() -> None:
@@ -133,6 +141,10 @@ def setup_cron_jobs() -> None:
         "purge_empty_guests_with_tokens": {
             "func": job_purge_empty_guests,
             "options": {"hours": 24},
+        },
+        "run_db_backup": {
+            "func": job_run_backup,
+            "options": {"hours": 1},
         },
     }
     for job_id, job_definition in job_definitions.items():
