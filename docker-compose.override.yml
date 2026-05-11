@@ -16,6 +16,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: nginx
+      network: host
 
   mailhog:
     image: mailhog/mailhog:latest
@@ -31,6 +32,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: development
+      network: host
     volumes:
       - .:/app
       - ./docker/.claude.json:/home/appuser/.claude.json
