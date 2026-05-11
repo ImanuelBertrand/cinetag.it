@@ -282,6 +282,8 @@ def _process_movie(
 ]:
     movie_id = tmdb_movie["id"]
     movie = existing_movies.get(movie_id)
+    if not tmdb_movie.get("release_date"):
+        return None, None, None, []
     release_date = (
         datetime.strptime(tmdb_movie["release_date"], "%Y-%m-%d")
         .replace(tzinfo=UTC)
