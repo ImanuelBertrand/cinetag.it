@@ -15,6 +15,7 @@ from app.errors import UserCreationError
 from app.extensions import db
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.user import User
+from app.utils.jwt_keys import decode_with_fallback
 
 _logger = logging.getLogger(__name__)
 
@@ -27,10 +28,14 @@ PUBLIC_ENDPOINTS = {
 
 
 def decode_refresh_token(encoded_token: str) -> dict:
-    secret = current_app.config["JWT_SECRET_KEY"]
     algo = current_app.config.get("JWT_ALGORITHM", "HS256")
-
-    return jwt.decode(encoded_token, secret, algorithms=[algo])
+    return decode_with_fallback(
+        encoded_token,
+        "JWT_SECRET_KEY",
+        "JWT_SECRET_KEY_FALLBACK",
+        "JWT_KEY_ID",
+        algorithms=[algo],
+    )
 
 
 def _validate_refresh_identity_and_jti(identity, jti) -> bool:

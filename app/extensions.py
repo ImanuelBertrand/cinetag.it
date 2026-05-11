@@ -1,7 +1,7 @@
 import base64
 
 from apscheduler.executors.pool import ThreadPoolExecutor
-from flask import request
+from flask import current_app, request
 from flask_apscheduler import APScheduler
 from flask_assets import Bundle, Environment
 from flask_babel import Babel
@@ -34,6 +34,24 @@ def obfuscate_email(email: str) -> str:
     return base64.b64encode(email.encode("utf-8")).decode("utf-8")[::-1]
 
 
+def _register_jwt_key_callbacks(manager: JWTManager) -> None:
+    """Stamp new tokens with the current kid; route decoding to primary or
+    fallback key based on the token's kid. Lets us rotate JWT_SECRET_KEY
+    without invalidating live sessions (see app/utils/jwt_keys.py)."""
+
+    @manager.additional_headers_loader
+    def _add_kid(_identity):
+        return {"kid": current_app.config.get("JWT_KEY_ID", "primary")}
+
+    @manager.decode_key_loader
+    def _select_decode_key(jwt_header, _jwt_payload):
+        current_kid = current_app.config.get("JWT_KEY_ID", "primary")
+        fallback = current_app.config.get("JWT_SECRET_KEY_FALLBACK")
+        if jwt_header.get("kid") == current_kid or not fallback:
+            return current_app.config["JWT_SECRET_KEY"]
+        return fallback
+
+
 def init_extensions(app) -> None:
     """
     Initialize the Flask extensions with the application instance.
@@ -41,6 +59,7 @@ def init_extensions(app) -> None:
     db.init_app(app)
     mail.init_app(app)
     jwt_manager.init_app(app)
+    _register_jwt_key_callbacks(jwt_manager)
     bcrypt.init_app(app)
     migrate.init_app(app, db)
     cache.init_app(app)

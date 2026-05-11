@@ -3,13 +3,13 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
-import jwt
 from flask import current_app, url_for
 from flask_mail import Message
 
 from app.extensions import db, mail
 from app.models.send_confirmation_mails import SentConfirmationMails
 from app.models.user_email import UserEmailQueue
+from app.utils.jwt_keys import encode_with_kid
 
 _logger = logging.getLogger(__name__)
 
@@ -34,14 +34,14 @@ def send_email(to: str | list[str], subject: str, body: str) -> bool:
 
 
 def generate_confirmation_token(user):
-    return jwt.encode(
+    return encode_with_kid(
         {
             "confirmation": user.id,
             "new_mail": user.new_email,
             "exp": datetime.now(UTC) + timedelta(hours=24),
         },
-        current_app.config["SECRET_KEY"],
-        algorithm="HS256",
+        "SECRET_KEY",
+        "SECRET_KEY_ID",
     )
 
 
@@ -68,14 +68,14 @@ def generate_password_reset_token(user):
     user.password_reset_token = os.urandom(16).hex()[:32]
     db.session.add(user)
     db.session.commit()
-    return jwt.encode(
+    return encode_with_kid(
         {
             "reset_password": user.id,
             "exp": datetime.now(UTC) + timedelta(hours=1),
             "token": user.password_reset_token,
         },
-        current_app.config["SECRET_KEY"],
-        algorithm="HS256",
+        "SECRET_KEY",
+        "SECRET_KEY_ID",
     )
 
 

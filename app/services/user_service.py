@@ -25,6 +25,7 @@ from app.models.user_movie import UserMovie
 from app.services.image_service import get_image_url
 from app.services.movie_service import get_region_infos
 from app.utils.email import queue_email
+from app.utils.jwt_keys import decode_with_fallback, encode_with_kid
 from app.utils.profiler import Profiler, profile_function
 
 if TYPE_CHECKING:
@@ -47,16 +48,18 @@ def authenticate_user(data) -> User:
 
 
 def generate_confirmation_token(user):
-    return jwt.encode(
+    return encode_with_kid(
         {"confirm": user.id, "exp": datetime.now(UTC) + timedelta(hours=24)},
-        current_app.config["SECRET_KEY"],
-        algorithm="HS256",
+        "SECRET_KEY",
+        "SECRET_KEY_ID",
     )
 
 
 def confirm_user_email(token) -> None:
     try:
-        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+        data = decode_with_fallback(
+            token, "SECRET_KEY", "SECRET_KEY_FALLBACK", "SECRET_KEY_ID"
+        )
         user = db.session.get(User, data["confirmation"])
         if not user:
             raise UserFeedbackError("User not found.")
@@ -79,7 +82,9 @@ def hash_password(password: str) -> str:
 
 def reset_user_password(token, new_password) -> None:
     try:
-        data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+        data = decode_with_fallback(
+            token, "SECRET_KEY", "SECRET_KEY_FALLBACK", "SECRET_KEY_ID"
+        )
         user_id = data.get("reset_password")
         reset_token = data.get("token")
         if not user_id or not reset_token:
