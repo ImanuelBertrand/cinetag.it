@@ -71,9 +71,6 @@ services:
       - CACHE_REDIS_URL=redis://redis:6379/0
       - CACHE_DEFAULT_TIMEOUT=${CACHE_DEFAULT_TIMEOUT:-300}
       - INSTANCE_PATH=/app/instance
-      - HTTPS_PROXY=http://squid:3128
-      - HTTP_PROXY=http://squid:3128
-      - NO_PROXY=db,redis,nginx,localhost,127.0.0.1
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
       - GUNICORN_THREADS=${GUNICORN_THREADS:-8}
     depends_on:
@@ -81,28 +78,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      squid:
-        condition: service_healthy
     volumes:
       - ./data/storage:/app/storage
       - ./data/instance:/app/instance
     networks:
       - cinetagit_network
-
-  squid:
-    image: ghcr.io/imanuelbertrand/cinetag.it-squid:latest
-    container_name: cinetagit_squid
-    restart: always
-    networks:
-      - cinetagit_network
-      - cinetagit_external
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/3128'"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-      start_interval: 1s
 
   nginx:
     image: ghcr.io/imanuelbertrand/cinetag.it-nginx:latest
@@ -116,11 +96,7 @@ services:
       - web
     networks:
       - cinetagit_network
-      - cinetagit_external
 
 networks:
   cinetagit_network:
-    driver: bridge
-    internal: true
-  cinetagit_external:
     driver: bridge

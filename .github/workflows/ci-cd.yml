@@ -201,17 +201,6 @@ jobs:
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Extract metadata (Squid)
-        id: meta_squid
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-squid
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
       - name: Build and push App
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
@@ -233,17 +222,5 @@ jobs:
           push: true
           tags: ${{ steps.meta_nginx.outputs.tags }}
           labels: ${{ steps.meta_nginx.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Squid
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
-        with:
-          context: .
-          file: docker/Dockerfile
-          target: squid
-          push: true
-          tags: ${{ steps.meta_squid.outputs.tags }}
-          labels: ${{ steps.meta_squid.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

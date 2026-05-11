@@ -59,7 +59,7 @@ PostgreSQL with Alembic migrations (`migrations/`). The test suite uses a dedica
 
 ### External Services
 
-- **TMDB API** — accessed through `app/utils/tmdb.py`, cached via Squid proxy (see `docker/squid/`)
+- **TMDB API** — accessed through `app/utils/tmdb.py`. Dev routes outbound HTTP through a Squid allowlist container (`docker/squid/squid-dev.conf`) to sandbox Claude Code; prod hits the internet directly.
 - **Redis** — caching layer
 - **SMTP/MailHog** — email, async queue in DB drained by scheduler
 - **Web Push** — VAPID keys in `app/utils/webpush.py`

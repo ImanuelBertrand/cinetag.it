@@ -17,7 +17,7 @@ Connect your watchlist with friends, discover movies you both want to see, and g
 - **Backend:** Python 3.14, Flask, SQLAlchemy, PostgreSQL, Redis
 - **Auth:** JWT (cookie + header), bcrypt
 - **Frontend:** Vanilla JS, Jinja2 templates
-- **Infrastructure:** Docker Compose, Nginx, Gunicorn, Squid proxy
+- **Infrastructure:** Docker Compose, Nginx, Gunicorn
 - **CI/CD:** GitHub Actions (lint, test, Docker publish)
 
 ## Getting Started

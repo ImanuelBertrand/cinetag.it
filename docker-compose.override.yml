@@ -8,8 +8,20 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: squid
+    container_name: cinetagit_squid
+    restart: always
     volumes:
       - ./docker/squid/squid-dev.conf:/etc/squid/squid.conf:ro
+    networks:
+      - cinetagit_network
+      - cinetagit_external
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/3128'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
 
   nginx:
     build:
@@ -17,6 +29,8 @@ services:
       dockerfile: docker/Dockerfile
       target: nginx
       network: host
+    networks:
+      - cinetagit_external
 
   mailhog:
     image: mailhog/mailhog:latest
@@ -46,9 +60,21 @@ services:
       - SERVER_NAME=${SERVER_NAME:-localhost:8000}
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-http}
       - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-noreply@cinetag.it}
+      - HTTPS_PROXY=http://squid:3128
+      - HTTP_PROXY=http://squid:3128
       - NO_PROXY=db,redis,nginx,mailhog,localhost,127.0.0.1
     depends_on:
-      - mailhog
+      mailhog:
+        condition: service_started
+      squid:
+        condition: service_healthy
+
+networks:
+  cinetagit_network:
+    driver: bridge
+    internal: true
+  cinetagit_external:
+    driver: bridge
 
 volumes:
   claude_local:
