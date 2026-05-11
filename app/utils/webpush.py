@@ -3,6 +3,7 @@ import http
 import json
 import logging
 import os
+import threading
 
 from cryptography.hazmat.primitives import serialization
 from flask import current_app
@@ -12,6 +13,11 @@ from pywebpush import WebPushException, webpush
 from app.errors import WebPushSubscriptionExpiredError
 
 _logger = logging.getLogger(__name__)
+
+# Serialises VAPID lazy init across threads. Without it, concurrent first
+# requests could each call create_vapid(); when no key is pre-configured that
+# generates fresh keypairs and races on disk, leaving threads with split keys.
+_vapid_init_lock = threading.Lock()
 
 
 def get_vapid_key_path() -> str:
@@ -73,10 +79,13 @@ def create_vapid() -> Vapid:
 
 def get_vapid() -> Vapid:
     """Gets the cached Vapid instance, creating it if necessary."""
-    if "vapid" not in current_app.extensions:
-        _logger.debug("Initializing VAPID instance for this app context.")
-        current_app.extensions["vapid"] = create_vapid()
-    return current_app.extensions["vapid"]
+    extensions = current_app.extensions
+    if "vapid" not in extensions:
+        with _vapid_init_lock:
+            if "vapid" not in extensions:
+                _logger.debug("Initializing VAPID instance for this app context.")
+                extensions["vapid"] = create_vapid()
+    return extensions["vapid"]
 
 
 def get_vapid_public_key_for_js() -> str:
@@ -86,11 +95,12 @@ def get_vapid_public_key_for_js() -> str:
     Returns:
         VAPID public key in URL-safe base64 format
     """
-    if "vapid_public_key_for_js" not in current_app.extensions:
-        current_app.extensions["vapid_public_key_for_js"] = get_public_key_b64(
-            get_vapid()
-        )
-    return current_app.extensions["vapid_public_key_for_js"]
+    extensions = current_app.extensions
+    if "vapid_public_key_for_js" not in extensions:
+        with _vapid_init_lock:
+            if "vapid_public_key_for_js" not in extensions:
+                extensions["vapid_public_key_for_js"] = get_public_key_b64(get_vapid())
+    return extensions["vapid_public_key_for_js"]
 
 
 def send_web_push(

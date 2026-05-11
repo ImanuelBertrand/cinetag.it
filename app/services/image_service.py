@@ -1,6 +1,8 @@
+import contextlib
 import http
 import logging
 import os
+import uuid
 
 import requests
 from flask import current_app
@@ -17,8 +19,7 @@ def get_image_base_path() -> str:
     path = current_app.config.get("POSTER_DIR")
     if path is None:
         raise ValueError("POSTER_DIR not configured")
-    if not os.path.exists(path):
-        os.makedirs(path)
+    os.makedirs(path, exist_ok=True)
     return path
 
 
@@ -40,15 +41,33 @@ def fetch_image(remote_filename: str, size: str = "original") -> None:
     if response.status_code != http.HTTPStatus.OK:
         raise ImageFetchError(f"Failed to fetch image from {remote_url}")
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-    with open(target_filename, "xb") as file:
-        file.write(response.content)
+    # Atomic write so concurrent fetchers can't see a partial file or fail
+    # on a write collision. Identical content from TMDB makes replace idempotent.
+    tmp_filename = f"{target_filename}.{uuid.uuid4().hex}.tmp"
+    try:
+        with open(tmp_filename, "wb") as file:
+            file.write(response.content)
+        os.replace(tmp_filename, target_filename)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(tmp_filename)
+        raise
 
 
 def resize_image(original_file: str, width: int, target_filename: str) -> None:
     image = Image.open(original_file)
     image.thumbnail((width, width * 3))
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-    image.save(target_filename)
+    # Keep the original extension on the tmp file so PIL infers the format.
+    ext = os.path.splitext(target_filename)[1]
+    tmp_filename = f"{target_filename}.{uuid.uuid4().hex}.tmp{ext}"
+    try:
+        image.save(tmp_filename)
+        os.replace(tmp_filename, target_filename)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(tmp_filename)
+        raise
 
 
 def ensure_image_exists(filename: str, width: int) -> str:

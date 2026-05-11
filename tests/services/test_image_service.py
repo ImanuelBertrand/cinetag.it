@@ -1,5 +1,5 @@
 import os
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 from app.services.image_service import (
     ensure_image_exists,
@@ -25,20 +25,18 @@ def test_get_image_base_path(app) -> None:
 
 
 def test_get_image_base_path_creates_directory(app) -> None:
-    """Test that get_image_base_path creates the directory if it doesn't exist."""
+    """Test that get_image_base_path ensures the directory exists.
+
+    We rely on os.makedirs(..., exist_ok=True), which is idempotent under
+    threading (no TOCTOU between exists() and makedirs()).
+    """
     with app.app_context():
-        # Configure a test path
         app.config["POSTER_DIR"] = "/test/path"
 
-        # Mock os.path.exists to return False and check if os.makedirs is called
-        with (
-            patch("os.path.exists", return_value=False) as mock_exists,
-            patch("os.makedirs") as mock_makedirs,
-        ):
+        with patch("os.makedirs") as mock_makedirs:
             path = get_image_base_path()
             assert path == "/test/path"
-            mock_exists.assert_called_once_with("/test/path")
-            mock_makedirs.assert_called_once_with("/test/path")
+            mock_makedirs.assert_called_once_with("/test/path", exist_ok=True)
 
 
 def test_get_tmdb_image_base_url(app) -> None:
@@ -86,67 +84,54 @@ def test_get_image_url() -> None:
     assert url is None
 
 
-def test_fetch_image(app) -> None:
-    """Test that fetch_image downloads and saves an image."""
+def test_fetch_image(app, tmp_path) -> None:
+    """Test that fetch_image downloads and atomically writes an image."""
     with app.app_context():
-        # Configure test paths
-        app.config["POSTER_DIR"] = "/test/path"
+        app.config["POSTER_DIR"] = str(tmp_path)
         app.config["TMDB_IMAGE_BASE_URL"] = "https://image.tmdb.org/t/p"
 
-        # Mock the necessary functions
-        with (
-            patch(
-                "app.services.image_service.get_image_base_path",
-                return_value="/test/path",
-            ),
-            patch(
-                "app.services.image_service.get_tmdb_image_url",
-                return_value="https://image.tmdb.org/t/p/test/image.jpg",
-            ),
-            patch("requests.get") as mock_get,
-            patch("os.makedirs") as mock_makedirs,
-            patch("builtins.open", mock_open()) as mock_file,
-        ):
-            # Configure the mock response
+        with patch("app.services.image_service.requests.get") as mock_get:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.content = b"test image content"
             mock_get.return_value = mock_response
 
-            # Call the function
             fetch_image("test/image.jpg")
 
-            # Verify the function called the expected methods
             mock_get.assert_called_once_with(
                 "https://image.tmdb.org/t/p/test/image.jpg", timeout=10
             )
-            mock_makedirs.assert_called_once_with(
-                os.path.dirname("/test/path/original/test/image.jpg"), exist_ok=True
-            )
-            mock_file.assert_called_once_with(
-                "/test/path/original/test/image.jpg", "xb"
-            )
-            mock_file().write.assert_called_once_with(b"test image content")
+            target = tmp_path / "original" / "test" / "image.jpg"
+            assert target.read_bytes() == b"test image content"
+            # No stray .tmp files left behind in the target directory.
+            assert not list(target.parent.glob("*.tmp"))
 
 
 def test_resize_image() -> None:
-    """Test that resize_image resizes an image correctly."""
-    # Mock the necessary functions
-    with patch("PIL.Image.open") as mock_open, patch("os.makedirs") as mock_makedirs:
-        # Configure the mock image
+    """Test that resize_image resizes and atomically writes the result."""
+    with (
+        patch("PIL.Image.open") as mock_open,
+        patch("os.makedirs") as mock_makedirs,
+        patch("os.replace") as mock_replace,
+    ):
         mock_image = MagicMock()
         mock_open.return_value = mock_image
 
-        # Call the function
         resize_image("/test/original.jpg", 500, "/test/resized.jpg")
 
-        # Verify the function called the expected methods
         mock_open.assert_called_once_with("/test/original.jpg")
         mock_image.thumbnail.assert_called_once_with((500, 1500))
         mock_makedirs.assert_called_once_with(
             os.path.dirname("/test/resized.jpg"), exist_ok=True
         )
-        mock_image.save.assert_called_once_with("/test/resized.jpg")
+        # PIL saves to a tmp filename ending in the original extension,
+        # which is then atomically renamed onto the target.
+        save_args = mock_image.save.call_args.args
+        assert len(save_args) == 1
+        tmp_path = save_args[0]
+        assert tmp_path.startswith("/test/resized.jpg.")
+        assert tmp_path.endswith(".jpg")
+        mock_replace.assert_called_once_with(tmp_path, "/test/resized.jpg")
 
 
 def test_ensure_image_exists_already_present(app) -> None:

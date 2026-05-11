@@ -22,20 +22,45 @@ def test_fetch_image_non_200_does_not_write(app, tmp_path):
         assert not (tmp_path / "original" / "x" / "y.jpg").exists()
 
 
-def test_fetch_image_existing_file_raises(app, tmp_path):
+def test_fetch_image_existing_file_is_overwritten(app, tmp_path):
+    """A concurrent fetcher (or stale leftover) is replaced atomically.
+
+    TMDB filenames are content-addressed so the new bytes equal the old bytes
+    in practice; overwriting is safe and prevents FileExistsError from being
+    surfaced to a user request under threading.
+    """
     with app.app_context():
         app.config["POSTER_DIR"] = str(tmp_path)
-        # Precreate the path
         target = tmp_path / "original" / "x" / "y.jpg"
         target.parent.mkdir(parents=True)
         target.write_bytes(b"abc")
         with patch("app.services.image_service.requests.get") as mget:
             mget.return_value.status_code = 200
             mget.return_value.content = b"xyz"
-            with pytest.raises(FileExistsError):
+            fetch_image("x/y.jpg")
+        assert target.read_bytes() == b"xyz"
+        # No .tmp file left around after a successful fetch.
+        assert not list(target.parent.glob("*.tmp"))
+
+
+def test_fetch_image_cleans_up_tmp_on_write_error(app, tmp_path):
+    """If the write fails mid-way, the tmp file is removed."""
+    with app.app_context():
+        app.config["POSTER_DIR"] = str(tmp_path)
+        with (
+            patch("app.services.image_service.requests.get") as mget,
+            patch(
+                "app.services.image_service.os.replace",
+                side_effect=OSError("disk full"),
+            ),
+        ):
+            mget.return_value.status_code = 200
+            mget.return_value.content = b"xyz"
+            with pytest.raises(OSError, match="disk full"):
                 fetch_image("x/y.jpg")
-        # remains unchanged
-        assert target.read_bytes() == b"abc"
+        target_dir = tmp_path / "original" / "x"
+        assert not list(target_dir.glob("*.tmp"))
+        assert not (target_dir / "y.jpg").exists()
 
 
 def test_resize_image_non_image_raises(tmp_path):
