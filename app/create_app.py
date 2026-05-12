@@ -37,7 +37,19 @@ from app.utils.auth import authenticate_request
 _logger = logging.getLogger(__name__)
 
 
+def _configure_logging() -> None:
+    root_level = os.environ.get("LOG_LEVEL", "WARNING").upper()
+    app_level = os.environ.get("APP_LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=root_level,
+        format="%(asctime)s %(levelname)-5s [%(name)s] %(message)s",
+        force=True,
+    )
+    logging.getLogger("app").setLevel(app_level)
+
+
 def create_app(config_name, start_scheduler=False):
+    _configure_logging()
 
     instance_path = os.environ.get("INSTANCE_PATH")
     if instance_path and not os.path.isabs(instance_path):

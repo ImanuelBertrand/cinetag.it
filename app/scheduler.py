@@ -61,9 +61,9 @@ def _acquire_scheduler_lock(instance_path: str) -> bool:
 def shutdown_scheduler_if_running() -> None:
     if scheduler.running:
         scheduler.shutdown()
-        _logger.info("Scheduler shut down successfully")
+        _logger.debug("Scheduler shut down successfully")
     else:
-        _logger.info("Scheduler is not running")
+        _logger.debug("Scheduler is not running")
 
 
 atexit.register(shutdown_scheduler_if_running)
