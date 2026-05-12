@@ -15,10 +15,17 @@ python -m flask db upgrade
 # 4. Start Gunicorn
 GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
 GUNICORN_THREADS=${GUNICORN_THREADS:-8}
+
+RELOAD_ARGS=()
+if [ "$CONFIG_MODE" = "development" ]; then
+    RELOAD_ARGS+=(--reload)
+fi
+
 echo "Starting Gunicorn (workers=$GUNICORN_WORKERS, threads=$GUNICORN_THREADS)..."
 exec python -m gunicorn \
     --bind 0.0.0.0:8000 \
     --worker-class gthread \
     --workers "$GUNICORN_WORKERS" \
     --threads "$GUNICORN_THREADS" \
+    "${RELOAD_ARGS[@]}" \
     "wsgi:app"
