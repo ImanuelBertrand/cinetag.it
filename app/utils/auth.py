@@ -4,7 +4,15 @@ import uuid
 
 import jwt
 from crawlerdetect import CrawlerDetect
-from flask import Flask, current_app, g, make_response, request
+from flask import (
+    Flask,
+    current_app,
+    g,
+    jsonify,
+    make_response,
+    render_template,
+    request,
+)
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -420,6 +428,11 @@ def authenticate_request(app: Flask):
             return None
     except CSRFError as e:
         _logger.warning("CSRF check failed for endpoint %s: %s", endpoint, e)
-        return make_response("CSRF check failed", 403)
+        if request.blueprint in ("api", "friend_api"):
+            return make_response(
+                jsonify(error="Session expired. Please reload the page and try again."),
+                403,
+            )
+        return make_response(render_template("csrf_error.html"), 403)
 
     return make_response("Server error creating guest session", 500)
