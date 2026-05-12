@@ -29,6 +29,8 @@ services:
       dockerfile: docker/Dockerfile
       target: nginx
       network: host
+    volumes:
+      - ./app/static:/usr/share/nginx/html/static:ro
     networks:
       - cinetagit_external
 
