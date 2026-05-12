@@ -11,6 +11,7 @@ from app.errors import TMDbAPIError
 from app.extensions import db
 from app.models.misc_data import MiscData
 from app.models.movie import Movie
+from app.models.movie_credit import MovieCredit, Person
 from app.models.movie_language_info import MovieLanguageInfo
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.tmdb_genre import MovieGenre, TmdbGenre, TmdbGenreName
@@ -432,6 +433,89 @@ def update_movie_details(movie: Movie) -> None:
         update_movie_genres(movie.id, movie_data)
     except Exception:
         _logger.exception("Failed syncing/updating genres for movie %s", movie.id)
+
+    try:
+        update_movie_credits(movie.id, movie_data.get("credits") or {})
+    except Exception:
+        _logger.exception("Failed syncing credits for movie %s", movie.id)
+
+
+# Crew jobs we surface on the movie details page.
+_CREW_JOBS = {"Director", "Screenplay", "Writer", "Story"}
+_MAX_CAST = 10
+
+
+def update_movie_credits(movie_id: int, credits_payload: dict) -> None:
+    """Reconcile movie_credits rows from a TMDB credits payload.
+
+    Keeps top-billed cast (up to ``_MAX_CAST`` by TMDB billing ``order``) and
+    crew members whose ``job`` is in ``_CREW_JOBS``.
+    """
+    cast_entries = credits_payload.get("cast") or []
+    crew_entries = credits_payload.get("crew") or []
+
+    cast_entries = sorted(cast_entries, key=lambda c: c.get("order", 1_000_000))[
+        :_MAX_CAST
+    ]
+    crew_entries = [c for c in crew_entries if c.get("job") in _CREW_JOBS]
+
+    desired: dict[tuple[int, str, str], tuple[int, str]] = {}
+    for idx, entry in enumerate(cast_entries):
+        pid = entry.get("id")
+        name = entry.get("name")
+        if not pid or not name:
+            continue
+        character = entry.get("character") or ""
+        desired[(int(pid), "cast", character[:255])] = (idx, name)
+    for entry in crew_entries:
+        pid = entry.get("id")
+        name = entry.get("name")
+        job = entry.get("job")
+        if not pid or not name or not job:
+            continue
+        desired[(int(pid), "crew", job[:255])] = (0, name)
+
+    _upsert_people({pid: name for (pid, _, _), (_, name) in desired.items()})
+
+    existing = MovieCredit.query.filter_by(movie_id=movie_id).all()
+    existing_keys = {(c.person_id, c.department, c.role): c for c in existing}
+
+    desired_keys = set(desired.keys())
+    for key, credit in existing_keys.items():
+        if key not in desired_keys:
+            db.session.delete(credit)
+
+    for key, (sort_order, _name) in desired.items():
+        credit = existing_keys.get(key)
+        if credit is None:
+            db.session.add(
+                MovieCredit(
+                    movie_id=movie_id,
+                    person_id=key[0],
+                    department=key[1],
+                    role=key[2],
+                    sort_order=sort_order,
+                )
+            )
+        elif credit.sort_order != sort_order:
+            credit.sort_order = sort_order
+            db.session.add(credit)
+
+
+def _upsert_people(name_by_id: dict[int, str]) -> None:
+    if not name_by_id:
+        return
+    existing = {p.id: p for p in Person.query.filter(Person.id.in_(name_by_id)).all()}
+    new_people = []
+    for pid, name in name_by_id.items():
+        person = existing.get(pid)
+        if person is None:
+            new_people.append(Person(id=pid, name=name[:255]))
+        elif person.name != name:
+            person.name = name[:255]
+            db.session.add(person)
+    if new_people:
+        db.session.bulk_save_objects(new_people)
 
 
 def update_movie_languages(movie: Movie) -> None:

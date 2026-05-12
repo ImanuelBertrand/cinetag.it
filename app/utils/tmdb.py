@@ -181,7 +181,7 @@ def fetch_movie_details(movie_id: int, language: str) -> dict:
         DEFAULT_TTL,
         _get_json,
         f"movie/{movie_id}",
-        params={"language": language},
+        params={"language": language, "append_to_response": "credits"},
     )
 
 

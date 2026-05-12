@@ -26,41 +26,73 @@
                 </div>
             </div>
 
-            {% if movie["tagline"] %}
-                <div class="tagline"><em>{{ movie["tagline"] }}</em></div>
-            {% endif %}
+            <div class="content-col">
+                {% if movie["release_date"] %}
+                    <p class="release-date">{{ movie["release_date"] }}</p>
+                {% endif %}
 
-            <div class="plot">{{ movie["overview"] }}</div>
+                {% if movie["tagline"] %}
+                    <div class="tagline"><em>{{ movie["tagline"] }}</em></div>
+                {% endif %}
 
-            <p>Release Date: {{ movie["release_date"] }}</p>
-
-            {% if movie["runtime"] %}
-                <p>Runtime: {{ movie["runtime"] }} minutes</p>
-            {% endif %}
-
-            {% if movie["original_language"] %}
-                <p>Original Language: {{ movie["original_language"] }}</p>
-            {% endif %}
-
-            {% if movie["origin_countries"] %}
-                <p>Origin Countries: {{ movie["origin_countries"]|join(", ") }}</p>
-            {% endif %}
-
-            {% if movie["region_release_dates"] %}
-                <div class="release-dates">
-                    <h4>Release Dates:</h4>
-                    <ul>
-                        {% for region, date in movie["region_release_dates"].items() %}
-                            <li>{{ region }}: {{ date }}</li>
+                {% if movie["genres"] %}
+                    <p class="genres">
+                        {% for genre in movie["genres"] %}
+                            <span class="genre-chip">{{ genre }}</span>
                         {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
+                    </p>
+                {% endif %}
 
-            {% if movie["imdb_id"] %}
-                <p><a href="https://www.imdb.com/title/{{ movie['imdb_id'] }}" target="_blank">IMDB</a></p>
-            {% endif %}
-            <p><a href="https://www.themoviedb.org/movie/{{ movie['id'] }}" target="_blank">TMDB</a></p>
+                <div class="plot">{{ movie["overview"] }}</div>
+
+                {% if movie["directors"] or movie["writers"] or movie["cast"] %}
+                    <div class="credits-grid">
+                        {% if movie["directors"] %}
+                            <span class="credit-label">{{ 'Director' if movie["directors"]|length == 1 else 'Directors' }}</span>
+                            <span class="credit-name">{{ movie["directors"]|join(", ") }}</span>
+                            <span class="credit-role"></span>
+                        {% endif %}
+                        {% for writer in movie["writers"] %}
+                            <span class="credit-label">{% if loop.first %}{{ 'Writer' if movie["writers"]|length == 1 else 'Writers' }}{% endif %}</span>
+                            <span class="credit-name">{{ writer }}</span>
+                            <span class="credit-role"></span>
+                        {% endfor %}
+                        {% for member in movie["cast"] %}
+                            <span class="credit-label">{% if loop.first %}Cast{% endif %}</span>
+                            <span class="credit-name">{{ member["name"] }}</span>
+                            <span class="credit-role">{% if member["character"] %}as {{ member["character"] }}{% endif %}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <p class="meta-block">
+                    {% if movie["runtime"] %}
+                        <span><strong>Runtime:</strong> {{ movie["runtime"] }} min</span>
+                    {% endif %}
+                    {% if movie["original_language"] %}
+                        <span><strong>Original Language:</strong> {{ movie["original_language"] }}</span>
+                    {% endif %}
+                    {% if movie["origin_countries"] %}
+                        <span><strong>Origin:</strong> {{ movie["origin_countries"]|join(", ") }}</span>
+                    {% endif %}
+                </p>
+
+                {% if movie["region_release_dates"] %}
+                    <div class="release-dates">
+                        <h4>Other Release Dates</h4>
+                        <ul>
+                            {% for region, date in movie["region_release_dates"].items() %}
+                                <li>{{ region }}: {{ date }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if movie["imdb_id"] %}
+                    <p><a href="https://www.imdb.com/title/{{ movie['imdb_id'] }}" target="_blank">IMDB</a></p>
+                {% endif %}
+                <p><a href="https://www.themoviedb.org/movie/{{ movie['id'] }}" target="_blank">TMDB</a></p>
+            </div>
         </div>
     </div>
 

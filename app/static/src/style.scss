@@ -635,12 +635,6 @@ ul.release-list li {
 .movie-details {
   max-width: 1200px;
 
-  .poster {
-    float: right;
-    margin: 0 0 2em 2em;
-    max-width: 100%;
-  }
-
   .tagline {
     font-size: 1.2em;
     color: $steel-gray;
@@ -669,6 +663,68 @@ ul.release-list li {
         margin-bottom: 0.3em;
       }
     }
+  }
+
+  .release-date {
+    float: right;
+    margin: 0 0 0.5em 1em;
+    font-size: 1.15em;
+    font-weight: bold;
+  }
+
+  .genres {
+    max-width: 30em;
+    margin-top: 0;
+
+    .genre-chip {
+      display: inline-block;
+      padding: 2px 10px;
+      margin: 0 4px 4px 0;
+      border-radius: 999px;
+      background-color: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-size: 0.9em;
+    }
+  }
+
+  .credits-grid {
+    display: grid;
+    grid-template-columns: max-content max-content 1fr;
+    column-gap: 1.2em;
+    row-gap: 0.25em;
+    margin: 1em 0 1.5em;
+    max-width: 40em;
+    align-items: baseline;
+
+    .credit-label {
+      font-weight: bold;
+      align-self: start;
+    }
+
+    .credit-role {
+      color: $steel-gray;
+      font-style: italic;
+    }
+  }
+
+  .meta-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 1.5em;
+    color: $steel-gray;
+    font-size: 0.95em;
+    max-width: 40em;
+
+    strong {
+      color: inherit;
+    }
+  }
+}
+
+@media screen and (max-width: $mobile-screen) {
+  .movie-details .credits-grid {
+    column-gap: 0.6em;
+    font-size: 0.95em;
   }
 }
 
@@ -871,18 +927,23 @@ ul.release-list li {
 }
 
 .movie-details-view {
-  display: block;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2em;
+  align-items: start;
 }
 
 .movie-details-view .poster-col {
-  float: right;
-  margin: 0 0 1em 2em;
   text-align: center;
+  width: 300px;
+}
+
+.movie-details-view .content-col {
+  min-width: 0;
 }
 
 .movie-details-view .poster-col .poster {
   display: block;
-  max-width: 300px;
   width: 100%;
   height: auto;
 }
@@ -947,11 +1008,13 @@ ul.release-list li {
 
 /* Responsive adjustments */
 @media screen and (max-width: $mobile-screen) {
-  .movie-details-view .poster-col {
-    float: none;
-    margin: 0 auto 1em auto;
+  .movie-details-view {
+    grid-template-columns: 1fr;
+    gap: 1em;
   }
-  .movie-details-view .poster-col .poster {
-    max-width: 100%;
+  .movie-details-view .poster-col {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
   }
 }

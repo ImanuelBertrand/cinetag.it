@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.extensions import db
 
 if TYPE_CHECKING:
+    from app.models.movie_credit import MovieCredit
     from app.models.movie_language_info import MovieLanguageInfo
     from app.models.movie_region_info import MovieRegionInfo
     from app.models.notification import Notification
@@ -45,6 +46,10 @@ class Movie(db.Model):
     )
 
     genres: Mapped[list[MovieGenre]] = relationship(cascade="all, delete-orphan")
+
+    credits: Mapped[list[MovieCredit]] = relationship(
+        back_populates="movie", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<Movie {self.id} ({self.original_title})>"

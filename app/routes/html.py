@@ -24,8 +24,10 @@ from app.errors import UserFeedbackError
 from app.extensions import bcrypt, db
 from app.models.friendship import Friendship
 from app.models.movie import Movie
+from app.models.movie_credit import MovieCredit, Person
 from app.models.movie_region_info import MovieRegionInfo
 from app.models.notification_channel import NotificationChannel
+from app.models.tmdb_genre import TmdbGenreName
 from app.models.tmdb_language import TmdbLanguage
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
@@ -694,6 +696,69 @@ def get_movies(filter_mode):
     return render_template("movie_list.html", filter_mode=filter_mode, friends=friends)
 
 
+def _get_movie_genres(movie: Movie, language: str) -> list[str]:
+    genre_ids = [mg.genre_id for mg in movie.genres]
+    if not genre_ids:
+        return []
+
+    names = TmdbGenreName.query.filter(
+        TmdbGenreName.genre_id.in_(genre_ids),
+        TmdbGenreName.language.in_({language, "en"}),
+    ).all()
+
+    by_id: dict[int, dict[str, str]] = defaultdict(dict)
+    for row in names:
+        by_id[row.genre_id][row.language] = row.name
+
+    result = []
+    for gid in genre_ids:
+        translations = by_id.get(gid, {})
+        name = translations.get(language) or translations.get("en")
+        if name:
+            result.append(name)
+    return result
+
+
+_WRITER_JOBS_PRIORITY = ("Screenplay", "Writer", "Story")
+
+
+def _get_movie_credits(
+    movie_id: int,
+) -> tuple[list[str], list[str], list[dict[str, str]]]:
+    rows = (
+        db.session.query(MovieCredit, Person)
+        .join(Person, MovieCredit.person_id == Person.id)
+        .filter(MovieCredit.movie_id == movie_id)
+        .all()
+    )
+
+    directors: list[str] = []
+    writer_jobs: dict[int, tuple[str, str]] = {}
+    cast: list[tuple[int, dict[str, str]]] = []
+
+    for credit, person in rows:
+        if credit.department == "cast":
+            cast.append(
+                (credit.sort_order, {"name": person.name, "character": credit.role})
+            )
+        elif credit.role == "Director":
+            directors.append(person.name)
+        elif credit.role in _WRITER_JOBS_PRIORITY:
+            existing = writer_jobs.get(person.id)
+            new_priority = _WRITER_JOBS_PRIORITY.index(credit.role)
+            if existing is None or new_priority < _WRITER_JOBS_PRIORITY.index(
+                existing[1]
+            ):
+                writer_jobs[person.id] = (person.name, credit.role)
+
+    cast.sort(key=lambda item: item[0])
+    return (
+        sorted(set(directors)),
+        [name for name, _ in writer_jobs.values()],
+        [entry for _, entry in cast],
+    )
+
+
 @html.route("/movie/<int:movie_id>", methods=["GET"])
 def get_movie_details(movie_id):
     try:
@@ -713,12 +778,13 @@ def get_movie_details(movie_id):
             movie_id=movie_id, region=user.region
         ).first()
 
-        # Get all region infos for the movie to display different release dates
+        # Build a map of release dates for regions other than the user's own;
+        # the user's region is already shown as the headline release date.
         all_region_infos = MovieRegionInfo.query.filter_by(movie_id=movie_id).all()
         region_release_dates = {}
         region_names = {reg.code: reg.english_name for reg in TmdbRegion.query.all()}
         for ri in all_region_infos:
-            if ri.is_fake:
+            if ri.is_fake or ri.region == user.region:
                 continue
             region_display = region_names.get(ri.region, ri.region)
             region_release_dates[region_display] = format_date(
@@ -752,6 +818,9 @@ def get_movie_details(movie_id):
         ).first()
         user_decision = user_movie.decision if user_movie else None
 
+        genres = _get_movie_genres(movie, language)
+        directors, writers, cast = _get_movie_credits(movie_id)
+
         movie_data = {
             "id": movie.id,
             "title": lang_info["title"],
@@ -769,6 +838,10 @@ def get_movie_details(movie_id):
             "origin_countries": origin_countries,
             "region_release_dates": region_release_dates,
             "decision": user_decision,
+            "genres": genres,
+            "directors": directors,
+            "writers": writers,
+            "cast": cast,
         }
         if not movie:
             flash("Movie not found.", "danger")
