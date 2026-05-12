@@ -6,6 +6,7 @@
     <h2>Register</h2>
     <form method="POST" action="{{ url_for('html.register') }}" novalidate>
         <input type="hidden" name="csrf_token">
+        <input type="hidden" name="csrf_refresh_token">
 
         {# Honeypot field: visually hidden, out of SRs and tab order #}
         <div class="form-row" aria-hidden="true" style="position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;">

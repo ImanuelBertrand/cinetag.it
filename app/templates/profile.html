@@ -11,6 +11,7 @@
             <form action="{{ url_for('html.merge_temporary_user') }}" method="post" accept-charset="UTF-8"
                   enctype="application/x-www-form-urlencoded">
                 <input type="hidden" name="csrf_token">
+                <input type="hidden" name="csrf_refresh_token">
                 <div class="form-row">
                     <button name="merge" value="merge" type="submit">Import pre-login data</button>
                     <button name="delete" value="delete" type="submit" class="danger">Delete pre-login data</button>
@@ -27,6 +28,7 @@
             <form action="{{ url_for('html.request_confirmation_email') }}" method="post" accept-charset="UTF-8"
                   enctype="application/x-www-form-urlencoded">
                 <input type="hidden" name="csrf_token">
+                <input type="hidden" name="csrf_refresh_token">
                 <button name="logout" type="submit">Request new confirmation mail</button>
             </form>
         </div>
@@ -37,6 +39,7 @@
     <form method="POST" action="{{ url_for('html.profile') }}" accept-charset="UTF-8"
           enctype="application/x-www-form-urlencoded">
         <input type="hidden" name="csrf_token">
+        <input type="hidden" name="csrf_refresh_token">
         {% if user.email %}
             {% if  user.new_email %}
                 <div class="form-row">
@@ -158,6 +161,7 @@
         <form method="POST" action="{{ url_for('html.delete_data') }}" accept-charset="UTF-8"
               enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="csrf_token">
+            <input type="hidden" name="csrf_refresh_token">
             <button id="delete-all-data" type="submit" name="delete_data" class="danger needs-confirmation"
                     data-confirmation-message="Are you sure you want to delete all your data?">
                 Delete all my data

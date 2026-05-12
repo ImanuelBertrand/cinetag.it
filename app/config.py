@@ -57,6 +57,10 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/"
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN"
+    # Refresh CSRF uses a distinct field name so forms can carry both tokens
+    # at once and submissions still validate when the access token has expired
+    # and the request falls through to the refresh-token auth path.
+    JWT_REFRESH_CSRF_FIELD_NAME = "csrf_refresh_token"
     JWT_CSRF_CHECK_FORM = True
 
     CACHE_TYPE = os.environ.get(

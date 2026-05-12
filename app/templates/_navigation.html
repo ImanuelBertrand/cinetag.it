@@ -30,6 +30,7 @@
             {% else %}
                 <form method="POST" action="{{ url_for('html.logout') }}">
                     <input type="hidden" name="csrf_token">
+                    <input type="hidden" name="csrf_refresh_token">
                     <button type="submit">Logout</button>
                 </form>
             {% endif %}

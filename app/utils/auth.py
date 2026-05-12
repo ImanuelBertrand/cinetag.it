@@ -1,3 +1,4 @@
+import hmac
 import logging
 import uuid
 
@@ -10,6 +11,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
     verify_jwt_in_request,
 )
+from flask_jwt_extended.exceptions import CSRFError
 
 from app.errors import UserCreationError
 from app.extensions import db
@@ -18,6 +20,8 @@ from app.models.user import User
 from app.utils.jwt_keys import decode_with_fallback
 
 _logger = logging.getLogger(__name__)
+
+_CSRF_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 PUBLIC_ENDPOINTS = {
@@ -246,6 +250,9 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
         _logger.warning(
             "Invalid access token encountered for endpoint %s: %s", endpoint, e
         )
+    except CSRFError:
+        # Caller (authenticate_request) handles this as 403.
+        raise
     except Exception:
         # Catch other potential verification errors
         _logger.exception("Error verifying JWT access token for endpoint %s", endpoint)
@@ -267,6 +274,39 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
             g.new_refresh_token = None
 
 
+def _check_refresh_csrf(refresh_token: str) -> None:
+    """Enforce CSRF on the refresh-token auth path for unsafe HTTP methods.
+
+    Mirrors flask-jwt-extended's access-token CSRF check, since the custom
+    refresh decode path (decode_with_fallback) bypasses the library's
+    built-in CSRF protection.
+    """
+    if request.method not in _CSRF_METHODS:
+        return
+    if not current_app.config.get("JWT_COOKIE_CSRF_PROTECT", True):
+        return
+
+    # Signature was already verified by verify_refresh_token_and_get_identity.
+    payload = jwt.decode(
+        refresh_token,
+        options={"verify_signature": False, "verify_exp": False},
+    )
+    expected = payload.get("csrf")
+    if not expected:
+        return
+
+    csrf_field = current_app.config.get(
+        "JWT_REFRESH_CSRF_FIELD_NAME", "csrf_refresh_token"
+    )
+    received = None
+    if current_app.config.get("JWT_CSRF_CHECK_FORM", False):
+        received = request.form.get(csrf_field)
+    if not received:
+        raise CSRFError("Missing CSRF token")
+    if not hmac.compare_digest(received, expected):
+        raise CSRFError("CSRF double submit tokens do not match")
+
+
 def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
     refresh_token = request.cookies.get("refresh_token_cookie")
     if not refresh_token:
@@ -283,6 +323,8 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
                 "Refresh token deemed invalid by verification helper (e.g., revoked)."
             )
             return
+
+        _check_refresh_csrf(refresh_token)
 
         with app.app_context():  # Ensure context for DB query
             user = db.session.get(User, refreshed_user_id)
@@ -303,6 +345,8 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
         g.current_user = user
         _logger.debug("User %s authenticated via refresh token.", user.id)
 
+    except CSRFError:
+        raise
     except jwt.ExpiredSignatureError, jwt.InvalidTokenError:
         _logger.warning("Refresh token verification failed.", exc_info=True)
 
@@ -352,26 +396,30 @@ def authenticate_request(app: Flask):
         _logger.info("Bot detected, skipping auth.")
         return None
 
-    # 3. Attempt Access Token Auth
-    auth_token = request.cookies.get("access_token_cookie")
-    if auth_token:
-        _authenticate_via_auth_token(app, endpoint or "unknown")
+    try:
+        # 3. Attempt Access Token Auth
+        auth_token = request.cookies.get("access_token_cookie")
+        if auth_token:
+            _authenticate_via_auth_token(app, endpoint or "unknown")
 
-    if g.current_user:
-        return None
+        if g.current_user:
+            return None
 
-    # 4. Attempt Refresh Token Auth
-    refresh_token = request.cookies.get("refresh_token_cookie")
-    if refresh_token:
-        _authenticate_via_refresh_token(app, endpoint or "unknown")
+        # 4. Attempt Refresh Token Auth
+        refresh_token = request.cookies.get("refresh_token_cookie")
+        if refresh_token:
+            _authenticate_via_refresh_token(app, endpoint or "unknown")
 
-    if g.current_user:
-        return None
+        if g.current_user:
+            return None
 
-    # 5. Handle Guest User / Unauthenticated for Protected Route
-    _authenticate_as_guest_user(app, endpoint or "unknown")
+        # 5. Handle Guest User / Unauthenticated for Protected Route
+        _authenticate_as_guest_user(app, endpoint or "unknown")
 
-    if g.current_user:
-        return None
+        if g.current_user:
+            return None
+    except CSRFError as e:
+        _logger.warning("CSRF check failed for endpoint %s: %s", endpoint, e)
+        return make_response("CSRF check failed", 403)
 
     return make_response("Server error creating guest session", 500)

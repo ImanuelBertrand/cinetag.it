@@ -43,10 +43,24 @@ CineTagIt.Utils = {
    * @returns {string} CSRF token
    */
   getCsrfToken: function () {
+    return CineTagIt.Utils._readCookie("csrf_access_token");
+  },
+
+  /**
+   * Get refresh CSRF token from cookies (used when access token has expired
+   * and the request must auth via the refresh path).
+   * @returns {string} CSRF token
+   */
+  getRefreshCsrfToken: function () {
+    return CineTagIt.Utils._readCookie("csrf_refresh_token");
+  },
+
+  _readCookie: function (name) {
     const cookies = document.cookie.split("; ");
+    const prefix = name + "=";
     for (let i = 0; i < cookies.length; i++) {
-      if (cookies[i].startsWith("csrf_access_token")) {
-        return cookies[i].split("=")[1];
+      if (cookies[i].startsWith(prefix)) {
+        return cookies[i].substring(prefix.length);
       }
     }
     return "";
@@ -343,10 +357,16 @@ CineTagIt.Events = {
  * Initialize the application
  */
 CineTagIt.init = function () {
-  // Set CSRF token on form inputs
+  // Set CSRF tokens on form inputs. Forms include both fields so submissions
+  // still validate when the access token expires and the request falls through
+  // to the refresh-token auth path.
   const csrfToken = CineTagIt.Utils.getCsrfToken();
+  const refreshCsrfToken = CineTagIt.Utils.getRefreshCsrfToken();
   document.querySelectorAll('input[name="csrf_token"]').forEach(function (element) {
     element.value = csrfToken;
+  });
+  document.querySelectorAll('input[name="csrf_refresh_token"]').forEach(function (element) {
+    element.value = refreshCsrfToken;
   });
 
   // Handle initial flashed messages
