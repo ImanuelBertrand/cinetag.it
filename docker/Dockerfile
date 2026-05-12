@@ -80,6 +80,16 @@ COPY --from=builder /venv /venv
 # Copy your application code
 COPY . .
 
+# Re-sync the venv against this stage's Python interpreter. The builder
+# image installs Python at a different path than python:3.14-slim, so
+# the symlinks in /venv/bin would otherwise be dangling here and `python`
+# would fall through to the slim image's bare interpreter without Flask.
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+ENV UV_LINK_MODE=copy
+ENV UV_PROJECT_ENVIRONMENT=/venv
+RUN uv sync --frozen --no-dev \
+    && rm /usr/local/bin/uv
+
 # Copy precompiled assets from the builder stage
 # (This ensures we get the compiled dist/style.css)
 COPY --from=builder /app/app/static/dist /app/app/static/dist
@@ -90,7 +100,6 @@ ARG STATIC_VERSION=dev
 ENV STATIC_VERSION=${STATIC_VERSION}
 
 # Place the virtual env on the PATH so 'python' and 'gunicorn' work automatically
-ENV UV_PROJECT_ENVIRONMENT=/venv
 ENV PATH="/venv/bin:$PATH"
 
 # Copy the entrypoint script
