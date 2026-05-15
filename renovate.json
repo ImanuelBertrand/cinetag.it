@@ -6,9 +6,7 @@
   "internalChecksFilter": "strict",
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": [
-      "* 0-3 * * 4"
-    ]
+    "schedule": ["* 0-3 * * 4"]
   },
   "packageRules": [
     {
