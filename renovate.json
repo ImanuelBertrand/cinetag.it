@@ -4,6 +4,12 @@
   "rangeStrategy": "pin",
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "* 0-3 * * 4"
+    ]
+  },
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
