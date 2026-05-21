@@ -47,7 +47,7 @@ def get_tmdb_url(path: str) -> str:
 def _get(
     url: str,
     params: dict[str, str] | None = None,
-    headers: dict[str, str] | None = None,
+    headers: dict[str, str | bytes] | None = None,
 ):
     if not params:
         params = {}
