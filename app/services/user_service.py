@@ -501,7 +501,7 @@ def fetch_user_events(
     start: datetime | None = None,
     end: datetime | None = None,
     external_urls: bool = False,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if not user:
         raise ValueError("User not found.")
     lang = user.language or current_app.config["DEFAULT_LANGUAGE"]
