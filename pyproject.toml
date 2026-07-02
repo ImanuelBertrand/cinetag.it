@@ -3,7 +3,7 @@ name = "CineTagIt"
 version = "1.0.0"
 requires-python = "==3.14.6"
 dependencies = [
-  "alembic==1.18.4",
+  "alembic==1.18.5",
   "apscheduler==3.11.2",
   "babel==2.18.0",
   "crawlerdetect==0.3.2",
