@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libffi-dev \
+    librsvg2-bin \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
