@@ -250,6 +250,9 @@ def _build_movies_query(
     if mode == "pending":
         return query.filter(UserMovie.movie_id.is_(None))
 
+    if mode == "reviewed":
+        return query.filter(UserMovie.movie_id.isnot(None))
+
     return query.filter(UserMovie.decision == mode.rstrip("d"))  # approved => approve
 
 
@@ -496,6 +499,30 @@ def _get_user_movies(
     return joined_query.all()
 
 
+def get_pending_count(user: User) -> int:
+    """Count upcoming movies the user has not tagged yet."""
+    region = user.region or current_app.config["DEFAULT_REGION"]
+    language = user.language or current_app.config["DEFAULT_LANGUAGE"]
+    query = _build_movies_query(
+        user,
+        region,
+        language,
+        min_release_date=None,
+        min_movie_id=None,
+        need_imdb=True,
+        name_filter=None,
+        mode="pending",
+    )
+    return query.count()
+
+
+def user_has_any_tags(user: User) -> bool:
+    """Whether the user has tagged at least one movie."""
+    return db.session.query(
+        UserMovie.query.filter_by(user_id=user.id).exists()
+    ).scalar()
+
+
 def fetch_user_events(
     user,
     start: datetime | None = None,
@@ -547,6 +574,8 @@ def fetch_user_events(
                 ),
                 "allDay": True,
                 "decision": user_movie.decision,
+                # Lets FullCalendar color-code events by decision
+                "classNames": [user_movie.decision],
             }
         )
     return sorted(events, key=lambda x: x["sort_order"])

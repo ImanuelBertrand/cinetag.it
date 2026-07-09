@@ -1,0 +1,37 @@
+{% extends "_base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    {% if not current_user.email %}
+        <p class="guest-banner">
+            You are browsing as a guest.
+            <a href="{{ url_for('html.register') }}">Create an account</a>
+            to keep your list and get notified about releases.
+        </p>
+    {% endif %}
+
+    {% if pending_count %}
+        <p class="pending-nudge">
+            <a class="button primary" href="{{ url_for('html.get_movies', filter_mode="pending") }}">
+                {{ pending_count }} new movie{{ 's' if pending_count != 1 }} to tag
+            </a>
+        </p>
+    {% endif %}
+
+    <h2>Your releases in the next 30 days</h2>
+    {% if upcoming %}
+        <ul class="release-list">
+            {% for release in upcoming %}
+                <li class="{{ release.decision }}"><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>
+            Nothing coming up.
+            <a href="{{ url_for('html.get_all_movies') }}">Browse movies</a>
+            to find your next release, or check
+            <a href="{{ url_for('html.get_releases') }}">all your releases</a>.
+        </p>
+    {% endif %}
+{% endblock %}

@@ -26,6 +26,9 @@ body {
   margin: 0;
   padding: 0;
   line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 header {
@@ -243,6 +246,26 @@ main {
   }
 }
 
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5em 2em;
+  padding: 1em 2em;
+  border-top: 1px solid $gunmetal-gray;
+  font-size: 0.85em;
+
+  a {
+    color: $cool-gray;
+    text-decoration: none;
+    transition: color 0.1s;
+
+    &:hover {
+      color: $neon-blue;
+    }
+  }
+}
+
 h2 {
   font-weight: normal;
 }
@@ -259,16 +282,6 @@ li {
 
 .content-text ul {
   list-style-type: disc;
-}
-
-footer {
-  background-color: $gunmetal-gray;
-  color: $steel-gray;
-  text-align: center;
-  padding: 1em;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
 }
 
 .danger {
@@ -561,6 +574,47 @@ button {
   }
 }
 
+// Link styled as a button (CTAs)
+main a.button {
+  display: inline-block;
+  background-color: $cool-gray;
+  color: $steel-gray;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+
+  &:hover {
+    background-color: $neon-blue;
+    color: $dark-gray;
+  }
+
+  &.primary {
+    background-color: $neon-blue;
+    color: $dark-gray;
+
+    &:hover {
+      background-color: lighten($neon-blue, 10%);
+    }
+  }
+}
+
+.home-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  margin: 1.5em 0;
+}
+
+.guest-banner {
+  background-color: $gunmetal-gray;
+  border-left: 4px solid $neon-blue;
+  border-radius: 4px;
+  padding: 0.8em 1em;
+}
+
+.pending-nudge {
+  margin: 1.5em 0;
+}
+
 .profile-message {
   color: $neon-blue;
   margin: 1em 1em 4em;
@@ -584,8 +638,13 @@ ul.release-list li {
     text-decoration: none;
   }
 
+  &.approve {
+    border-left: 4px solid $color-approve-text;
+  }
+
   &.maybe {
     background-color: darken($cool-gray, 10%);
+    border-left: 4px solid $color-maybe-text;
 
     a {
       color: darken($steel-gray, 10%);
@@ -595,6 +654,17 @@ ul.release-list li {
 
 #calendar {
   max-width: 1500px;
+
+  // Events carry their decision as a class (see fetch_user_events)
+  .fc-event.approve {
+    background-color: darken($color-approve-background, 35%);
+    border-color: $color-approve-text;
+  }
+
+  .fc-event.maybe {
+    background-color: darken($color-maybe-background, 35%);
+    border-color: $color-maybe-text;
+  }
 }
 
 .calendar-type {
@@ -876,6 +946,33 @@ ul.release-list li {
   font-size: 12px;
 }
 
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-bottom: 15px;
+
+  .chip {
+    padding: 0.3em 0.9em;
+    border: 1px solid $cool-gray;
+    border-radius: 1em;
+    color: $steel-gray;
+    white-space: nowrap;
+    transition:
+      border-color 0.1s,
+      color 0.1s;
+
+    &:hover {
+      border-color: $neon-blue;
+    }
+
+    &.active {
+      border-color: $neon-blue;
+      color: $neon-blue;
+    }
+  }
+}
+
 .movie-filters {
   display: flex;
   flex-wrap: wrap;
@@ -889,6 +986,36 @@ ul.release-list li {
 .filter-group {
   display: flex;
   align-items: center;
+}
+
+.friend-filter {
+  display: flex;
+  align-items: center;
+  background-color: #f0f8ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #cce5ff;
+  margin: 0;
+  height: 100%;
+
+  span {
+    flex-grow: 1;
+    font-size: 14px;
+  }
+}
+
+.remove-friend-filter {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 5px;
+  margin-left: 8px;
+
+  &:hover {
+    color: #ff0000;
+  }
 }
 
 .checkbox-container {

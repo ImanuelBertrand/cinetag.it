@@ -1,0 +1,35 @@
+{% extends "_base.html" %}
+
+{% block title %}Releases{% endblock %}
+
+{% block content %}
+    <h2>Releases</h2>
+
+    <div class="filter-chips">
+        <a href="{{ url_for('html.get_releases', view="list") }}"
+           class="chip {{ 'active' if view == 'list' }}">List</a>
+        <a href="{{ url_for('html.get_releases', view="calendar") }}"
+           class="chip {{ 'active' if view == 'calendar' }}">Calendar</a>
+    </div>
+
+    {% if view == 'calendar' %}
+        <div id="calendar"></div>
+    {% else %}
+        <ul class="release-list">
+            {% for release in releases %}
+                <li class="{{ release.decision }}"><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {% if view == 'calendar' %}
+        {% set lang = current_user.language or 'en' %}
+        <script defer src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}?v={{ static_version }}"></script>
+        {% if lang != 'en' %}
+            <script defer src="{{ url_for('static', filename='vendor/fullcalendar/locales/' + lang + '.global.js') }}?v={{ static_version }}"></script>
+        {% endif %}
+        <script defer src="{{ url_for('static', filename='js/calendar.js') }}?v={{ static_version }}"></script>
+    {% endif %}
+{% endblock %}

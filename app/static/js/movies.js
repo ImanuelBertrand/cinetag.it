@@ -145,9 +145,17 @@ CineTagIt.Movies = {
       // load filterMode from data-filter-mode in movieContainer
       const filterMode = movieContainer.getAttribute("data-filter-mode");
 
+      // Optional fixed limit (e.g. the home page poster wall);
+      // containers with a limit don't paginate
+      const limit = movieContainer.getAttribute("data-limit");
+
       // Build URL with pagination parameters
       let url = `/api/movies/${filterMode}`;
       const params = new URLSearchParams();
+
+      if (limit) {
+        params.append("limit", limit);
+      }
 
       if (minReleaseDate) {
         params.append("min_release_date", minReleaseDate);
@@ -180,7 +188,7 @@ CineTagIt.Movies = {
         // Update state with new pagination data
         state.nextReleaseDate = data.next_release_date;
         state.nextMovieId = data.next_movie_id;
-        state.hasMore = data.has_more;
+        state.hasMore = limit ? false : data.has_more;
 
         // Update friend filter UI if friend info is available
         if (data.friend && state.filters.friendId) {

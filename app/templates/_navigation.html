@@ -1,41 +1,12 @@
 <a class="mobile-menu-toggle">☰</a>
+{% set filter_mode_arg = request.view_args.get('filter_mode') if request.view_args else none %}
 <nav>
-    <a href="{{ url_for('html.get_all_movies') }}">All movies</a>
-    <div class="dropdown hoverable">
-        <a href="#" class="dropbtn">My movies</a>
-        <div class="dropdown-content">
-            <a href="{{ url_for('html.get_movies', filter_mode="pending") }}">❔ Not yet tagged</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="approved") }}">👍️ Must see</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="maybe") }}">🤷 Maybe</a>
-            <a href="{{ url_for('html.get_movies', filter_mode="disapproved") }}">👎 Definitely not</a>
-        </div>
-    </div>
-    <div class="dropdown hoverable">
-        <a href="#" class="dropbtn">My releases</a>
-        <div class="dropdown-content">
-            {% if current_user %}
-                <a href="{{ url_for('html.get_user_release_dates') }}">As a list</a>
-                <a href="{{ url_for('html.get_user_calendar') }}">As a calendar</a>
-            {% endif %}
-        </div>
-    </div>
-    <div class="dropdown hoverable">
-        <a href="#" class="dropbtn">User</a>
-        <div class="dropdown-content">
-            <a href="{{ url_for('html.profile') }}">Profile</a>
-            <a href="{{ url_for('html.profile_notifications') }}">Notifications</a>
-            {% if not current_user or not current_user.email %}
-                <a href="{{ url_for('html.login') }}">Login</a>
-                <a href="{{ url_for('html.register') }}">Register</a>
-            {% else %}
-                <form method="POST" action="{{ url_for('html.logout') }}">
-                    <input type="hidden" name="csrf_token">
-                    <input type="hidden" name="csrf_refresh_token">
-                    <button type="submit">Logout</button>
-                </form>
-            {% endif %}
-        </div>
-    </div>
+    <a href="{{ url_for('html.get_all_movies') }}"
+       class="{{ 'active' if request.endpoint == 'html.get_all_movies' or filter_mode_arg == 'all' }}">Browse</a>
+    <a href="{{ url_for('html.get_movies', filter_mode="pending") }}"
+       class="{{ 'active' if filter_mode_arg and filter_mode_arg != 'all' }}">My List</a>
+    <a href="{{ url_for('html.get_releases') }}"
+       class="{{ 'active' if request.endpoint == 'html.get_releases' }}">Releases</a>
     <div class="dropdown hoverable">
         <a href="#" class="dropbtn">Friends</a>
         <div class="dropdown-content">
@@ -45,13 +16,28 @@
         </div>
     </div>
     <div class="dropdown hoverable">
-        <a href="#" class="dropbtn">About</a>
+        <a href="#" class="dropbtn">Account</a>
         <div class="dropdown-content">
-            <a href="{{ url_for('html.why') }}">Why?</a>
-            <a href="{{ url_for('html.how') }}">How?</a>
-            <a href="{{ url_for('html.who') }}">Who?</a>
-            <a href="{{ url_for('html.imprint') }}">Imprint / legal infos</a>
-            <a href="{{ url_for('html.privacy') }}">Privacy policy</a>
+            {% if current_user and current_user.email %}
+                <a href="{{ url_for('html.profile') }}">Profile</a>
+                <a href="{{ url_for('html.profile_notifications') }}">Notifications</a>
+                <form method="POST" action="{{ url_for('html.logout') }}">
+                    <input type="hidden" name="csrf_token">
+                    <input type="hidden" name="csrf_refresh_token">
+                    <button type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('html.login') }}">Login</a>
+                <a href="{{ url_for('html.register') }}">Register</a>
+                <div class="separator">Guest</div>
+                <a href="{{ url_for('html.profile') }}">Profile</a>
+                <a href="{{ url_for('html.profile_notifications') }}">Notifications</a>
+            {% endif %}
+            {# Legal pages must stay reachable from infinite-scroll pages,
+               where the footer keeps moving out of reach #}
+            <div class="separator">Legal</div>
+            <a href="{{ url_for('html.imprint') }}">Imprint</a>
+            <a href="{{ url_for('html.privacy') }}">Privacy</a>
         </div>
     </div>
 </nav>

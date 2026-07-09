@@ -4,6 +4,18 @@
 
 {% block content %}
     <h2>Never Miss a Movie You're Interested In.</h2>
-    <p>Start tagging movies as 👍️, 🤷, or 👎 to build your personal watchlist and stay informed about their release dates.</p>
-    <p><a href="/movies">Explore All Movies & Start Tagging</a></p>
+    <p>Tag movies as 👍️, 🤷, or 👎 to build your personal watchlist and stay informed about their release dates.</p>
+    <p class="home-cta">
+        <a class="button primary" href="{{ url_for('html.get_all_movies') }}">Start tagging — no account needed</a>
+        <a class="button" href="{{ url_for('html.register') }}">Create an account</a>
+    </p>
+
+    <h3>The next releases — try it right here:</h3>
+    <div class="movie-container movie-grid movie-grid-all" data-filter-mode="all" data-limit="12">
+        <!-- Movies will be dynamically loaded here -->
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/movies.js') }}?v={{ static_version }}"></script>
 {% endblock %}

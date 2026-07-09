@@ -39,9 +39,11 @@ from app.services.user_service import (
     confirm_user_email,
     fetch_user_events,
     get_current_user,
+    get_pending_count,
     hash_password,
     queue_confirmation_mail,
     reset_user_password,
+    user_has_any_tags,
 )
 from app.utils.auth import generate_new_tokens
 from app.utils.email import queue_email
@@ -61,6 +63,23 @@ def service_worker():
 
 @html.route("/", methods=["GET"])
 def home():
+    user = get_current_user()
+
+    # Registered users and guests who already tagged movies land on their
+    # dashboard; everyone else gets the demonstrative landing page.
+    if user and (user.email or user_has_any_tags(user)):
+        try:
+            now = datetime.now(UTC)
+            upcoming = fetch_user_events(user, now, now + timedelta(days=30))
+            pending_count = get_pending_count(user)
+        except Exception:
+            _logger.exception("Error building home dashboard.")
+            upcoming = []
+            pending_count = 0
+        return render_template(
+            "dashboard.html", upcoming=upcoming, pending_count=pending_count
+        )
+
     return render_template("home.html")
 
 
@@ -874,43 +893,44 @@ def add_friend():
     return render_template("add_friend.html")
 
 
-@html.route("/release-dates", methods=["GET"])
-def get_user_release_dates():
-    user = get_current_user()
-    if not user:
-        flash("User not found.", "danger")
-        return redirect(url_for("html.profile"))
-    try:
-        # four weeks ago
-        start = datetime.now(UTC) - timedelta(weeks=4)
-        releases = fetch_user_events(user, start)
-        return render_template("release_dates.html", releases=releases)
-    except UserFeedbackError as e:
-        flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
-    except Exception:
-        _logger.exception("Error fetching release dates.")
-        flash("Error fetching release dates.", "danger")
-        return redirect(url_for("html.profile"))
-
-
-@html.route("/calendar", methods=["GET"])
-def get_user_calendar():
+@html.route("/releases", methods=["GET"])
+def get_releases():
     user = get_current_user()
     if not user:
         flash("There was an error with your session. Please try again.", "danger")
         return redirect(url_for("html.profile"))
 
-    try:
-        releases = fetch_user_events(user)
-        return render_template("calendar.html", releases=releases)
-    except UserFeedbackError as e:
-        flash(str(e), "danger")
-        return redirect(url_for("html.profile"))
-    except Exception:
-        _logger.exception("Error fetching calendar.")
-        flash("Error fetching calendar.", "danger")
-        return redirect(url_for("html.profile"))
+    view = request.args.get("view", "list")
+    if view not in ("list", "calendar"):
+        view = "list"
+
+    # The calendar view loads its events via /api/user/events (FullCalendar),
+    # so only the list view needs them server-side.
+    releases = []
+    if view == "list":
+        try:
+            # four weeks ago
+            start = datetime.now(UTC) - timedelta(weeks=4)
+            releases = fetch_user_events(user, start)
+        except UserFeedbackError as e:
+            flash(str(e), "danger")
+            return redirect(url_for("html.profile"))
+        except Exception:
+            _logger.exception("Error fetching release dates.")
+            flash("Error fetching release dates.", "danger")
+            return redirect(url_for("html.profile"))
+
+    return render_template("releases.html", view=view, releases=releases)
+
+
+@html.route("/release-dates", methods=["GET"])
+def get_user_release_dates():
+    return redirect(url_for("html.get_releases", view="list"), code=301)
+
+
+@html.route("/calendar", methods=["GET"])
+def get_user_calendar():
+    return redirect(url_for("html.get_releases", view="calendar"), code=301)
 
 
 @html.route("/calendar/ics/<calendar_hash>", methods=["GET"])

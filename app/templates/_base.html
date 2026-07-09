@@ -25,5 +25,12 @@
     <div id="flash-messages-container"></div>
     {% block content %}{% endblock %}
 </main>
+<footer>
+    <a href="{{ url_for('html.why') }}">Why?</a>
+    <a href="{{ url_for('html.how') }}">How?</a>
+    <a href="{{ url_for('html.who') }}">Who?</a>
+    <a href="{{ url_for('html.imprint') }}">Imprint / legal infos</a>
+    <a href="{{ url_for('html.privacy') }}">Privacy policy</a>
+</footer>
 </body>
 </html>
