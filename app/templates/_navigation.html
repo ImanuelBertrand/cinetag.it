@@ -8,10 +8,10 @@
     <a href="{{ url_for('html.get_releases') }}"
        class="{{ 'active' if request.endpoint == 'html.get_releases' }}">Releases</a>
     <div class="dropdown hoverable">
-        <a href="#" class="dropbtn">Friends</a>
+        <a href="#" class="dropbtn">Friends{% if pending_friend_requests_count %} <span class="nav-badge">{{ pending_friend_requests_count }}</span>{% endif %}</a>
         <div class="dropdown-content">
             <a href="{{ url_for('html.friends_list') }}">My Friends</a>
-            <a href="{{ url_for('html.friend_requests') }}">Friend Requests</a>
+            <a href="{{ url_for('html.friend_requests') }}">Friend Requests{% if pending_friend_requests_count %} <span class="nav-badge">{{ pending_friend_requests_count }}</span>{% endif %}</a>
             <a href="{{ url_for('html.add_friend') }}">Add Friend</a>
         </div>
     </div>

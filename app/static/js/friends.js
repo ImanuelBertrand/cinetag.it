@@ -91,6 +91,7 @@ function renderFriendsList(friends) {
                 </div>
                 <div class="friend-actions">
                     <button class="view-common-movies-btn">Common Movies</button>
+                    <button class="view-friend-picks-btn">Their picks</button>
                     <button class="remove-friend-btn" data-friend-id="${friend.id}">Remove</button>
                 </div>
             </div>
@@ -108,6 +109,11 @@ function renderFriendsList(friends) {
   // Add event listeners to the view common movies buttons
   document.querySelectorAll(".view-common-movies-btn").forEach((button) => {
     button.addEventListener("click", handleViewCommonMovies);
+  });
+
+  // Add event listeners to the "their picks" buttons
+  document.querySelectorAll(".view-friend-picks-btn").forEach((button) => {
+    button.addEventListener("click", handleViewFriendPicks);
   });
 }
 
@@ -308,7 +314,17 @@ function handleViewCommonMovies(event) {
   const friendCard = event.target.closest(".friend-card");
   const friendId = friendCard.dataset.friendId;
 
-  // Redirect to the common movies page
+  // The "approved" mode restricts to *your* approvals, and the friend filter
+  // restricts to *their* approvals, so this URL is the true intersection:
+  // movies you both want to see.
+  window.location.href = `/movies/approved?friend_id=${friendId}`;
+}
+
+function handleViewFriendPicks(event) {
+  const friendCard = event.target.closest(".friend-card");
+  const friendId = friendCard.dataset.friendId;
+
+  // Everything the friend approved among upcoming movies, tagged by you or not.
   window.location.href = `/movies?friend_id=${friendId}`;
 }
 

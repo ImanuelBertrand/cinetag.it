@@ -1,5 +1,9 @@
 from flask_jwt_extended import create_access_token
 
+from app.extensions import db
+from app.models.friend_request import FriendRequest
+from app.models.user import User
+
 
 def _login(client, app, user):
     """Authenticate the test client as the given user via an access token."""
@@ -94,3 +98,34 @@ def test_no_filter_chips_on_browse(client) -> None:
     response = client.get("/movies")
     assert response.status_code == 200
     assert b"filter-chips" not in response.data
+
+
+def test_friend_request_badge_for_recipient(client, app, test_user) -> None:
+    """A registered recipient with a pending request sees a nav badge."""
+    with app.app_context():
+        sender = User(
+            display_name="Sender",
+            email="sender-badge@example.com",
+            region="US",
+            language="en",
+        )
+        db.session.add(sender)
+        db.session.commit()
+        db.session.add(
+            FriendRequest(
+                requester_id=sender.id, recipient_id=test_user.id, status="pending"
+            )
+        )
+        db.session.commit()
+
+    _login(client, app, test_user)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b'class="nav-badge"' in response.data
+
+
+def test_no_friend_request_badge_for_guest(client) -> None:
+    """Guests never get a request badge (they cannot receive requests)."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b'class="nav-badge"' not in response.data

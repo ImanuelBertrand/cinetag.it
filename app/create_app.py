@@ -12,7 +12,7 @@ from app.cli import register_cli
 from app.config import config_by_name
 from app.extensions import init_extensions
 from app.models.allowed_refresh_token import AllowedRefreshToken  # noqa F401
-from app.models.friend_request import FriendRequest  # noqa F401
+from app.models.friend_request import FriendRequest
 from app.models.friendship import Friendship  # noqa F401
 from app.models.misc_data import MiscData  # noqa F401
 from app.models.movie import Movie  # noqa F401
@@ -35,6 +35,14 @@ from app.scheduler import setup_cron_jobs
 from app.utils.auth import authenticate_request
 
 _logger = logging.getLogger(__name__)
+
+
+def _pending_friend_requests_count(user) -> int:
+    # Registered users can receive friend requests; guests cannot (friend
+    # codes are registered-only), so skip the query for them.
+    if not user or not user.email:
+        return 0
+    return FriendRequest.query.filter_by(recipient_id=user.id, status="pending").count()
 
 
 def _configure_logging() -> None:
@@ -114,9 +122,11 @@ def create_app(config_name, start_scheduler=False):
     @app.context_processor
     def inject_context():
         # g.current_user is set (or None) by before_request
+        user = g.get("current_user")
         return {
-            "current_user": g.get("current_user"),
+            "current_user": user,
             "static_version": app.config.get("STATIC_VERSION", "dev"),
+            "pending_friend_requests_count": _pending_friend_requests_count(user),
         }
 
     return app
