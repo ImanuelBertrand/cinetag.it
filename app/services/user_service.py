@@ -345,11 +345,18 @@ def _build_movies_query(
     return query.filter(UserMovie.decision == mode.rstrip("d"))  # approved => approve
 
 
+# TMDB's "TV Movie" genre — meaningless as a filter in a theatrical release
+# tracker. Matched by TMDB's stable id, since genre names are localized.
+_EXCLUDED_GENRE_IDS = {10770}
+
+
 def get_available_genres(language: str) -> list[dict[str, Any]]:
     """All genres that appear on at least one movie, localized and sorted by
     name. Used to render the browse genre-chip row."""
     genre_ids = [
-        gid for (gid,) in db.session.query(MovieGenre.genre_id).distinct().all()
+        gid
+        for (gid,) in db.session.query(MovieGenre.genre_id).distinct().all()
+        if gid not in _EXCLUDED_GENRE_IDS
     ]
     if not genre_ids:
         return []

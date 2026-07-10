@@ -132,3 +132,18 @@ def test_get_available_genres_localized(app) -> None:
         assert 28 in ids
         assert 99 not in ids  # not attached to any movie
         assert next(g["name"] for g in genres if g["id"] == 28) == "Action"
+
+
+def test_get_available_genres_excludes_tv_movie(app) -> None:
+    """The 'TV Movie' genre is never offered as a browse filter."""
+    from app.models.tmdb_genre import TmdbGenreName
+
+    with app.app_context():
+        _make_movie(1, genres=[28, 10770])
+        db.session.add(TmdbGenreName(genre_id=28, language="en", name="Action"))
+        db.session.add(TmdbGenreName(genre_id=10770, language="en", name="TV Movie"))
+        db.session.commit()
+
+        ids = {g["id"] for g in get_available_genres("en")}
+        assert 28 in ids
+        assert 10770 not in ids
