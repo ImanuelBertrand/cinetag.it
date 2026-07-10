@@ -10,6 +10,8 @@
     {% set title = 'Movies to tag' %}
 {% elif filter_mode == 'reviewed' %}
     {% set title = 'Movies you tagged' %}
+{% elif filter_mode == 'released' %}
+    {% set title = 'Recently released' %}
 {% elif filter_mode == 'all' %}
     {% set title = 'All upcoming movies' %}
 {% else %}
@@ -35,6 +37,8 @@
                class="chip {{ 'active' if filter_mode == 'disapproved' }}">👎 Definitely not</a>
             <a href="{{ url_for('html.get_movies', filter_mode="reviewed") }}"
                class="chip {{ 'active' if filter_mode == 'reviewed' }}">All tagged</a>
+            <a href="{{ url_for('html.get_movies', filter_mode="released") }}"
+               class="chip {{ 'active' if filter_mode == 'released' }}">🎬 Released</a>
         </div>
     {% endif %}
 
@@ -52,6 +56,24 @@
             </select>
         </div>
         {% endif %}
+    </div>
+
+    {% if genres %}
+        <div class="genre-chips" id="genre-chips">
+            {% for genre in genres %}
+                <button type="button"
+                        class="chip genre-chip {{ 'active' if genre.id in selected_genres }}"
+                        data-genre-id="{{ genre.id }}">{{ genre.name }}</button>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="sort-toggle" id="sort-toggle">
+        <span class="sort-label">Sort:</span>
+        <button type="button" class="chip sort-chip {{ 'active' if sort != 'popularity' }}"
+                data-sort="release">Release date</button>
+        <button type="button" class="chip sort-chip {{ 'active' if sort == 'popularity' }}"
+                data-sort="popularity">Popularity</button>
     </div>
 
     <div class="movie-container movie-grid movie-grid-{{ filter_mode }}" data-filter-mode="{{ filter_mode }}">

@@ -19,6 +19,16 @@
         </p>
     {% endif %}
 
+    {% if recently_released %}
+        <h2>Out now</h2>
+        <ul class="release-list">
+            {% for release in recently_released | reverse %}
+                <li class="{{ release.decision }}"><a href="{{ release.url }}">{{ release.start_pretty }}:&emsp;{{ release.title }}</a></li>
+            {% endfor %}
+        </ul>
+        <p><a href="{{ url_for('html.get_movies', filter_mode='released') }}">See all released movies you tagged</a></p>
+    {% endif %}
+
     <h2>Your releases in the next 30 days</h2>
     {% if upcoming %}
         <ul class="release-list">

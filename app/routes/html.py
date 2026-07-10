@@ -38,6 +38,7 @@ from app.services.user_service import (
     authenticate_user,
     confirm_user_email,
     fetch_user_events,
+    get_available_genres,
     get_current_user,
     get_pending_count,
     hash_password,
@@ -71,13 +72,18 @@ def home():
         try:
             now = datetime.now(UTC)
             upcoming = fetch_user_events(user, now, now + timedelta(days=30))
+            recently_released = fetch_user_events(user, now - timedelta(days=14), now)
             pending_count = get_pending_count(user)
         except Exception:
             _logger.exception("Error building home dashboard.")
             upcoming = []
+            recently_released = []
             pending_count = 0
         return render_template(
-            "dashboard.html", upcoming=upcoming, pending_count=pending_count
+            "dashboard.html",
+            upcoming=upcoming,
+            recently_released=recently_released,
+            pending_count=pending_count,
         )
 
     return render_template("home.html")
@@ -702,6 +708,7 @@ def get_movies(filter_mode):
         "reviewed",
         "approved",
         "disapproved",
+        "released",
     }:
         flash("Invalid filter mode.", "danger")
         return redirect(url_for("html.profile"))
@@ -712,7 +719,27 @@ def get_movies(filter_mode):
     if user:
         friends = Friendship.get_friends_with_details(user.id)
 
-    return render_template("movie_list.html", filter_mode=filter_mode, friends=friends)
+    language = (user.language if user else None) or current_app.config[
+        "DEFAULT_LANGUAGE"
+    ]
+    genres = get_available_genres(language)
+    selected_genres = {
+        int(part)
+        for part in request.args.get("genres", "").split(",")
+        if part.strip().isdigit()
+    }
+    sort = request.args.get("sort", "release")
+    if sort not in ("release", "popularity"):
+        sort = "release"
+
+    return render_template(
+        "movie_list.html",
+        filter_mode=filter_mode,
+        friends=friends,
+        genres=genres,
+        selected_genres=selected_genres,
+        sort=sort,
+    )
 
 
 def _get_movie_genres(movie: Movie, language: str) -> list[str]:

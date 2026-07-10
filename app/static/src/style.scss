@@ -983,6 +983,43 @@ ul.release-list li {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.genre-chips,
+.sort-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 15px;
+
+  .chip {
+    padding: 0.3em 0.9em;
+    border: 1px solid $cool-gray;
+    border-radius: 1em;
+    background: none;
+    color: $steel-gray;
+    white-space: nowrap;
+    cursor: pointer;
+    font: inherit;
+    transition:
+      border-color 0.1s,
+      color 0.1s;
+
+    &:hover {
+      border-color: $neon-blue;
+    }
+
+    &.active {
+      border-color: $neon-blue;
+      color: $neon-blue;
+    }
+  }
+}
+
+.sort-toggle .sort-label {
+  color: $cool-gray;
+  margin-right: 0.25em;
+}
+
 .filter-group {
   display: flex;
   align-items: center;

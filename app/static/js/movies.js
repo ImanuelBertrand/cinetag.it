@@ -22,9 +22,12 @@ CineTagIt.Movies = {
       return;
     }
 
-    // Get friend_id from URL if present
+    // Get filters from the URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const friendId = urlParams.get("friend_id");
+    const nameParam = urlParams.get("name") || "";
+    const sort = urlParams.get("sort") === "popularity" ? "popularity" : "release";
+    const genres = urlParams.get("genres") || "";
 
     // Fetch movies for each container
     movieContainers.forEach((container) => {
@@ -32,17 +35,23 @@ CineTagIt.Movies = {
       this.containerState.set(container, {
         nextReleaseDate: null,
         nextMovieId: null,
+        nextPopularity: null,
         hasMore: false,
         isLoading: false,
         movies: [],
         filters: {
-          name: "",
+          name: nameParam,
           friendId: friendId,
+          sort: sort,
+          genres: genres,
         },
       });
 
       this.fetchMovies(container);
     });
+
+    // Genre and sort controls (multi-select genre chips + sort toggle)
+    this.initBrowseControls();
 
     // Add scroll event listener for infinite scrolling
     window.addEventListener("scroll", this.handleScroll.bind(this));
@@ -58,6 +67,12 @@ CineTagIt.Movies = {
     const nameFilter = document.getElementById("name-filter");
 
     if (nameFilter) {
+      // Reflect a ?name= URL parameter in the input, so applyFilters (which
+      // reads the input) doesn't silently drop it on genre/sort changes.
+      if (nameParam) {
+        nameFilter.value = nameParam;
+      }
+
       // Update URL with name filter
       nameFilter.addEventListener("input", (event) => {
         const nameFilterValue = event.target.value;
@@ -110,6 +125,56 @@ CineTagIt.Movies = {
   },
 
   /**
+   * Wire up the genre-chip multi-select and the sort toggle. Both update the
+   * URL query string and re-fetch, mirroring the name-filter pattern.
+   */
+  initBrowseControls: function () {
+    const genreChips = document.getElementById("genre-chips");
+    if (genreChips) {
+      genreChips.addEventListener("click", (event) => {
+        const chip = event.target.closest(".genre-chip");
+        if (!chip) return;
+
+        chip.classList.toggle("active");
+        const selected = Array.from(genreChips.querySelectorAll(".genre-chip.active")).map((el) =>
+          el.getAttribute("data-genre-id"),
+        );
+
+        const url = new URL(window.location.href);
+        if (selected.length) {
+          url.searchParams.set("genres", selected.join(","));
+        } else {
+          url.searchParams.delete("genres");
+        }
+        window.history.replaceState({}, "", url.toString());
+        this.applyFilters();
+      });
+    }
+
+    const sortToggle = document.getElementById("sort-toggle");
+    if (sortToggle) {
+      sortToggle.addEventListener("click", (event) => {
+        const chip = event.target.closest(".sort-chip");
+        if (!chip) return;
+
+        const sort = chip.getAttribute("data-sort");
+        sortToggle.querySelectorAll(".sort-chip").forEach((el) => {
+          el.classList.toggle("active", el === chip);
+        });
+
+        const url = new URL(window.location.href);
+        if (sort === "popularity") {
+          url.searchParams.set("sort", "popularity");
+        } else {
+          url.searchParams.delete("sort");
+        }
+        window.history.replaceState({}, "", url.toString());
+        this.applyFilters();
+      });
+    }
+  },
+
+  /**
    * Handle scroll event for infinite scrolling
    */
   handleScroll: function () {
@@ -131,7 +196,12 @@ CineTagIt.Movies = {
    * @param {string|null} minReleaseDate - The minimum release date for pagination
    * @param {number|null} minMovieId - The minimum movie ID for pagination
    */
-  fetchMovies: async function (movieContainer, minReleaseDate = null, minMovieId = null) {
+  fetchMovies: async function (
+    movieContainer,
+    minReleaseDate = null,
+    minMovieId = null,
+    minPopularity = null,
+  ) {
     try {
       const state = this.containerState.get(movieContainer);
 
@@ -141,6 +211,10 @@ CineTagIt.Movies = {
       }
 
       state.isLoading = true;
+
+      // min_movie_id is the tiebreaker present on every paginated request, so
+      // its absence marks the first page.
+      const isInitialLoad = !minMovieId;
 
       // load filterMode from data-filter-mode in movieContainer
       const filterMode = movieContainer.getAttribute("data-filter-mode");
@@ -165,6 +239,10 @@ CineTagIt.Movies = {
         params.append("min_movie_id", minMovieId);
       }
 
+      if (minPopularity !== null && minPopularity !== undefined) {
+        params.append("min_popularity", minPopularity);
+      }
+
       // Add filter parameters
       const filters = state.filters || { name: "", friendId: null };
 
@@ -174,6 +252,14 @@ CineTagIt.Movies = {
 
       if (filters.friendId) {
         params.append("friend_id", filters.friendId);
+      }
+
+      if (filters.sort === "popularity") {
+        params.append("sort", "popularity");
+      }
+
+      if (filters.genres) {
+        params.append("genres", filters.genres);
       }
 
       // Add params to URL if any exist
@@ -188,6 +274,7 @@ CineTagIt.Movies = {
         // Update state with new pagination data
         state.nextReleaseDate = data.next_release_date;
         state.nextMovieId = data.next_movie_id;
+        state.nextPopularity = data.next_popularity;
         state.hasMore = limit ? false : data.has_more;
 
         // Update friend filter UI if friend info is available
@@ -200,13 +287,17 @@ CineTagIt.Movies = {
           }
 
           if (friendFilterSpan) {
-            friendFilterSpan.textContent = `Showing movies approved by ${data.friend.name}`;
+            const filterMode = movieContainer.getAttribute("data-filter-mode");
+            friendFilterSpan.textContent =
+              filterMode === "approved"
+                ? `Movies you and ${data.friend.name} both want to see`
+                : `Upcoming movies ${data.friend.name} approved`;
           }
         }
 
         // If this is the first load, replace the container content
         // Otherwise, append the new movies
-        if (!minReleaseDate && !minMovieId) {
+        if (isInitialLoad) {
           state.movies = data.movies;
           this.renderMovies(movieContainer, data.movies, false);
         } else {
@@ -215,7 +306,7 @@ CineTagIt.Movies = {
           this.renderMovies(movieContainer, data.movies, true);
         }
       } else {
-        if (!minReleaseDate && !minMovieId) {
+        if (isInitialLoad) {
           // Only show error on initial load
           // Create an error message element instead of using innerHTML
           const errorMessage = document.createElement("p");
@@ -235,7 +326,7 @@ CineTagIt.Movies = {
       state.isLoading = false;
     } catch (error) {
       console.error("Error fetching movies:", error);
-      if (!minReleaseDate && !minMovieId) {
+      if (!minMovieId) {
         // Only show error on initial load
         // Create an error message element instead of using innerHTML
         const errorMessage = document.createElement("p");
@@ -269,7 +360,12 @@ CineTagIt.Movies = {
       loadingIndicator.innerHTML = "<span>Loading more movies...</span>";
       movieContainer.appendChild(loadingIndicator);
 
-      this.fetchMovies(movieContainer, state.nextReleaseDate, state.nextMovieId).finally(() => {
+      this.fetchMovies(
+        movieContainer,
+        state.nextReleaseDate,
+        state.nextMovieId,
+        state.nextPopularity,
+      ).finally(() => {
         // Remove loading indicator when done
         const indicator = movieContainer.querySelector(".loading-indicator");
         if (indicator) {
@@ -299,8 +395,12 @@ CineTagIt.Movies = {
         friendFilterContainer.className = "friend-filter";
 
         // We'll update this with the friend's name when we get the API response
+        const placeholder =
+          movieContainer.getAttribute("data-filter-mode") === "approved"
+            ? "Movies you both want to see"
+            : "Upcoming movies your friend approved";
         friendFilterContainer.innerHTML = `
-                    <span>Showing movies approved by friend</span>
+                    <span>${placeholder}</span>
                     <button class="remove-friend-filter">×</button>
                 `;
 
@@ -451,9 +551,11 @@ CineTagIt.Movies = {
     // Get filter values
     const nameFilter = document.getElementById("name-filter")?.value || "";
 
-    // Get friend_id from URL if present
+    // Get friend_id / sort / genres from the URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const friendId = urlParams.get("friend_id");
+    const sort = urlParams.get("sort") === "popularity" ? "popularity" : "release";
+    const genres = urlParams.get("genres") || "";
 
     // Update all containers with new filters
     document.querySelectorAll(".movie-container").forEach((container) => {
@@ -463,11 +565,14 @@ CineTagIt.Movies = {
         state.filters = {
           name: nameFilter,
           friendId: friendId,
+          sort: sort,
+          genres: genres,
         };
 
         // Reset pagination
         state.nextReleaseDate = null;
         state.nextMovieId = null;
+        state.nextPopularity = null;
         state.hasMore = false;
         state.isLoading = false;
 

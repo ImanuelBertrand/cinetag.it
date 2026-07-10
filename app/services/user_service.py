@@ -19,6 +19,7 @@ from app.models.movie_region_info import MovieRegionInfo
 from app.models.send_confirmation_mails import (
     SentConfirmationMails as SentConfMails,
 )
+from app.models.tmdb_genre import MovieGenre, TmdbGenreName
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_movie import UserMovie
@@ -162,6 +163,67 @@ def validate_friendship(user_id: int, friend_id: int | None) -> None:
         raise UserFeedbackError("Friend not found or friendship does not exist.")
 
 
+def _cursor_by_release_date(query, min_release_date, min_movie_id, *, released):
+    """Keyset filter for the release-date sort (ascending, or descending for the
+    released view)."""
+    if min_release_date is None:
+        raise ValueError("min_release_date and min_movie_id can only be used together")
+    release_date = MovieRegionInfo.release_date
+    if released:
+        return query.filter(
+            db.or_(
+                release_date < min_release_date,
+                db.and_(release_date == min_release_date, Movie.id < min_movie_id),
+            ),
+            release_date <= min_release_date,
+        )
+    # Ascending; the redundant range filter helps the planner and the composite
+    # comparison avoids deadlock when movies share a release date.
+    return query.filter(
+        db.or_(
+            release_date > min_release_date,
+            db.and_(release_date == min_release_date, Movie.id > min_movie_id),
+        ),
+        release_date >= min_release_date,
+    )
+
+
+def _apply_pagination_cursor(
+    query,
+    *,
+    sort,
+    released,
+    min_release_date,
+    min_movie_id,
+    min_popularity,
+    popularity,
+):
+    """Apply the keyset-pagination filter. min_movie_id is always the tiebreaker;
+    the primary cursor column depends on the active sort order."""
+    if min_movie_id is None:
+        if min_release_date is not None or min_popularity is not None:
+            raise ValueError(
+                "cursor values can only be used together with min_movie_id"
+            )
+        return query
+
+    if sort == "popularity":
+        if min_popularity is None:
+            raise ValueError(
+                "min_popularity and min_movie_id can only be used together"
+            )
+        return query.filter(
+            db.or_(
+                popularity < min_popularity,
+                db.and_(popularity == min_popularity, Movie.id < min_movie_id),
+            )
+        )
+
+    return _cursor_by_release_date(
+        query, min_release_date, min_movie_id, released=released
+    )
+
+
 def _build_movies_query(
     user: User,
     region: str,
@@ -172,7 +234,16 @@ def _build_movies_query(
     name_filter: str | None,
     mode: str,
     friend_id: int | None = None,
+    sort: str = "release",
+    min_popularity: float | None = None,
+    genre_ids: list[int] | None = None,
 ):
+    # The "released" view shows movies that are already out; every other mode
+    # shows the future. Popularity is coalesced so NULL never breaks the
+    # descending sort / cursor comparisons.
+    released = mode == "released"
+    popularity = func.coalesce(Movie.popularity, 0.0)
+
     query = (
         db.session.query(Movie, MovieRegionInfo, UserMovie)
         .join(
@@ -186,29 +257,43 @@ def _build_movies_query(
             UserMovie,
             db.and_(UserMovie.movie_id == Movie.id, UserMovie.user_id == user.id),
         )
-        .filter(MovieRegionInfo.release_date >= datetime.now(UTC).date())
     )
 
-    # Apply pagination filter
-    if min_release_date and min_movie_id:
-        # If we have both release date and movie ID, use a composite filter
-        # to avoid deadlock when multiple movies have the same release date
-        query = query.filter(
-            db.or_(
-                MovieRegionInfo.release_date > min_release_date,
-                db.and_(
-                    MovieRegionInfo.release_date == min_release_date,
-                    Movie.id > min_movie_id,
-                ),
-            )
-        )
-        query = query.filter(MovieRegionInfo.release_date >= min_release_date)
-    elif min_release_date or min_movie_id:
-        raise ValueError("min_release_date and min_movie_id can only be used together")
+    today = datetime.now(UTC).date()
+    if released:
+        # Include release day itself so this view agrees with the dashboard's
+        # "Out now" section (fetch_user_events with end=now). A movie released
+        # today therefore appears in both the released and upcoming views for
+        # that one day — deliberate: it is both "out now" and still tracked.
+        query = query.filter(MovieRegionInfo.release_date <= today)
+    else:
+        query = query.filter(MovieRegionInfo.release_date >= today)
+
+    query = _apply_pagination_cursor(
+        query,
+        sort=sort,
+        released=released,
+        min_release_date=min_release_date,
+        min_movie_id=min_movie_id,
+        min_popularity=min_popularity,
+        popularity=popularity,
+    )
 
     # Apply other filters
     if need_imdb:
         query = query.filter(Movie.imdb_id.isnot(None))
+
+    # Genre filter (OR across ids) via a correlated EXISTS so the several
+    # joins above don't multiply rows.
+    if genre_ids:
+        query = query.filter(
+            db.session.query(MovieGenre.movie_id)
+            .filter(
+                MovieGenre.movie_id == Movie.id,
+                MovieGenre.genre_id.in_(genre_ids),
+            )
+            .exists()
+        )
 
     # Apply name filter to the SQL query
     if name_filter and name_filter.strip():
@@ -253,7 +338,38 @@ def _build_movies_query(
     if mode == "reviewed":
         return query.filter(UserMovie.movie_id.isnot(None))
 
+    if mode == "released":
+        # Movies the user cares about that are already out.
+        return query.filter(UserMovie.decision.in_(["approve", "maybe"]))
+
     return query.filter(UserMovie.decision == mode.rstrip("d"))  # approved => approve
+
+
+def get_available_genres(language: str) -> list[dict[str, Any]]:
+    """All genres that appear on at least one movie, localized and sorted by
+    name. Used to render the browse genre-chip row."""
+    genre_ids = [
+        gid for (gid,) in db.session.query(MovieGenre.genre_id).distinct().all()
+    ]
+    if not genre_ids:
+        return []
+
+    names = TmdbGenreName.query.filter(
+        TmdbGenreName.genre_id.in_(genre_ids),
+        TmdbGenreName.language.in_({language, "en"}),
+    ).all()
+
+    by_id: dict[int, dict[str, str]] = defaultdict(dict)
+    for row in names:
+        by_id[row.genre_id][row.language] = row.name
+
+    result = []
+    for gid in genre_ids:
+        translations = by_id.get(gid, {})
+        name = translations.get(language) or translations.get("en")
+        if name:
+            result.append({"id": gid, "name": name})
+    return sorted(result, key=lambda g: g["name"])
 
 
 def _get_preloaded_movie_data(movie_ids, region, language):
@@ -355,6 +471,18 @@ def _get_movie_context_data(
     }
 
 
+def _apply_sort_order(query, *, sort, mode):
+    """Order for consistent keyset pagination. Popularity sort ranks by
+    popularity (desc); the released view lists newest-first; everything else
+    lists soonest-upcoming-first."""
+    if sort == "popularity":
+        popularity = func.coalesce(Movie.popularity, 0.0)
+        return query.order_by(popularity.desc(), Movie.id.desc())
+    if mode == "released":
+        return query.order_by(MovieRegionInfo.release_date.desc(), Movie.id.desc())
+    return query.order_by(MovieRegionInfo.release_date, Movie.id)
+
+
 @profile_function
 def get_movies_based_on_filter(
     user: User,
@@ -366,6 +494,9 @@ def get_movies_based_on_filter(
     min_movie_id=None,
     limit: int = 20,
     friend_id: int | None = None,
+    sort: str = "release",
+    min_popularity: float | None = None,
+    genre_ids: list[int] | None = None,
 ) -> dict[str, Any]:
     profiler = Profiler(f"get_movies_based_on_filter(mode={mode}, limit={limit})")
     profiler.start()
@@ -397,10 +528,12 @@ def get_movies_based_on_filter(
         name_filter,
         mode,
         friend_id,
+        sort=sort,
+        min_popularity=min_popularity,
+        genre_ids=genre_ids,
     )
 
-    # Order by release date for consistent pagination
-    query = query.order_by(MovieRegionInfo.release_date, Movie.id)
+    query = _apply_sort_order(query, sort=sort, mode=mode)
 
     # Apply limit for pagination
     # (get one extra to check if there are more results)
@@ -439,9 +572,11 @@ def get_movies_based_on_filter(
     profiler.start_section("pagination_metadata")
     next_release_date = None
     next_movie_id = None
+    next_popularity = None
     if has_more and result:
         next_release_date = result[-1]["release_date"]
         next_movie_id = result[-1]["id"]
+        next_popularity = result[-1]["popularity"] or 0.0
 
     # Stop the profiler before returning
     profiler.stop()
@@ -452,6 +587,7 @@ def get_movies_based_on_filter(
             next_release_date.isoformat() if next_release_date else None
         ),
         "next_movie_id": next_movie_id,
+        "next_popularity": next_popularity,
         "has_more": has_more,
     }
 

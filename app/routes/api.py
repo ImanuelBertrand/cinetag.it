@@ -77,6 +77,39 @@ def get_user_events():
     return jsonify(events)
 
 
+def _parse_cursor_args(
+    args,
+) -> tuple[date | None, int | None, float | None]:
+    """Parse the keyset-pagination cursor query params."""
+    min_release_date = args.get("min_release_date")
+    min_movie_id = args.get("min_movie_id")
+    min_popularity = args.get("min_popularity")
+
+    release_val: date | None = None
+    if min_release_date:
+        release_val = (
+            datetime.strptime(min_release_date, "%Y-%m-%d").replace(tzinfo=UTC).date()
+        )
+    movie_id_val = int(min_movie_id) if min_movie_id else None
+    popularity_val = float(min_popularity) if min_popularity not in (None, "") else None
+    return release_val, movie_id_val, popularity_val
+
+
+def _parse_genre_ids(raw: str | None) -> list[int] | None:
+    """Parse a comma-separated list of TMDB genre ids, ignoring junk."""
+    if not raw:
+        return None
+    ids = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part:
+            try:
+                ids.append(int(part))
+            except ValueError:
+                continue
+    return ids or None
+
+
 @api.route("/movies/<filter_mode>", methods=["GET"])
 def get_movies_api(filter_mode):
     user = get_current_user()
@@ -88,10 +121,17 @@ def get_movies_api(filter_mode):
         name_filter = request.args.get("name", "")
         friend_id = request.args.get("friend_id")
 
+        # Sort order (release date by default) and genre filter
+        sort = request.args.get("sort", "release")
+        if sort not in ("release", "popularity"):
+            sort = "release"
+        genre_ids = _parse_genre_ids(request.args.get("genres"))
+
         # Get pagination parameters
-        min_release_date = request.args.get("min_release_date")
-        min_movie_id = request.args.get("min_movie_id")
         limit = int(request.args.get("limit", 50))
+        min_release_date_val, min_movie_id_val, min_popularity_val = _parse_cursor_args(
+            request.args
+        )
 
         # Convert friend_id to int if provided
         if friend_id:
@@ -99,20 +139,6 @@ def get_movies_api(filter_mode):
                 friend_id = int(friend_id)
             except ValueError:
                 return jsonify({"success": False, "error": "Invalid friend ID."})
-
-        # Convert min_release_date to datetime if provided
-        min_release_date_val: date | None = None
-        if min_release_date:
-            min_release_date_val = (
-                datetime.strptime(min_release_date, "%Y-%m-%d")
-                .replace(tzinfo=UTC)
-                .date()
-            )
-
-        # Convert min_movie_id to int if provided
-        min_movie_id_val: int | None = None
-        if min_movie_id:
-            min_movie_id_val = int(min_movie_id)
 
         # Get movies with pagination
         result = get_movies_based_on_filter(
@@ -125,6 +151,9 @@ def get_movies_api(filter_mode):
             min_movie_id=min_movie_id_val,
             limit=limit,
             friend_id=friend_id,
+            sort=sort,
+            min_popularity=min_popularity_val,
+            genre_ids=genre_ids,
         )
 
         # Prepare response
@@ -133,6 +162,7 @@ def get_movies_api(filter_mode):
             "movies": result["movies"],
             "next_release_date": result["next_release_date"],
             "next_movie_id": result["next_movie_id"],
+            "next_popularity": result["next_popularity"],
             "has_more": result["has_more"],
         }
 
