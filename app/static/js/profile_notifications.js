@@ -18,7 +18,7 @@ CineTagIt.ProfileNotifications = {
    */
   parseDaysInput: function (input) {
     if (!input || input.trim() === "") {
-      return [1, 3, 7]; // Default values
+      return [0, 1, 3, 7]; // Default values
     }
     return input
       .split(",")
@@ -48,7 +48,7 @@ CineTagIt.ProfileNotifications = {
         pushWithMaybeCheckbox.checked = result.settings.include_maybe_movies;
       } else {
         // Use default values
-        pushDaysInput.value = "1, 3, 7";
+        pushDaysInput.value = "0, 1, 3, 7";
         pushWithMaybeCheckbox.checked = true;
       }
 
@@ -123,6 +123,155 @@ CineTagIt.ProfileNotifications = {
 
     // Add event listeners
     this.addEventListeners(addPushButton, cancelPushButton, savePushSettingsButton);
+
+    // Render the unified list of every channel the user owns
+    await this.loadChannels();
+  },
+
+  /**
+   * Load and render every notification channel the user owns.
+   */
+  loadChannels: async function () {
+    const container = document.getElementById("notificationChannels");
+    if (!container) {
+      return;
+    }
+
+    try {
+      const endpoint = this.currentSubscription ? this.currentSubscription.endpoint : null;
+      const url = endpoint
+        ? `/api/notification-channels?endpoint=${encodeURIComponent(endpoint)}`
+        : "/api/notification-channels";
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (!result.success) {
+        container.textContent = "Could not load your notification channels.";
+        return;
+      }
+
+      this.renderChannels(container, result.channels);
+    } catch (error) {
+      console.error("Error loading notification channels:", error);
+      container.textContent = "Could not load your notification channels.";
+    }
+  },
+
+  /**
+   * Render the channel rows into the container.
+   */
+  renderChannels: function (container, channels) {
+    container.textContent = "";
+
+    if (!channels.length) {
+      container.textContent = "No notification channels yet.";
+      return;
+    }
+
+    channels.forEach((channel) => {
+      const row = document.createElement("div");
+      row.className = "channel-row";
+      row.dataset.channelId = channel.id;
+
+      const name =
+        channel.mode === "email"
+          ? "Email"
+          : channel.device_label + (channel.is_current_device ? " (this device)" : "");
+
+      const title = document.createElement("div");
+      title.className = "channel-title";
+      title.textContent = name;
+      row.appendChild(title);
+
+      if (channel.disabled_reason === "expired") {
+        const warning = document.createElement("div");
+        warning.className = "channel-warning";
+        warning.textContent =
+          "This device stopped receiving notifications — re-enable notifications on that device.";
+        row.appendChild(warning);
+      }
+
+      const controls = document.createElement("div");
+      controls.className = "channel-controls";
+
+      // Enabled toggle
+      const enabledLabel = document.createElement("label");
+      const enabled = document.createElement("input");
+      enabled.type = "checkbox";
+      enabled.className = "channel-enabled";
+      enabled.checked = channel.enabled;
+      enabledLabel.appendChild(enabled);
+      enabledLabel.appendChild(document.createTextNode(" Enabled"));
+      controls.appendChild(enabledLabel);
+
+      // Days-in-advance field
+      const daysLabel = document.createElement("label");
+      daysLabel.appendChild(document.createTextNode("When: "));
+      const days = document.createElement("input");
+      days.type = "text";
+      days.className = "channel-days";
+      days.value = (channel.days_in_advance || []).join(", ");
+      days.placeholder = "0, 1, 3, 7";
+      daysLabel.appendChild(days);
+      controls.appendChild(daysLabel);
+
+      // Include-maybe checkbox
+      const maybeLabel = document.createElement("label");
+      const maybe = document.createElement("input");
+      maybe.type = "checkbox";
+      maybe.className = "channel-maybe";
+      maybe.checked = channel.include_maybe_movies;
+      maybeLabel.appendChild(maybe);
+      maybeLabel.appendChild(document.createTextNode(" Include 'Maybe'"));
+      controls.appendChild(maybeLabel);
+
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "channel-save";
+      save.textContent = "Save";
+      save.addEventListener("click", () => this.saveChannel(row));
+      controls.appendChild(save);
+
+      row.appendChild(controls);
+      container.appendChild(row);
+    });
+  },
+
+  /**
+   * Persist a single channel row via the channel API.
+   */
+  saveChannel: async function (row) {
+    const channelId = row.dataset.channelId;
+    const enabled = row.querySelector(".channel-enabled").checked;
+    const includeMaybe = row.querySelector(".channel-maybe").checked;
+    const days = this.parseDaysInput(row.querySelector(".channel-days").value);
+
+    try {
+      const response = await fetch(`/api/notification-channels/${channelId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": CineTagIt.Utils.getCsrfToken(),
+        },
+        body: JSON.stringify({
+          enabled: enabled,
+          days_in_advance: days,
+          include_maybe_movies: includeMaybe,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        CineTagIt.UI.displayMessage("Channel updated.", "success");
+        // Refresh so re-enabled channels drop their expiry warning
+        await this.loadChannels();
+      } else {
+        CineTagIt.UI.displayMessage(result.error || "Error updating channel.", "danger");
+      }
+    } catch (error) {
+      console.error("Error updating channel:", error);
+      CineTagIt.UI.displayMessage("Error updating channel.", "danger");
+    }
   },
 
   /**

@@ -525,7 +525,7 @@ def profile_notifications_post(user) -> bool:
     data = dict(request.form)
     _logger.info("data: %s", data)
     email_days = data.get("email_days") or ""
-    if not re.match(r"^\s*\d+(s*,\s*\d+)*\s*$", email_days):
+    if not re.match(r"^\s*\d+(\s*,\s*\d+)*\s*$", email_days):
         raise UserFeedbackError(
             "Please enter a comma-separated list of numbers in the 'days' field."
         )

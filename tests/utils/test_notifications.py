@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -337,6 +337,265 @@ def test_push_notification_skips_when_days_diverge(
 
         result = get_push_notification_content(notification)
         assert result is None
+
+
+def test_add_missing_notifications_day_zero_on_release_day(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """A day-0 channel gets a notification even for a movie out today."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        # Movie releases today; user opts into a release-day (0) reminder
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today
+        channel.days_in_advance = [0]
+        db.session.commit()
+
+        user_movie = UserMovie(user_id=user.id, movie_id=7001, decision="approve")
+        db.session.add(user_movie)
+        db.session.commit()
+
+        add_missing_notifications(channel, [user_movie], [])
+        db.session.commit()
+
+        notifications = Notification.query.filter_by(channel_id=channel.id).all()
+        assert len(notifications) == 1
+        assert notifications[0].days_in_advance == 0
+        assert notifications[0].scheduled_at == datetime.combine(
+            today, datetime.min.time(), tzinfo=UTC
+        )
+
+
+def test_push_notification_out_today_copy(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """The push copy switches to an 'out today' message for day-0 releases."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=0,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        content = get_push_notification_content(notification)
+        assert content is not None
+        assert content["body"] == "Out today! 🎬"
+        assert content["title"].startswith("Out today:")
+
+
+def test_email_notification_body_has_links_and_decision(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """The reminder email deep-links the movie, the settings page, and the tag."""
+    with app.app_context():
+        app.config["SERVER_NAME"] = "localhost:8000"
+        app.config["PREFERRED_URL_SCHEME"] = "http"
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today + timedelta(days=3)
+        db.session.add(UserMovie(user_id=user.id, movie_id=7001, decision="approve"))
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=3,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        with (
+            app.test_request_context(),
+            patch("app.utils.notifications.send_email") as mock_send,
+        ):
+            mock_send.return_value = True
+            result = send_email_notification(notification)
+
+        assert result is True
+        _to, subject, body = mock_send.call_args[0]
+        assert "/movie/7001" in body
+        assert "/profile/notifications" in body
+        assert "Must see" in body
+        assert subject.startswith("Upcoming movie (3 days)")
+
+
+def test_email_notification_day_zero_subject(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """A release-day reminder uses the 'Out today' subject."""
+    with app.app_context():
+        app.config["SERVER_NAME"] = "localhost:8000"
+        app.config["PREFERRED_URL_SCHEME"] = "http"
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=0,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        with (
+            app.test_request_context(),
+            patch("app.utils.notifications.send_email") as mock_send,
+        ):
+            mock_send.return_value = True
+            send_email_notification(notification)
+
+        _to, subject, body = mock_send.call_args[0]
+        assert subject == "Out today: Notif Movie"
+        assert "out today" in body.lower()
+
+
+def test_push_notification_skipped_for_past_release(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """A stale day-0 reminder must not claim 'out today' days after release."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today - timedelta(days=2)
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=0,
+            scheduled_at=datetime.now(UTC) - timedelta(days=2),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        assert get_push_notification_content(notification) is None
+
+
+def test_email_notification_skipped_for_past_release(
+    app, notification_user, notification_movie, notification_channel
+) -> None:
+    """The email path also drops reminders for movies already released."""
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today - timedelta(days=2)
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=0,
+            scheduled_at=datetime.now(UTC) - timedelta(days=2),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        with patch("app.utils.notifications.send_email") as mock_send:
+            assert send_email_notification(notification) is False
+        mock_send.assert_not_called()
+
+
+def test_email_notification_sends_without_server_name(
+    app, monkeypatch, notification_user, notification_movie, notification_channel
+) -> None:
+    """Without SERVER_NAME the scheduler can't build absolute URLs; the email
+    must still go out (link-less) instead of failing and retrying forever."""
+    # Must be patched before the app context is created: Flask binds the URL
+    # adapter (and thus SERVER_NAME) at context push time.
+    monkeypatch.setitem(app.config, "SERVER_NAME", None)
+    with app.app_context():
+        user = db.session.get(User, notification_user.id)
+        assert user is not None
+        channel = db.session.get(NotificationChannel, notification_channel.id)
+        assert channel is not None
+        today = datetime.now(UTC).date()
+
+        region_info = MovieRegionInfo.query.filter_by(
+            movie_id=7001, region="US"
+        ).first()
+        region_info.release_date = today + timedelta(days=3)
+        db.session.commit()
+
+        notification = Notification(
+            user_id=user.id,
+            channel_id=channel.id,
+            movie_id=7001,
+            days_in_advance=3,
+            scheduled_at=datetime.now(UTC),
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        # No test_request_context here: this simulates the APScheduler path,
+        # where url_for(_external=True) raises without SERVER_NAME.
+        with patch("app.utils.notifications.send_email") as mock_send:
+            mock_send.return_value = True
+            result = send_email_notification(notification)
+
+        assert result is True
+        _to, subject, body = mock_send.call_args[0]
+        assert subject.startswith("Upcoming movie (3 days)")
+        assert "http" not in body
+        assert "Release date:" in body
 
 
 def test_email_notification_returns_false_when_no_region_info(

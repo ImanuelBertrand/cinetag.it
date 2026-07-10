@@ -2,7 +2,10 @@ import json
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from babel.dates import format_date
+from flask import url_for
 
 from app.errors import WebPushSubscriptionExpiredError
 from app.extensions import db
@@ -149,6 +152,16 @@ def get_push_notification_content(
     release_date = movie_region_info.release_date
     days_till_release = (release_date - datetime.now(UTC).date()).days
 
+    if days_till_release < 0:
+        # The movie is already out; a late reminder (scheduler downtime,
+        # repeated send failures) would claim "out today" for an old release.
+        _logger.warning(
+            "Skipping push notification %s: movie released %s days ago",
+            notification.id,
+            -days_till_release,
+        )
+        return None
+
     if abs(days_till_release - notification.days_in_advance) > max(
         notification.days_in_advance, 3
     ):
@@ -161,9 +174,16 @@ def get_push_notification_content(
         )
         return None
 
+    if days_till_release == 0:
+        title = f"Out today: {movie_title}"
+        body = "Out today! 🎬"
+    else:
+        title = f"Upcoming movie: {movie_title}"
+        body = f"In {days_till_release} days!"
+
     return {
-        "title": f"Upcoming movie: {movie_title}",
-        "body": f"In {days_till_release} days!",
+        "title": title,
+        "body": body,
         "icon": f"/poster/500/{movie_data.get('poster_path', 'default.jpg')}",
         "url": f"/movie/{notification.movie_id}",
     }
@@ -201,8 +221,12 @@ def send_push_notification(notification: Notification):
         _logger.warning(
             "Push subscription expired for channel %s, disabling channel", channel.id
         )
-        # Disable the notification channel
+        # Disable the notification channel and record why, so the settings page
+        # can distinguish this from a user-initiated disable.
         channel.enabled = False
+        new_data = dict(channel.notification_data or {})
+        new_data["disabled_reason"] = "expired"
+        channel.notification_data = new_data
         db.session.add(channel)
         db.session.commit()
         return False
@@ -211,13 +235,35 @@ def send_push_notification(notification: Notification):
         return False
 
 
+_DECISION_LABELS = {"approve": "👍 Must see", "maybe": "🤷 Maybe"}
+
+
+def _try_external_url(endpoint: str, **values: Any) -> str | None:
+    """Build an absolute URL from the scheduler (no request context).
+
+    url_for(_external=True) needs SERVER_NAME there, which is optional in
+    production config — without it, degrade to a link-less email instead of
+    failing the send (and retrying forever)."""
+    try:
+        return url_for(endpoint, _external=True, **values)
+    except RuntimeError:
+        _logger.warning(
+            "Cannot build external URL for %s (SERVER_NAME not configured); "
+            "sending notification email without links",
+            endpoint,
+        )
+        return None
+
+
 def send_email_notification(notification: Notification):
-    user_mail = notification.user.email
+    user = notification.user
+    user_mail = user.email
     if not user_mail:
         _logger.error("No email address for user %s", notification.user_id)
         return False
-    user_region = notification.user.region or "US"
-    movie_data = notification.movie.get_localized_data(user_region)
+    user_region = user.region or "US"
+    lang = user.language or "en"
+    movie_data = notification.movie.get_localized_data(lang)
     movie_region_info = MovieRegionInfo.query.filter_by(
         movie_id=notification.movie_id, region=user_region
     ).first()
@@ -229,6 +275,16 @@ def send_email_notification(notification: Notification):
     movie_title = movie_data["title"]
     release_date = movie_region_info.release_date
     days_till_release = (release_date - datetime.now(UTC).date()).days
+
+    if days_till_release < 0:
+        # The movie is already out; a late reminder (scheduler downtime,
+        # repeated send failures) would claim "out today" for an old release.
+        _logger.warning(
+            "Skipping email notification %s: movie released %s days ago",
+            notification.id,
+            -days_till_release,
+        )
+        return False
 
     if abs(days_till_release - notification.days_in_advance) > max(
         notification.days_in_advance, 3
@@ -242,11 +298,35 @@ def send_email_notification(notification: Notification):
         )
         return False
 
-    body = (
-        f"Hello! You have a movie '{movie_title}' "
-        f"coming up in {days_till_release} days."
+    release_date_str = format_date(release_date, locale=lang)
+    movie_url = _try_external_url(
+        "html.get_movie_details", movie_id=notification.movie_id
     )
-    subject = f"Upcoming movie ({days_till_release} days): {movie_title}"
+    settings_url = _try_external_url("html.profile_notifications")
+
+    decision_row = UserMovie.query.filter_by(
+        user_id=notification.user_id, movie_id=notification.movie_id
+    ).first()
+    decision_label = (
+        _DECISION_LABELS.get(decision_row.decision) if decision_row else None
+    )
+
+    if days_till_release == 0:
+        subject = f"Out today: {movie_title}"
+        intro = f"'{movie_title}' is out today! 🎬"
+    else:
+        plural = "s" if days_till_release != 1 else ""
+        subject = f"Upcoming movie ({days_till_release} days): {movie_title}"
+        intro = f"'{movie_title}' is coming up in {days_till_release} day{plural}."
+
+    body_lines = [intro, "", f"Release date: {release_date_str}"]
+    if decision_label:
+        body_lines.append(f"Your tag: {decision_label}")
+    if movie_url:
+        body_lines += ["", f"See details: {movie_url}"]
+    if settings_url:
+        body_lines += ["", f"Manage your notifications: {settings_url}"]
+    body = "\n".join(body_lines)
     _logger.info("Email notification for %s to %s", notification.id, user_mail)
     return send_email(user_mail, subject, body)
 
@@ -268,7 +348,9 @@ def add_missing_notifications(
         ).first()
         if region_info is None:
             continue
-        if region_info.release_date <= today:
+        # Skip movies already in the past, but keep release day itself so a
+        # day-0 ("out today") notification can still be created.
+        if region_info.release_date < today:
             continue
         days_in_advance = channel.days_in_advance
         if isinstance(days_in_advance, str):

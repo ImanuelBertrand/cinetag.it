@@ -283,15 +283,185 @@ def check_push_subscription():
     return jsonify({"success": True, "exists": False})
 
 
-def _parse_days_in_advance(data: dict) -> list:
-    days = data.get("days_in_advance", [1, 3, 7])
-    if isinstance(days, str):
+# (token found in UA, label). Order matters: more specific tokens first.
+_UA_BROWSERS = (
+    ("Edg", "Edge"),
+    ("Firefox", "Firefox"),
+    ("CriOS", "Chrome"),
+    ("Chrome", "Chrome"),
+    ("Safari", "Safari"),
+)
+_UA_OSES = (
+    ("Windows", "Windows"),
+    ("Android", "Android"),
+    ("iPhone", "iPhone"),
+    ("iPad", "iPad"),
+    ("Macintosh", "macOS"),
+    ("Mac OS", "macOS"),
+    ("Linux", "Linux"),
+)
+
+
+def _summarize_user_agent(ua: str) -> str:
+    """Best-effort human label for a device from its User-Agent string."""
+    browser = next((label for token, label in _UA_BROWSERS if token in ua), "Browser")
+    os_name = next((label for token, label in _UA_OSES if token in ua), "")
+    return f"{browser} on {os_name}" if os_name else browser
+
+
+def _device_label_from_data(data: dict | None) -> str:
+    """Derive a push-device label from its stored notification data."""
+    ua = (data or {}).get("user_agent")
+    return _summarize_user_agent(ua) if ua else "Unknown device"
+
+
+@api.route("/notification-channels", methods=["GET"])
+def list_notification_channels():
+    """List every notification channel the current user owns.
+
+    Pass ?endpoint=<current push endpoint> to have the matching push channel
+    flagged as `is_current_device`.
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    current_endpoint = request.args.get("endpoint")
+    channels = (
+        NotificationChannel.query.filter_by(user_id=user.id)
+        .order_by(NotificationChannel.mode, NotificationChannel.id)
+        .all()
+    )
+
+    result = []
+    for channel in channels:
+        data = channel.notification_data or {}
+        is_push = channel.mode == "push"
+        is_current = bool(
+            is_push and current_endpoint and data.get("endpoint") == current_endpoint
+        )
+        result.append(
+            {
+                "id": channel.id,
+                "mode": channel.mode,
+                "enabled": bool(channel.enabled),
+                # Normalize legacy rows (JSON strings, string elements) so the
+                # settings page always receives a list of ints.
+                "days_in_advance": _normalize_days_list(channel.days_in_advance) or [],
+                "include_maybe_movies": bool(channel.include_maybe_movies),
+                "created_at": (
+                    channel.created_at.isoformat() if channel.created_at else None
+                ),
+                "device_label": (_device_label_from_data(data) if is_push else "Email"),
+                "is_current_device": is_current,
+                # An expiry-disabled channel carries this marker so the UI can
+                # explain why it stopped (see send_push_notification).
+                "disabled_reason": data.get("disabled_reason") if is_push else None,
+            }
+        )
+
+    return jsonify({"success": True, "channels": result})
+
+
+def _apply_channel_update(channel: NotificationChannel, data: dict) -> str | None:
+    """Apply the updatable fields to a channel. Returns an error message for
+    invalid input, None on success."""
+    if "enabled" in data:
+        channel.enabled = bool(data["enabled"])
+        # Re-enabling clears any expiry warning left by the push handler.
+        if channel.enabled and (channel.notification_data or {}).get("disabled_reason"):
+            new_data = dict(channel.notification_data or {})
+            new_data.pop("disabled_reason", None)
+            channel.notification_data = new_data
+
+    if "days_in_advance" in data:
+        days = _normalize_days_list(data["days_in_advance"])
+        if days is None:
+            return "days_in_advance must be a list of numbers"
+        channel.days_in_advance = days
+
+    if "include_maybe_movies" in data:
+        channel.include_maybe_movies = bool(data["include_maybe_movies"])
+
+    return None
+
+
+@api.route("/notification-channels/<int:channel_id>", methods=["POST"])
+def update_notification_channel(channel_id):
+    """Update enabled / days_in_advance / include_maybe_movies for any channel
+    the current user owns."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 401
+
+    channel = NotificationChannel.query.filter_by(
+        id=channel_id, user_id=user.id
+    ).first()
+    if not channel:
+        return jsonify({"success": False, "error": "Channel not found"}), 404
+
+    error = _apply_channel_update(channel, request.get_json() or {})
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+
+    db.session.add(channel)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        _logger.exception("Error updating notification channel %s", channel_id)
+        return (
+            jsonify({"success": False, "error": "Error updating channel"}),
+            500,
+        )
+
+    # The channel change is persisted at this point; a failure while
+    # rescheduling must not be reported as a failed update — the hourly
+    # notification cron reconciles the schedule anyway.
+    if channel.enabled:
         try:
-            days = json.loads(days)
+            setup_notifications(channel)
+        except Exception:
+            db.session.rollback()
+            _logger.exception(
+                "Error rescheduling notifications for channel %s", channel_id
+            )
+
+    return jsonify({"success": True})
+
+
+DEFAULT_DAYS_IN_ADVANCE = [0, 1, 3, 7]
+
+
+def _normalize_days_list(value) -> list[int] | None:
+    """Coerce a days_in_advance value to a sorted list of unique non-negative
+    ints. Handles legacy JSON-string rows and string elements from arbitrary
+    clients — a str day like "2" would otherwise break the (movie_id, day)
+    notification dedup key and re-send the same reminder every hour.
+    Returns None when the value is not a list at all."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
         except json.JSONDecodeError, ValueError:
-            days = [1, 3, 7]
-    if not isinstance(days, list):
-        days = [1, 3, 7]
+            return None
+    if not isinstance(value, list):
+        return None
+    days = set()
+    for item in value:
+        try:
+            day = int(item)
+        except TypeError, ValueError:
+            continue
+        if day >= 0:
+            days.add(day)
+    return sorted(days)
+
+
+def _parse_days_in_advance(data: dict) -> list[int]:
+    days = _normalize_days_list(data.get("days_in_advance"))
+    if days is None:
+        return list(DEFAULT_DAYS_IN_ADVANCE)
     return days
 
 
@@ -308,6 +478,9 @@ def subscribe_push():
             jsonify({"success": False, "error": "Invalid subscription data"}),
             400,
         )
+
+    # Store a device hint so this channel can be labeled on the settings page.
+    data["user_agent"] = request.headers.get("User-Agent")
 
     # Extract notification settings if provided
     days_in_advance = _parse_days_in_advance(data)
