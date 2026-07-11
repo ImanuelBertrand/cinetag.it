@@ -2,7 +2,7 @@ import logging
 
 from flask import Blueprint, jsonify, request
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.friend_request import FriendRequest
 from app.models.friendship import Friendship
 from app.models.user import User
@@ -68,6 +68,7 @@ def reset_friend_code():
 
 
 @friend_api.route("/request", methods=["POST"])
+@limiter.limit("10 per minute; 60 per hour")
 def send_friend_request():
     """Send a friend request to another user by friend code"""
     user = get_current_user()

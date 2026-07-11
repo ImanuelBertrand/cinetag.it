@@ -2,7 +2,7 @@ import logging
 import os
 import secrets
 
-from flask import Flask, current_app, g
+from flask import Flask, current_app, g, jsonify, render_template, request
 from flask_jwt_extended import (
     set_access_cookies,
     set_refresh_cookies,
@@ -86,6 +86,14 @@ def _set_security_headers(response):
     return response
 
 
+def _handle_ratelimit(error):
+    # JSON for the API surfaces (their JS reads .error), a page otherwise.
+    description = getattr(error, "description", "Too many requests")
+    if request.blueprint in ("api", "friend_api"):
+        return jsonify(success=False, error=f"Too many requests: {description}"), 429
+    return render_template("429.html"), 429
+
+
 def _configure_logging() -> None:
     root_level = os.environ.get("LOG_LEVEL", "WARNING").upper()
     app_level = os.environ.get("APP_LOG_LEVEL", "INFO").upper()
@@ -152,6 +160,8 @@ def create_app(config_name, start_scheduler=False):
             g.pop("new_refresh_token", None)
             g.pop("clear_auth_cookies", None)
         return response
+
+    app.register_error_handler(429, _handle_ratelimit)
 
     app.register_blueprint(html_blueprint)
     app.register_blueprint(api_blueprint, url_prefix="/api")

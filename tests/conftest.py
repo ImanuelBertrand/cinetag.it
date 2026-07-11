@@ -58,6 +58,23 @@ def clean_test_db(app) -> Generator[None]:
     db.session.remove()
 
 
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter(app) -> Generator[None]:
+    """Keep the rate limiter off for the bulk of the suite (tests share a single
+    client IP and would otherwise trip the global limit). The limiter is enabled
+    at app init so its hook is registered; the dedicated rate-limit tests flip
+    ``limiter.enabled`` back on. Storage is reset each test for isolation."""
+    import contextlib
+
+    from app.extensions import limiter
+
+    limiter.enabled = False
+    with contextlib.suppress(Exception):
+        limiter.reset()
+    yield
+    limiter.enabled = False
+
+
 @pytest.fixture
 def client(app):
     """A test client for the app."""

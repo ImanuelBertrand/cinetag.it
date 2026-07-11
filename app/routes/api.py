@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 from flask import Blueprint, jsonify, request
 
 from app.errors import UserFeedbackError
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.movie import Movie
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
@@ -22,6 +22,16 @@ api = Blueprint("api", __name__)
 _logger = logging.getLogger(__name__)
 
 
+def _coerce_movie_id(value) -> int | None:
+    """Parse a client-supplied movie id to int, or None when unparseable."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except TypeError, ValueError:
+        return None
+
+
 @api.route("/user/movies/review", methods=["POST"])
 def review_movie():
     user = get_current_user()
@@ -29,7 +39,6 @@ def review_movie():
         return jsonify({"error": "User not found."}), 404
 
     data = request.get_json(silent=True) or {}
-    movie_id = data.get("movie_id")
     decision = data.get("decision")
 
     if decision not in ["approve", "disapprove", "maybe", "remove"]:
@@ -38,11 +47,8 @@ def review_movie():
     # Validate movie_id up front: an unparseable or non-existent id would
     # otherwise reach the INSERT and raise IntegrityError (500 + poisoned
     # session) instead of a clean 4xx.
+    movie_id = _coerce_movie_id(data.get("movie_id"))
     if movie_id is None:
-        return jsonify({"error": "Invalid movie id."}), 400
-    try:
-        movie_id = int(movie_id)
-    except TypeError, ValueError:
         return jsonify({"error": "Invalid movie id."}), 400
 
     if decision != "remove" and db.session.get(Movie, movie_id) is None:
@@ -491,6 +497,7 @@ def _parse_days_in_advance(data: dict) -> list[int]:
 
 
 @api.route("/subscribe", methods=["POST"])
+@limiter.limit("30 per minute; 200 per hour")
 def subscribe_push():
     """Subscribe to push notifications"""
     user = get_current_user()

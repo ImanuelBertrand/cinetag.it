@@ -95,6 +95,18 @@ class Config:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", "300"))
 
+    # Rate limiting (Flask-Limiter). Redis ships alongside the app, so default
+    # to it with no extra configuration — a shared store keeps limits consistent
+    # across gunicorn workers. Uses logical DB 1 to stay isolated from the cache
+    # (DB 0), so clearing the cache can't wipe rate-limit counters. An explicit
+    # RATELIMIT_STORAGE_URI overrides (e.g. "memory://" for a Redis-less run).
+    RATELIMIT_ENABLED = parse_bool(os.environ.get("RATELIMIT_ENABLED", "True"))
+    RATELIMIT_STORAGE_URI = os.environ.get(
+        "RATELIMIT_STORAGE_URI", "redis://redis:6379/1"
+    )
+    RATELIMIT_STRATEGY = "fixed-window"
+    RATELIMIT_HEADERS_ENABLED = True
+
     BACKUP_ENABLED = parse_bool(os.environ.get("BACKUP_ENABLED", "True"))
     BACKUP_MIN_INTERVAL_HOURS = float(
         os.environ.get("BACKUP_MIN_INTERVAL_HOURS", "23.5")
@@ -158,6 +170,12 @@ class TestingConfig(Config):
     SCHEDULER_ENABLED = False
     BACKUP_ENABLED = False
     JWT_COOKIE_CSRF_PROTECT = False
+    # Enabled so Flask-Limiter registers its request hook (it no-ops entirely
+    # when disabled at init). The conftest autouse fixture toggles
+    # limiter.enabled off for the bulk of the suite and individual tests flip it
+    # back on to exercise the 429 path. In-memory store keeps tests hermetic.
+    RATELIMIT_ENABLED = True
+    RATELIMIT_STORAGE_URI = "memory://"
     SECRET_KEY = os.environ.get(
         "SECRET_KEY",
         "your-extremely-long-and-secure-secret-key-that-is-very-long-for",

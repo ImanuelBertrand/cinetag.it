@@ -21,7 +21,7 @@ from flask_jwt_extended import (
 )
 
 from app.errors import UserFeedbackError
-from app.extensions import bcrypt, db
+from app.extensions import bcrypt, db, limiter
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.friendship import Friendship
 from app.models.movie import Movie
@@ -65,6 +65,14 @@ _logger = logging.getLogger(__name__)
 ONE_DAY = 86400
 MIN_PASSWORD_LENGTH = 8
 MAX_DISPLAY_NAME_LENGTH = 100
+
+
+def _exempt_non_post() -> bool:
+    """Rate-limit only the POST (state-changing / credential) path of endpoints
+    that also serve a GET form, so browsing the form isn't throttled."""
+    return request.method != "POST"
+
+
 # Matches C0 control chars (except we already strip surrounding whitespace) and
 # the C1 range / DEL — none are legitimate in a display name and they enable
 # spoofing or break downstream rendering.
@@ -262,6 +270,7 @@ def register_post(user: User):
 
 
 @html.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 40 per hour", exempt_when=_exempt_non_post)
 def register():
     user = get_current_user()
     form_data: dict[str, str] = defaultdict(str)
@@ -357,6 +366,7 @@ def merge_temporary_user():
 
 
 @html.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 100 per hour", exempt_when=_exempt_non_post)
 def login():
     pre_login_user = get_current_user()
 
@@ -715,6 +725,7 @@ def confirm_email(token):
 
 
 @html.route("/request-confirmation-mail", methods=["POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def request_confirmation_email():
     user = get_current_user()
     if not user:
@@ -739,6 +750,7 @@ def request_confirmation_email():
 
 
 @html.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute; 20 per hour", exempt_when=_exempt_non_post)
 def reset_password_request():
     if request.method == "POST":
         data = request.form
@@ -768,6 +780,7 @@ def reset_password_request():
 
 
 @html.route("/reset-password/<token>", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 40 per hour", exempt_when=_exempt_non_post)
 def reset_password(token):
     if request.method == "POST":
         data = request.form

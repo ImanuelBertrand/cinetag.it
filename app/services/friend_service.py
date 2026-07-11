@@ -7,6 +7,12 @@ from app.models.user import User
 
 _logger = logging.getLogger(__name__)
 
+# Uniform "request sent" response. Returned for both a genuine send and an
+# unknown friend code so an attacker can't tell valid codes from invalid ones
+# (SEC-17). The rate limit on the endpoint makes probing the ~48-bit code space
+# infeasible on top of this.
+_FRIEND_REQUEST_SENT = (True, "Friend request sent successfully.", 200)
+
 
 def send_friend_request_service(user: User, friend_code: str):
     """
@@ -16,7 +22,8 @@ def send_friend_request_service(user: User, friend_code: str):
     # Find the user with the given friend code
     friend = User.query.filter_by(friend_code=friend_code).first()
     if not friend:
-        return False, "User with this friend code not found.", 404
+        # Same response as a real send — don't disclose that the code is invalid.
+        return _FRIEND_REQUEST_SENT
 
     # Check if the user is trying to add themselves
     if friend.id == user.id:
@@ -43,7 +50,7 @@ def send_friend_request_service(user: User, friend_code: str):
         existing_request.status = "pending"
         db.session.add(existing_request)
         db.session.commit()
-        return True, "Friend request sent successfully.", 200
+        return _FRIEND_REQUEST_SENT
 
     # Check if the other user has already sent a request (incoming)
     reverse_request = FriendRequest.query.filter_by(
