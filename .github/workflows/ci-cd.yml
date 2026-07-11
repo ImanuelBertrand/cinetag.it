@@ -207,6 +207,8 @@ jobs:
           context: .
           file: docker/Dockerfile
           target: production
+          build-args: |
+            STATIC_VERSION=${{ github.sha }}
           push: true
           tags: ${{ steps.meta_app.outputs.tags }}
           labels: ${{ steps.meta_app.outputs.labels }}
