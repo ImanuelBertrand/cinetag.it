@@ -269,13 +269,22 @@ def prune_poster_cache(retention_days: int, dry_run: bool = False) -> dict:
 
 
 def prefetch_poster(filename: str | None) -> None:
-    """Download and resize the poster so it is warm on disk before any request."""
+    """Download and resize the poster so it is warm on disk before any request.
+
+    Warms the source format plus every next-gen format in ``POSTER_FORMATS`` so
+    the first real request — which almost always negotiates WebP/AVIF — is served
+    straight off disk instead of paying the encode cost inline.
+    """
     if not filename:
         return
     for width in POSTER_WIDTHS:
-        try:
-            ensure_image_exists(filename, width)
-        except Exception:
-            _logger.exception(
-                "Failed to prefetch poster %s at width %s", filename, width
-            )
+        for fmt in (None, *POSTER_FORMATS):
+            try:
+                ensure_image_exists(filename, width, fmt)
+            except Exception:
+                _logger.exception(
+                    "Failed to prefetch poster %s at width %s (%s)",
+                    filename,
+                    width,
+                    fmt or "source",
+                )
