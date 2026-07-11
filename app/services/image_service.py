@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import uuid
+from typing import Any
 
 import requests
 from flask import current_app
@@ -27,6 +28,34 @@ POSTER_SRC_WIDTH = 500
 # JPEG encode quality for resized posters. PIL defaults to 75, which softens
 # poster detail; 85 is the usual quality/size sweet spot.
 POSTER_JPEG_QUALITY = 85
+
+# Next-gen formats served via Accept-header negotiation: nginx picks the variant
+# the browser advertised, and Flask generates it on a cold miss. Ordered by
+# preference (best compression first). Quality scales are per-codec, not shared
+# with JPEG. AVIF `speed` is the encoder effort (0 slowest/smallest .. 10
+# fastest/largest); 6 keeps cold-miss encode latency reasonable on-demand.
+POSTER_FORMATS = ("avif", "webp")
+POSTER_WEBP_QUALITY = 80
+POSTER_AVIF_QUALITY = 63
+POSTER_AVIF_SPEED = 6
+
+_MIME_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+}
+
+# PIL save options keyed by output extension; unknown extensions fall back to the
+# JPEG quality. AVIF/WebP are converted to RGB(A) first (see resize_image).
+_SAVE_OPTIONS: dict[str, dict[str, Any]] = {
+    ".jpg": {"quality": POSTER_JPEG_QUALITY},
+    ".jpeg": {"quality": POSTER_JPEG_QUALITY},
+    ".webp": {"quality": POSTER_WEBP_QUALITY},
+    ".avif": {"quality": POSTER_AVIF_QUALITY, "speed": POSTER_AVIF_SPEED},
+}
 
 
 def get_image_base_path() -> str:
@@ -73,12 +102,16 @@ def resize_image(original_file: str, width: int, target_filename: str) -> None:
     # LANCZOS downscales noticeably sharper than PIL's default (BICUBIC).
     image.thumbnail((width, width * 3), resample=Image.Resampling.LANCZOS)
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-    # Keep the original extension on the tmp file so PIL infers the format.
-    ext = os.path.splitext(target_filename)[1]
+    # Keep the target extension on the tmp file so PIL infers the output format.
+    ext = os.path.splitext(target_filename)[1].lower()
+    # AVIF/WebP can't encode palette or CMYK modes; normalise to RGB(A) first
+    # (alpha is preserved for the rare poster that has it).
+    if ext in (".avif", ".webp") and image.mode not in ("RGB", "RGBA", "L"):
+        image = image.convert("RGB")
+    save_options = _SAVE_OPTIONS.get(ext, {"quality": POSTER_JPEG_QUALITY})
     tmp_filename = f"{target_filename}.{uuid.uuid4().hex}.tmp{ext}"
     try:
-        # quality only affects JPEG output; PIL ignores it for other formats.
-        image.save(tmp_filename, quality=POSTER_JPEG_QUALITY)
+        image.save(tmp_filename, **save_options)
         os.replace(tmp_filename, target_filename)
     except BaseException:
         with contextlib.suppress(FileNotFoundError):
@@ -86,15 +119,48 @@ def resize_image(original_file: str, width: int, target_filename: str) -> None:
         raise
 
 
-def ensure_image_exists(filename: str, width: int) -> str:
-    local_file_original = f"{get_image_base_path()}/original/{filename}"
-    local_file_resized = f"{get_image_base_path()}/w{width}/{filename}"
+def ensure_image_exists(filename: str, width: int, fmt: str | None = None) -> str:
+    """Ensure the resized poster exists on disk and return its path.
+
+    ``fmt`` selects a next-gen format (``"webp"``/``"avif"``), cached alongside
+    the original-format file as ``w{width}/{filename}.{fmt}``. ``None`` keeps the
+    source format (the existing JPEG path). Both are derived from the cached
+    original, so an added format never triggers a new TMDB fetch.
+    """
+    suffix = f".{fmt}" if fmt else ""
+    base_path = get_image_base_path()
+    local_file_original = f"{base_path}/original/{filename}"
+    local_file_resized = f"{base_path}/w{width}/{filename}{suffix}"
     if not os.path.exists(local_file_resized):
         if not os.path.exists(local_file_original):
             fetch_image(filename)
         resize_image(local_file_original, width, local_file_resized)
 
     return local_file_resized
+
+
+def negotiate_poster_format(accept: str | None) -> str | None:
+    """Pick the best next-gen format the client advertised, or None.
+
+    Returns ``"avif"`` or ``"webp"`` only when the ``Accept`` header names it
+    explicitly (preferring AVIF), so a browser sending ``*/*`` gets the original
+    format. This is what lets one poster URL serve different bytes per browser.
+    """
+    if not accept:
+        return None
+    for fmt in POSTER_FORMATS:
+        if f"image/{fmt}" in accept:
+            return fmt
+    return None
+
+
+def poster_mime_type(name: str) -> str:
+    """Content-Type for a served poster file, by extension."""
+    ext = os.path.splitext(name)[1].lower()
+    mime = _MIME_TYPES.get(ext)
+    if mime is None:
+        raise ValueError(f"Unsupported file type: {name}")
+    return mime
 
 
 def get_image_url(filename: str | None, width: int) -> str | None:
@@ -123,7 +189,9 @@ def delete_local_poster(filename: str | None) -> None:
         return
     base_path = get_image_base_path()
     paths = [f"{base_path}/original/{filename}"]
-    paths.extend(f"{base_path}/w{w}/{filename}" for w in POSTER_WIDTHS)
+    for w in POSTER_WIDTHS:
+        paths.append(f"{base_path}/w{w}/{filename}")
+        paths.extend(f"{base_path}/w{w}/{filename}.{fmt}" for fmt in POSTER_FORMATS)
     for path in paths:
         try:
             os.remove(path)

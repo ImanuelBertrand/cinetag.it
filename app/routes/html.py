@@ -38,6 +38,8 @@ from app.services.image_service import (
     ensure_image_exists,
     get_image_srcset,
     get_image_url,
+    negotiate_poster_format,
+    poster_mime_type,
 )
 from app.services.user_service import (
     authenticate_user,
@@ -1027,25 +1029,21 @@ def get_ics_calendar(calendar_hash):
 
 @html.route("/poster/<int:width>/<filename>")
 def get_poster(width, filename):
-    def get_mime_type(f_name: str) -> str:
-        if f_name.endswith((".jpg", ".jpeg")):
-            return "image/jpeg"
-        if f_name.endswith(".png"):
-            return "image/png"
-        if f_name.endswith(".gif"):
-            return "image/gif"
-        if f_name.endswith(".webp"):
-            return "image/webp"
-        raise ValueError(f"Unsupported file type: {f_name}")
-
     if width not in POSTER_WIDTHS:
         return "Invalid width", 400
 
-    ensure_image_exists(filename, int(width))
+    # Serve a next-gen format (webp/avif) when the browser advertised it, else
+    # the original format. nginx normally serves the file straight off disk;
+    # this cold-miss path generates the negotiated variant and hands it back.
+    fmt = negotiate_poster_format(request.headers.get("Accept"))
+    ensure_image_exists(filename, int(width), fmt)
+    served_name = f"{filename}.{fmt}" if fmt else filename
 
     response = make_response("", 200)
-    response.headers["X-Accel-Redirect"] = f"/internal-static/w{width}/{filename}"
-    response.headers["Content-Type"] = get_mime_type(filename)
+    response.headers["X-Accel-Redirect"] = f"/internal-static/w{width}/{served_name}"
+    response.headers["Content-Type"] = poster_mime_type(served_name)
+    # Same URL yields different bytes per Accept header — caches must key on it.
+    response.headers["Vary"] = "Accept"
     return response
 
 

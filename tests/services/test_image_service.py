@@ -2,6 +2,7 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PIL import Image
 
 from app.services.image_service import (
@@ -12,6 +13,8 @@ from app.services.image_service import (
     get_image_url,
     get_tmdb_image_base_url,
     get_tmdb_image_url,
+    negotiate_poster_format,
+    poster_mime_type,
     prune_poster_cache,
     resize_image,
 )
@@ -267,3 +270,83 @@ def test_prune_poster_cache_dry_run_deletes_nothing(app, tmp_path) -> None:
         assert result["deleted"] == 1
         assert result["bytes_freed"] == 100
         assert result["dry_run"] is True
+
+
+def test_negotiate_poster_format() -> None:
+    """AVIF is preferred over WebP; anything not explicitly named -> None."""
+    assert negotiate_poster_format("image/avif,image/webp,*/*") == "avif"
+    assert negotiate_poster_format("image/webp,*/*") == "webp"
+    assert negotiate_poster_format("*/*") is None
+    assert negotiate_poster_format("") is None
+    assert negotiate_poster_format(None) is None
+
+
+def test_poster_mime_type() -> None:
+    """Content-Type is derived from the (last) extension of the served file."""
+    assert poster_mime_type("a.jpg") == "image/jpeg"
+    assert poster_mime_type("a.jpg.webp") == "image/webp"
+    assert poster_mime_type("a.jpg.avif") == "image/avif"
+    with pytest.raises(ValueError, match="Unsupported file type"):
+        poster_mime_type("a.txt")
+
+
+def test_ensure_image_exists_format_variant(app) -> None:
+    """A format variant is cached alongside as w{width}/{filename}.{fmt}."""
+    with app.app_context():
+        app.config["POSTER_DIR"] = "/test/path"
+        with (
+            patch(
+                "app.services.image_service.get_image_base_path",
+                return_value="/test/path",
+            ),
+            patch("os.path.exists", side_effect=[False, True]),
+            patch("app.services.image_service.resize_image") as mock_resize,
+        ):
+            path = ensure_image_exists("test/image.jpg", 500, "webp")
+
+            assert path == "/test/path/w500/test/image.jpg.webp"
+            mock_resize.assert_called_once_with(
+                "/test/path/original/test/image.jpg",
+                500,
+                "/test/path/w500/test/image.jpg.webp",
+            )
+
+
+def test_resize_image_encodes_by_extension(tmp_path) -> None:
+    """resize_image infers the output codec from the target extension."""
+    src = tmp_path / "src.jpg"
+    Image.new("RGB", (1000, 1500), (100, 50, 25)).save(src, quality=90)
+
+    for ext, pil_format in ((".jpg", "JPEG"), (".webp", "WEBP"), (".avif", "AVIF")):
+        target = tmp_path / f"out{ext}"
+        resize_image(str(src), 300, str(target))
+        assert target.exists()
+        with Image.open(target) as im:
+            assert im.format == pil_format
+            assert im.width == 300
+
+
+def test_get_poster_negotiates_format(app, client) -> None:
+    """The route serves the negotiated variant with a Vary: Accept header."""
+    with patch("app.routes.html.ensure_image_exists") as mock_ensure:
+        # AVIF-capable browser
+        resp = client.get(
+            "/poster/500/abc.jpg", headers={"Accept": "image/avif,image/webp,*/*"}
+        )
+        assert resp.status_code == 200
+        assert resp.headers["Content-Type"] == "image/avif"
+        assert resp.headers["X-Accel-Redirect"] == "/internal-static/w500/abc.jpg.avif"
+        assert resp.headers["Vary"] == "Accept"
+        mock_ensure.assert_called_once_with("abc.jpg", 500, "avif")
+
+        # Legacy browser -> original format, no suffix
+        mock_ensure.reset_mock()
+        resp = client.get("/poster/500/abc.jpg", headers={"Accept": "*/*"})
+        assert resp.headers["Content-Type"] == "image/jpeg"
+        assert resp.headers["X-Accel-Redirect"] == "/internal-static/w500/abc.jpg"
+        mock_ensure.assert_called_once_with("abc.jpg", 500, None)
+
+
+def test_get_poster_rejects_invalid_width(client) -> None:
+    resp = client.get("/poster/999/abc.jpg", headers={"Accept": "*/*"})
+    assert resp.status_code == 400
