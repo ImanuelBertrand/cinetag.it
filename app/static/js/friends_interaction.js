@@ -52,8 +52,12 @@ async function loadFriendsForFilter() {
     if (!friendsFilter) return;
 
     if (data.success && data.friends.length > 0) {
+      const esc = CineTagIt.Utils.escapeHtml;
       const friendsOptions = data.friends
-        .map((friend) => `<option value="${friend.id}">${friend.display_name || "User"}</option>`)
+        .map(
+          (friend) =>
+            `<option value="${esc(friend.id)}">${esc(friend.display_name || "User")}</option>`,
+        )
         .join("");
 
       friendsFilter.innerHTML = friendsOptions;
@@ -157,10 +161,13 @@ function renderMoviesWithFriendData(container, movies) {
     return;
   }
 
+  const esc = CineTagIt.Utils.escapeHtml;
   const moviesHtml = movies
     .map((movie) => {
-      const decisionClass = movie.decision ? `decided decided-${movie.decision}` : "";
+      const decisionClass = movie.decision ? `decided decided-${esc(movie.decision)}` : "";
       const posterClass = movie.poster_url ? "" : "has-no-poster";
+      const title = esc(movie.title);
+      const movieId = esc(movie.id);
 
       // Add friend rating indicators if available
       let friendRatingHtml = "";
@@ -177,7 +184,7 @@ function renderMoviesWithFriendData(container, movies) {
           friendRatingHtml = `
                     <div class="friend-rating ${ratingClass}">
                         <span class="rating-icon"></span>
-                        <span class="rating-count">${totalRated}/${ratings.total_friends}</span>
+                        <span class="rating-count">${esc(totalRated)}/${esc(ratings.total_friends)}</span>
                     </div>
                 `;
         }
@@ -187,24 +194,24 @@ function renderMoviesWithFriendData(container, movies) {
       let poster;
       if (movie.poster_url) {
         const posterSrcset = movie.poster_srcset
-          ? ` srcset="${movie.poster_srcset}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
+          ? ` srcset="${esc(movie.poster_srcset)}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
           : "";
-        poster = `<img class="movie-poster" src="${movie.poster_url}"${posterSrcset} alt="${movie.title} poster" loading="lazy">`;
+        poster = `<img class="movie-poster" src="${esc(movie.poster_url)}"${posterSrcset} alt="${title} poster" loading="lazy">`;
       } else {
-        poster = `<div class="no-poster"><div class="movie-title">${movie.title}</div></div>`;
+        poster = `<div class="no-poster"><div class="movie-title">${title}</div></div>`;
       }
 
       return `
-            <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
+            <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movieId}">
                 <div class="decision-icon"></div>
                 ${friendRatingHtml}
                 ${poster}
                 <div class="overlay">
-                    <a href="/movie/${movie.id}">${movie.title}</a>
+                    <a href="/movie/${movieId}">${title}</a>
                     <div class="decide">
-                        <div class="approve" data-movie-id="${movie.id}" data-decision="approve">👍</div>
-                        <div class="maybe" data-movie-id="${movie.id}" data-decision="maybe">🤷</div>
-                        <div class="disapprove" data-movie-id="${movie.id}" data-decision="disapprove">👎</div>
+                        <div class="approve" data-movie-id="${movieId}" data-decision="approve">👍</div>
+                        <div class="maybe" data-movie-id="${movieId}" data-decision="maybe">🤷</div>
+                        <div class="disapprove" data-movie-id="${movieId}" data-decision="disapprove">👎</div>
                     </div>
                 </div>
             </div>

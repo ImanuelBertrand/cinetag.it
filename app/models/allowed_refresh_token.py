@@ -85,15 +85,21 @@ class AllowedRefreshToken(db.Model):
 
     @staticmethod
     def revoke_token(jti: str) -> bool:
-        """Removes a token JTI from the allowlist (revokes it)."""
-        token_entry = AllowedRefreshToken.query.filter_by(jti=jti).first()
-        if token_entry:
-            db.session.delete(token_entry)
-            _logger.debug(
-                "Revoked refresh token %s for user %s.", jti, token_entry.user_id
-            )
-            return True
-        return False
+        """Atomically remove a token JTI from the allowlist (revoke it).
+
+        Uses a single ``DELETE ... WHERE jti=:jti`` so revocation is the gate:
+        two concurrent rotations of the same token contend on the row and only
+        one sees a deleted row (rowcount 1); the other sees 0 and is treated as
+        reuse. Returns True iff a row was deleted.
+        """
+        deleted = (
+            db.session.query(AllowedRefreshToken)
+            .filter_by(jti=jti)
+            .delete(synchronize_session=False)
+        )
+        if deleted:
+            _logger.debug("Revoked refresh token %s.", jti)
+        return deleted > 0
 
     @staticmethod
     def revoke_all_for_user(user_id: int) -> bool:

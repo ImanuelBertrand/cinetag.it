@@ -107,6 +107,16 @@ ENV PATH="/venv/bin:$PATH"
 COPY docker/entrypoint.sh docker/entrypoint.sh
 RUN chmod +x docker/entrypoint.sh
 
+# Run as a non-root user: any app-level RCE then lacks container root and write
+# access to bind-mounted volumes (instance dir holding vapid.private.pem, DB
+# backups, poster cache). Gunicorn binds 8000 (unprivileged), so nothing is
+# lost. uid/gid match the development stage and typical host IDs.
+RUN groupadd -g 1001 appgroup \
+    && useradd -u 1000 -g 1001 -m appuser \
+    && mkdir -p /app/storage /app/instance \
+    && chown -R appuser:appgroup /app /venv
+USER appuser
+
 # Use the script to start the container
 ENTRYPOINT ["./docker/entrypoint.sh"]
 
@@ -127,6 +137,11 @@ COPY docker/squid/squid-prod.conf /etc/squid/squid.conf
 # --- Development Stage ---
 FROM production AS development
 
+# The production stage now ends on `USER appuser`; switch back to root for the
+# dev-only installs, then drop privileges again at the end. The appuser/appgroup
+# already exist (created in the production stage).
+USER root
+
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 RUN uv sync --frozen
 
@@ -136,10 +151,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install
-
-# Create group (gid 1001) and user (uid 1000) matching typical host IDs
-RUN groupadd -g 1001 appgroup && \
-    useradd -u 1000 -g 1001 -m appuser
 
 RUN chown -R appuser:appgroup /venv
 

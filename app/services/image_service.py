@@ -2,6 +2,7 @@ import contextlib
 import http
 import logging
 import os
+import re
 import time
 import uuid
 from typing import Any
@@ -56,6 +57,27 @@ _SAVE_OPTIONS: dict[str, dict[str, Any]] = {
     ".webp": {"quality": POSTER_WEBP_QUALITY},
     ".avif": {"quality": POSTER_AVIF_QUALITY, "speed": POSTER_AVIF_SPEED},
 }
+
+
+# Poster filenames come from TMDB (e.g. "abc123.jpg"). Anything outside this
+# shape is rejected before any filesystem use — defence-in-depth against path
+# traversal on top of Flask's <filename> converter and nginx normalisation.
+_POSTER_FILENAME_RE = re.compile(
+    r"^[A-Za-z0-9._-]+\.(jpg|jpeg|png|gif|webp|avif)$", re.IGNORECASE
+)
+
+
+def is_valid_poster_filename(filename: str | None) -> bool:
+    """Whether ``filename`` is a safe, allowlisted poster basename."""
+    if not filename or not _POSTER_FILENAME_RE.match(filename):
+        return False
+    # A bare basename can't traverse, but confirm the resolved path stays under
+    # the poster dir in case the allowlist is ever loosened.
+    poster_dir = current_app.config.get("POSTER_DIR")
+    if not poster_dir:
+        return False
+    candidate = os.path.realpath(os.path.join(poster_dir, "original", filename))
+    return candidate.startswith(os.path.realpath(poster_dir) + os.sep)
 
 
 def get_image_base_path() -> str:

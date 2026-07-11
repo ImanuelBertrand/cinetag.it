@@ -20,6 +20,12 @@ def _backup_dir() -> Path:
     storage_dir = current_app.config["STORAGE_DIR"]
     path = Path(storage_dir) / "db_backups"
     path.mkdir(parents=True, exist_ok=True)
+    # DB dumps contain the full dataset; keep the directory owner-only so other
+    # users on the host (or a compromised sibling process) can't read them.
+    try:
+        path.chmod(0o700)
+    except OSError:
+        _logger.exception("backup: could not restrict permissions on %s", path)
     return path
 
 

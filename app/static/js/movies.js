@@ -429,34 +429,37 @@ CineTagIt.Movies = {
         }
       }
     }
+    const esc = window.CineTagIt.Utils.escapeHtml;
     const moviesHtml = movies
       .map((movie) => {
-        const decisionClass = movie.decision ? `decided decided-${movie.decision}` : "";
+        const decisionClass = movie.decision ? `decided decided-${esc(movie.decision)}` : "";
         const posterClass = movie.poster_url ? "" : "has-no-poster";
+        const title = esc(movie.title);
+        const movieId = esc(movie.id);
         const posterSrcset = movie.poster_srcset
-          ? ` srcset="${movie.poster_srcset}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
+          ? ` srcset="${esc(movie.poster_srcset)}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
           : "";
         const poster = movie.poster_url
-          ? `<img src="${movie.poster_url}"${posterSrcset} alt="${movie.title}" class="movie-poster" loading="lazy"/>`
-          : `<span class="no-poster">${movie.title}</span>`;
+          ? `<img src="${esc(movie.poster_url)}"${posterSrcset} alt="${title}" class="movie-poster" loading="lazy"/>`
+          : `<span class="no-poster">${title}</span>`;
 
         const release_dates =
           movie.all_release_dates && movie.all_release_dates.length > 0
             ? this.renderReleaseDates(movie.all_release_dates)
-            : movie.release_date_pretty;
+            : esc(movie.release_date_pretty);
 
         return `
-                <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movie.id}">
+                <div class="movie-item hoverable ${decisionClass} ${posterClass}" id="movie-${movieId}">
                     <div class="decision-icon"></div>
                     ${poster}
                     <div class="overlay">
-                        <a class="details-link" href="/movie/${movie.id}">${movie.title}</a>
+                        <a class="details-link" href="/movie/${movieId}">${title}</a>
                         <div class="decide">
-                            <div data-decision="approve" data-movie-id="${movie.id}">👍️</div>
-                            <div data-decision="maybe" data-movie-id="${movie.id}">🤷</div>
-                            <div data-decision="disapprove" data-movie-id="${movie.id}">👎</div>
+                            <div data-decision="approve" data-movie-id="${movieId}">👍️</div>
+                            <div data-decision="maybe" data-movie-id="${movieId}">🤷</div>
+                            <div data-decision="disapprove" data-movie-id="${movieId}">👎</div>
                         </div>
-                        <a class="details-link" href="/movie/${movie.id}">
+                        <a class="details-link" href="/movie/${movieId}">
                             <div class="release-dates">${release_dates}</div>
                         </a>
                     </div>
@@ -522,11 +525,12 @@ CineTagIt.Movies = {
    * @returns {string} The HTML for the release dates
    */
   renderReleaseDates: function (releaseDates) {
+    const esc = window.CineTagIt.Utils.escapeHtml;
     return releaseDates
       .map(
-        (date) => `<div title="${date.region_info.english_name}">
-                ${date.flag ? `<span class="flag-icon">${date.flag}</span>` : `<span>${date.region}</span>`}
-                <span>${date.date_pretty}</span>
+        (date) => `<div title="${esc(date.region_info.english_name)}">
+                ${date.flag ? `<span class="flag-icon">${esc(date.flag)}</span>` : `<span>${esc(date.region)}</span>`}
+                <span>${esc(date.date_pretty)}</span>
             </div>`,
       )
       .join("");

@@ -62,6 +62,9 @@ class Config:
     # and the request falls through to the refresh-token auth path.
     JWT_REFRESH_CSRF_FIELD_NAME = "csrf_refresh_token"
     JWT_CSRF_CHECK_FORM = True
+    # Defence-in-depth behind the existing CSRF double-submit: don't send auth
+    # cookies on cross-site navigations.
+    JWT_COOKIE_SAMESITE = "Lax"
 
     CACHE_TYPE = os.environ.get(
         "CACHE_TYPE", "flask_caching.backends.simplecache.SimpleCache"
@@ -106,9 +109,43 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
 
+# Sample/placeholder secrets that must never be used in production. Mirrors the
+# hardcoded TestingConfig fallbacks so a copy-paste of those into prod is caught.
+_INSECURE_SECRETS = frozenset(
+    {
+        "your-extremely-long-and-secure-secret-key-that-is-very-long-for",
+        "your-even-longer-and-even-more-secure-jwt-secret-key-that-is-very-long",
+        "changeme",
+        "secret",
+    }
+)
+_MIN_SECRET_LENGTH = 32
+
+
 class ProductionConfig(Config):
     JWT_COOKIE_SECURE = True
     DEBUG = False
+
+    @staticmethod
+    def init_app(app) -> None:
+        # Fail fast at boot (mirroring the TestingConfig DB-safety assertion)
+        # rather than surfacing a misconfiguration lazily at request time.
+        for name in ("SECRET_KEY", "JWT_SECRET_KEY"):
+            value = app.config.get(name)
+            if not value:
+                raise RuntimeError(
+                    f"{name} must be set in production. Refusing to start."
+                )
+            if len(value) < _MIN_SECRET_LENGTH:
+                raise RuntimeError(
+                    f"{name} is too short ({len(value)} chars); "
+                    f"require at least {_MIN_SECRET_LENGTH}."
+                )
+            if value in _INSECURE_SECRETS:
+                raise RuntimeError(
+                    f"{name} is set to a known sample/placeholder value. "
+                    "Refusing to start."
+                )
 
 
 class TestingConfig(Config):

@@ -67,6 +67,30 @@ CineTagIt.Utils = {
   },
 
   /**
+   * HTML-escape a value for safe interpolation into an innerHTML template
+   * literal. Guards against stored XSS from user-controlled fields (e.g. a
+   * friend's display name) reaching a DOM sink.
+   * @param {*} value - The value to escape (coerced to string)
+   * @returns {string} The escaped string
+   */
+  escapeHtml: function (value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => {
+      switch (char) {
+        case "&":
+          return "&amp;";
+        case "<":
+          return "&lt;";
+        case ">":
+          return "&gt;";
+        case '"':
+          return "&quot;";
+        default:
+          return "&#39;";
+      }
+    });
+  },
+
+  /**
    * De-obfuscate an email address
    * @param {string} obfuscatedEmail - The obfuscated email
    * @returns {string} The decoded email
@@ -400,6 +424,11 @@ CineTagIt.init = function () {
   CineTagIt.Events.initPostButtons();
   CineTagIt.Events.initEmailDeobfuscation();
   CineTagIt.Events.initCopyToClipboard();
+
+  // Bind reload buttons (avoids inline onclick handlers, which the CSP blocks).
+  document.querySelectorAll('[data-action="reload"]').forEach((element) => {
+    element.addEventListener("click", () => window.location.reload());
+  });
 
   // Initialize registered modules
   for (const moduleName in CineTagIt.modules) {

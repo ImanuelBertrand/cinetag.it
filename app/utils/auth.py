@@ -179,16 +179,21 @@ def generate_new_tokens(
     JTI to the allowlist atomically. Returns (None, None) on failure.
     """
     try:
-        # 1. Revoke the old token FIRST if provided
+        # 1. Revoke the old token FIRST if provided. Revocation is the atomic
+        # gate: if no row was deleted the token was already rotated/revoked
+        # (concurrent request or replay of a stolen successor), so refuse to
+        # mint a new one instead of issuing a second valid successor.
         if old_jti_to_revoke and not AllowedRefreshToken.revoke_token(
             jti=old_jti_to_revoke
         ):
             _logger.warning(
-                "Old refresh token JTI %s not found "
-                "for revocation during rotation (user %s).",
+                "Refresh token JTI %s already revoked/rotated (user %s); "
+                "refusing to issue a successor (possible reuse).",
                 old_jti_to_revoke,
                 identity,
             )
+            db.session.rollback()
+            return None, None
 
         # 2. Generate JTI first
         jti = str(uuid.uuid4())

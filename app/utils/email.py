@@ -58,7 +58,7 @@ def send_confirmation_email(user) -> None:
         f"Hi,\n\nPlease click the link below to "
         f"confirm your email address:\n\n{confirm_url}\n\nThank you!"
     )
-    mail_sent_log = SentConfirmationMails(email=user.new_email)
+    mail_sent_log = SentConfirmationMails(email=user.new_email, user_id=user.id)
     db.session.add(mail_sent_log)
     send_email(user.new_email, subject, body)
     db.session.commit()

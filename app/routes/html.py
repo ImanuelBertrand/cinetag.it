@@ -22,6 +22,7 @@ from flask_jwt_extended import (
 
 from app.errors import UserFeedbackError
 from app.extensions import bcrypt, db
+from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.friendship import Friendship
 from app.models.movie import Movie
 from app.models.movie_credit import MovieCredit, Person
@@ -38,6 +39,7 @@ from app.services.image_service import (
     ensure_image_exists,
     get_image_srcset,
     get_image_url,
+    is_valid_poster_filename,
     negotiate_poster_format,
     poster_mime_type,
 )
@@ -62,6 +64,11 @@ _logger = logging.getLogger(__name__)
 
 ONE_DAY = 86400
 MIN_PASSWORD_LENGTH = 8
+MAX_DISPLAY_NAME_LENGTH = 100
+# Matches C0 control chars (except we already strip surrounding whitespace) and
+# the C1 range / DEL — none are legitimate in a display name and they enable
+# spoofing or break downstream rendering.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
 @html.route("/sw.js")
@@ -97,11 +104,38 @@ def home():
 
 
 def _validate_email(email):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+    # Anchored and whitespace-free: rejects trailing garbage, embedded newlines
+    # and control chars (header-injection / spoofing vectors) that the previous
+    # unanchored pattern let through.
+    if not email or _CONTROL_CHARS_RE.search(email):
+        return None
+    return re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email)
 
 
 def _validate_password(password):
     return len(password) >= MIN_PASSWORD_LENGTH
+
+
+def _clean_display_name(raw: str | None) -> str | None:
+    """Validate and normalise a user-supplied display name.
+
+    Output encoding on the client is the primary XSS defence (see friends.js);
+    this is server-side defence-in-depth: bound the length and reject control
+    characters. Returns the cleaned value, or None when the field was empty.
+    Raises UserFeedbackError on invalid input.
+    """
+    if raw is None:
+        return None
+    cleaned = raw.strip()
+    if not cleaned:
+        return None
+    if len(cleaned) > MAX_DISPLAY_NAME_LENGTH:
+        raise UserFeedbackError(
+            f"Display name must be at most {MAX_DISPLAY_NAME_LENGTH} characters."
+        )
+    if _CONTROL_CHARS_RE.search(cleaned):
+        raise UserFeedbackError("Display name contains invalid characters.")
+    return cleaned
 
 
 def validate_register_post(data: dict) -> bool:
@@ -154,6 +188,11 @@ def validate_register_post_credentials(email: str, password: str) -> bool:
     ).first()
 
     if existing_user:
+        # Accepted trade-off: registration necessarily reveals whether an email
+        # is taken (the user must be told why sign-up can't proceed). The
+        # honeypot + timing checks in validate_register_post already deter
+        # automated enumeration here. The authenticated email-change path, by
+        # contrast, is neutralized (see _update_user_credentials).
         flash("Email address already in use.", "danger")
         return False
 
@@ -243,6 +282,29 @@ def register():
     return render_template("register.html", form_data=form_data)
 
 
+def _merge_temp_user_movies(user, temp_user) -> None:
+    """Fold the temporary user's movie tags into ``user``, keeping the newer
+    decision when both have tagged the same movie."""
+    user_movies = {movie.movie_id: movie for movie in user.user_movies}
+    for temp_movie in temp_user.user_movies:
+        user_movie = user_movies.get(temp_movie.movie_id)
+        if not user_movie:
+            _logger.info("Adding movie %s", temp_movie.movie.original_title)
+            temp_movie.user_id = user.id
+            db.session.add(temp_movie)
+        elif temp_movie.updated_at > user_movie.updated_at:
+            _logger.info("Replacing movie %s", user_movie.movie.original_title)
+            db.session.delete(temp_movie)
+            temp_movie.user_id = user.id
+        else:
+            _logger.info(
+                "Deleting movie %s because there is a newer decision: %s",
+                temp_movie.movie.original_title,
+                user_movie.decision,
+            )
+            db.session.delete(temp_movie)
+
+
 @html.route("/merge-temporary-user", methods=["POST"])
 def merge_temporary_user():
     user = get_current_user()
@@ -265,6 +327,14 @@ def merge_temporary_user():
 
     temp_user = User.query.get(temp_user)
 
+    if not temp_user:
+        # The referenced temporary user is gone (already merged/deleted or a
+        # stale pointer); clear the dangling reference instead of 500ing.
+        user.temporary_user_id = None
+        db.session.commit()
+        flash("No temporary data found.", "danger")
+        return redirect(url_for("html.profile"))
+
     if temp_user.email:
         # temporary users should not be able to have email associated
         _logger.error(":%s has email: %s", user.email, temp_user.email)
@@ -272,24 +342,7 @@ def merge_temporary_user():
         return redirect(url_for("html.profile"))
 
     if merge:
-        user_movies = {movie.movie_id: movie for movie in user.user_movies}
-        for temp_movie in temp_user.user_movies:
-            user_movie = user_movies.get(temp_movie.movie_id)
-            if not user_movie:
-                _logger.info("Adding movie %s", temp_movie.movie.original_title)
-                temp_movie.user_id = user.id
-                db.session.add(temp_movie)
-            elif temp_movie.updated_at > user_movie.updated_at:
-                _logger.info("Replacing movie %s", user_movie.movie.original_title)
-                db.session.delete(temp_movie)
-                temp_movie.user_id = user.id
-            else:
-                _logger.info(
-                    "Deleting movie %s because there is a newer decision: %s",
-                    temp_movie.movie.original_title,
-                    user_movie.decision,
-                )
-                db.session.delete(temp_movie)
+        _merge_temp_user_movies(user, temp_user)
         db.session.commit()
         flash("Movie tags were successfully imported.", "success")
 
@@ -338,6 +391,19 @@ def login():
 
 @html.route("/logout", methods=["POST"])
 def logout():
+    # Revoke refresh tokens server-side so clearing the cookie can't be undone
+    # by replaying a captured token. The auth middleware may have already
+    # rotated this request's token (minting a fresh allowlist entry), so revoke
+    # everything for the user rather than only the cookie's now-stale jti.
+    user = get_current_user()
+    if user:
+        try:
+            AllowedRefreshToken.revoke_all_for_user(user.id)
+            db.session.commit()
+        except Exception:
+            _logger.exception("Could not revoke refresh tokens on logout")
+            db.session.rollback()
+
     flash("Logged out successfully.", "success")
     response = make_response(redirect(url_for("html.home")))
     g.clear_auth_cookies = True
@@ -384,6 +450,18 @@ def _validate_profile_input(
     return True
 
 
+def _revoke_sessions_keep_current(user) -> None:
+    """Revoke every refresh token for the user, then mint a fresh pair for the
+    acting session so the current browser stays logged in. Used after a
+    password change so other (possibly stolen) sessions are killed."""
+    AllowedRefreshToken.revoke_all_for_user(user.id)
+    db.session.commit()
+    new_access, new_refresh = generate_new_tokens(user.id)
+    if new_access and new_refresh:
+        g.new_access_token = new_access
+        g.new_refresh_token = new_refresh
+
+
 def _update_user_credentials(
     user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
 ) -> None:
@@ -413,6 +491,7 @@ def _update_user_credentials(
     if has_new_pw and has_old_pw:
         confirm_current_pw()
         user.password = hash_password(data.get("new_password"))
+        _revoke_sessions_keep_current(user)
         flash("Password changed successfully.", "success")
 
     # Changing the email address
@@ -424,12 +503,18 @@ def _update_user_credentials(
     ):
         confirm_current_pw()
 
-        existing_user = User.query.filter_by(email=data.get("email")).first()
-        if existing_user:
-            flash("Email address already in use.", "danger")
+        new_email = data.get("email")
+        if not _validate_email(new_email):
+            flash("Invalid email.", "danger")
         else:
-            user.new_email = data.get("email")
-            queue_confirmation_mail(user)
+            existing_user = User.query.filter_by(email=new_email).first()
+            # Don't reveal whether the address is already registered (account
+            # enumeration) — mirror /forgot-password's neutral response. When the
+            # address is taken we silently skip the change; the current owner is
+            # unaffected and no duplicate is created.
+            if not existing_user:
+                user.new_email = new_email
+                queue_confirmation_mail(user)
             flash("Please check your inbox for a confirmation email.", "info")
             form_data["email"] = user.email  # reset email field in the UI
 
@@ -457,7 +542,7 @@ def profile_post(user: User, form_data: dict[str, str]) -> None:
         user, data, form_data, has_new_mail, has_new_pw, has_old_email, has_old_pw
     )
 
-    user.display_name = data.get("display_name")
+    user.display_name = _clean_display_name(data.get("display_name"))
     user.language = data.get("language")
     user.region = data.get("region")
 
@@ -1031,6 +1116,9 @@ def get_ics_calendar(calendar_hash):
 def get_poster(width, filename):
     if width not in POSTER_WIDTHS:
         return "Invalid width", 400
+
+    if not is_valid_poster_filename(filename):
+        return "Invalid filename", 400
 
     # Serve a next-gen format (webp/avif) when the browser advertised it, else
     # the original format. nginx normally serves the file straight off disk;

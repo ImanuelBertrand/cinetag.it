@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from app.errors import UserFeedbackError
 from app.extensions import db
+from app.models.movie import Movie
 from app.models.notification_channel import NotificationChannel
 from app.models.user_movie import UserMovie
 from app.services.user_service import (
@@ -14,7 +15,7 @@ from app.services.user_service import (
     get_movies_based_on_filter,
 )
 from app.utils.notifications import setup_notifications
-from app.utils.webpush import get_vapid_public_key_for_js
+from app.utils.webpush import get_vapid_public_key_for_js, validate_push_endpoint
 
 api = Blueprint("api", __name__)
 
@@ -27,30 +28,51 @@ def review_movie():
     if not user:
         return jsonify({"error": "User not found."}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     movie_id = data.get("movie_id")
     decision = data.get("decision")
 
     if decision not in ["approve", "disapprove", "maybe", "remove"]:
         return jsonify({"error": "Invalid decision value."}), 400
 
-    user_movie = UserMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
+    # Validate movie_id up front: an unparseable or non-existent id would
+    # otherwise reach the INSERT and raise IntegrityError (500 + poisoned
+    # session) instead of a clean 4xx.
+    if movie_id is None:
+        return jsonify({"error": "Invalid movie id."}), 400
+    try:
+        movie_id = int(movie_id)
+    except TypeError, ValueError:
+        return jsonify({"error": "Invalid movie id."}), 400
 
-    if decision == "remove":
-        if user_movie:
-            db.session.delete(user_movie)
-        result_decision = None
-    else:
-        if not user_movie:
-            user_movie = UserMovie(
-                user_id=user.id, movie_id=movie_id, decision=decision
-            )
+    if decision != "remove" and db.session.get(Movie, movie_id) is None:
+        return jsonify({"error": "Movie not found."}), 404
+
+    try:
+        user_movie = UserMovie.query.filter_by(
+            user_id=user.id, movie_id=movie_id
+        ).first()
+
+        if decision == "remove":
+            if user_movie:
+                db.session.delete(user_movie)
+            result_decision = None
         else:
-            user_movie.decision = decision
-        db.session.add(user_movie)
-        result_decision = user_movie.decision
+            if not user_movie:
+                user_movie = UserMovie(
+                    user_id=user.id, movie_id=movie_id, decision=decision
+                )
+            else:
+                user_movie.decision = decision
+            db.session.add(user_movie)
+            result_decision = user_movie.decision
 
-    db.session.commit()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        _logger.exception("Error reviewing movie %s", movie_id)
+        return jsonify({"error": "Could not save your decision."}), 400
+
     return (
         jsonify(
             {
@@ -71,8 +93,11 @@ def get_user_events():
     end_str = request.args.get("end")
     if not start_str or not end_str:
         return jsonify({"error": "Invalid date range."}), 400
-    start = datetime.fromisoformat(start_str)
-    end = datetime.fromisoformat(end_str)
+    try:
+        start = datetime.fromisoformat(start_str)
+        end = datetime.fromisoformat(end_str)
+    except ValueError:
+        return jsonify({"error": "Invalid date format."}), 400
     events = fetch_user_events(user, start, end)
     return jsonify(events)
 
@@ -479,8 +504,23 @@ def subscribe_push():
             400,
         )
 
-    # Store a device hint so this channel can be labeled on the settings page.
-    data["user_agent"] = request.headers.get("User-Agent")
+    endpoint = data["endpoint"]
+
+    # Reject endpoints that could turn the scheduler's outbound POST into an
+    # SSRF against internal hosts (see validate_push_endpoint).
+    try:
+        validate_push_endpoint(endpoint)
+    except UserFeedbackError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+    # Persist only known keys, never the raw client blob: an attacker could
+    # otherwise inject arbitrary fields (e.g. disabled_reason) that the settings
+    # UI surfaces. user_agent is server-set from the request header.
+    notification_data = {
+        "endpoint": endpoint,
+        "keys": data.get("keys"),
+        "user_agent": request.headers.get("User-Agent"),
+    }
 
     # Extract notification settings if provided
     days_in_advance = _parse_days_in_advance(data)
@@ -495,14 +535,14 @@ def subscribe_push():
     for channel in push_channels:
         if (
             channel.notification_data
-            and channel.notification_data.get("endpoint") == data["endpoint"]
+            and channel.notification_data.get("endpoint") == endpoint
         ):
             existing_channel = channel
             break
 
     if existing_channel:
         # Update the existing channel
-        existing_channel.notification_data = data
+        existing_channel.notification_data = notification_data
         existing_channel.enabled = True
         existing_channel.days_in_advance = days_in_advance
         existing_channel.include_maybe_movies = include_maybe_movies
@@ -510,7 +550,7 @@ def subscribe_push():
     else:
         # Create a new push notification channel
         channel = NotificationChannel(user_id=user.id, mode="push", enabled=True)
-        channel.notification_data = data
+        channel.notification_data = notification_data
         channel.days_in_advance = days_in_advance
         channel.include_maybe_movies = include_maybe_movies
         db.session.add(channel)

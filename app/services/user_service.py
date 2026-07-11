@@ -12,6 +12,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 
 from app.errors import UserFeedbackError
 from app.extensions import bcrypt, cache, db
+from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.models.friendship import Friendship
 from app.models.movie import Movie
 from app.models.movie_language_info import MovieLanguageInfo as MovieLangInfo
@@ -26,7 +27,7 @@ from app.models.user_movie import UserMovie
 from app.services.image_service import get_image_srcset, get_image_url
 from app.services.movie_service import get_region_infos
 from app.utils.email import queue_email
-from app.utils.jwt_keys import decode_with_fallback, encode_with_kid
+from app.utils.jwt_keys import decode_with_fallback
 from app.utils.profiler import Profiler, profile_function
 
 if TYPE_CHECKING:
@@ -35,6 +36,32 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 REGION_STR_LENGTH = 2
+MIN_PASSWORD_LENGTH = 8
+
+
+def validate_password(password: str | None) -> None:
+    """Reject empty or too-short passwords. Mirrors the registration check so
+    the reset flow can't set a weaker password than sign-up allows."""
+    if not password or len(password) < MIN_PASSWORD_LENGTH:
+        raise UserFeedbackError(
+            f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+        )
+
+
+# A pre-computed bcrypt hash compared against on the unknown-user / no-password
+# branch, so login takes the same time whether or not the account exists
+# (prevents timing-based account enumeration). Lazily generated on first use
+# because bcrypt needs an app context.
+_dummy_password_hash: str | None = None
+
+
+def _get_dummy_password_hash() -> str:
+    global _dummy_password_hash
+    if _dummy_password_hash is None:
+        _dummy_password_hash = bcrypt.generate_password_hash(
+            "timing-attack-mitigation-placeholder"
+        ).decode("utf-8")
+    return _dummy_password_hash
 
 
 def authenticate_user(data) -> User:
@@ -42,18 +69,16 @@ def authenticate_user(data) -> User:
     password = data.get("password")
 
     user = User.query.filter_by(email=email).first()
-    if not user or not bcrypt.check_password_hash(user.password, password):
+    if not user or not user.password:
+        # Run a comparison against a dummy hash anyway so the missing-account
+        # (and passwordless-account) path costs the same as a real check.
+        bcrypt.check_password_hash(_get_dummy_password_hash(), password or "")
+        raise UserFeedbackError("Invalid email or password.")
+
+    if not bcrypt.check_password_hash(user.password, password):
         raise UserFeedbackError("Invalid email or password.")
 
     return user
-
-
-def generate_confirmation_token(user):
-    return encode_with_kid(
-        {"confirm": user.id, "exp": datetime.now(UTC) + timedelta(hours=24)},
-        "SECRET_KEY",
-        "SECRET_KEY_ID",
-    )
 
 
 def confirm_user_email(token) -> None:
@@ -96,8 +121,13 @@ def reset_user_password(token, new_password) -> None:
         ).first()
         if not user:
             raise UserFeedbackError("Invalid reset token.")
+        validate_password(new_password)
         user.password = hash_password(new_password)
         user.password_reset_token = None
+        # Revoke every outstanding refresh token: a password reset is the
+        # primary "recover from compromise" action, so a stolen session must
+        # not survive it.
+        AllowedRefreshToken.revoke_all_for_user(user.id)
         db.session.add(user)
         db.session.commit()
     except jwt.ExpiredSignatureError:
@@ -763,6 +793,16 @@ def get_current_user() -> User | None:
     return user
 
 
+# Per-originating-account confirmation-mail limits (window seconds -> max sends).
+# Kept within the 86400s cleanup window used below so pruning old rows never
+# drops a row that a limit still needs to count.
+_ACCOUNT_CONFIRMATION_LIMITS = {
+    60: 2,
+    300: 5,
+    86400: 20,
+}
+
+
 def queue_confirmation_mail(user: User) -> None:
     rate_limits = {
         60: 1,
@@ -786,5 +826,17 @@ def queue_confirmation_mail(user: User) -> None:
     for seconds, limit in rate_limits.items():
         if sum(1 for s in mails_sent_in_seconds if s < seconds) >= limit:
             raise UserFeedbackError("Too many confirmation mails sent to this address.")
+
+    # Also rate-limit per originating account, so one user can't pre-exhaust
+    # many third parties' quotas by sending each a single confirmation mail.
+    account_mails = SentConfMails.query.filter_by(user_id=user.id).all()
+    account_sent_in_seconds = [
+        (now - mail.sent_at).total_seconds() for mail in account_mails
+    ]
+    for seconds, limit in _ACCOUNT_CONFIRMATION_LIMITS.items():
+        if sum(1 for s in account_sent_in_seconds if s < seconds) >= limit:
+            raise UserFeedbackError(
+                "Too many confirmation mails requested. Please try again later."
+            )
 
     queue_email(user, "confirm")

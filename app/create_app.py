@@ -1,7 +1,8 @@
 import logging
 import os
+import secrets
 
-from flask import Flask, g
+from flask import Flask, current_app, g
 from flask_jwt_extended import (
     set_access_cookies,
     set_refresh_cookies,
@@ -45,6 +46,46 @@ def _pending_friend_requests_count(user) -> int:
     return FriendRequest.query.filter_by(recipient_id=user.id, status="pending").count()
 
 
+def _assign_csp_nonce() -> None:
+    # Per-request nonce so the Content-Security-Policy can allow our own inline
+    # <script> blocks while still blocking injected ones. Assigned before auth
+    # so it exists even on error responses.
+    g.csp_nonce = secrets.token_urlsafe(16)
+
+
+def _build_csp(nonce: str) -> str:
+    # frame-ancestors 'none' (clickjacking) + a script backstop for XSS.
+    # style-src allows 'unsafe-inline' because templates use inline style
+    # attributes; scripts are locked to same-origin + the per-request nonce.
+    return (
+        "default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "manifest-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'"
+    )
+
+
+def _set_security_headers(response):
+    csp = _build_csp(g.get("csp_nonce", ""))
+    response.headers.setdefault("Content-Security-Policy", csp)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # HSTS is only meaningful over TLS; JWT_COOKIE_SECURE is the prod signal.
+    if current_app.config.get("JWT_COOKIE_SECURE"):
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+        )
+    return response
+
+
 def _configure_logging() -> None:
     root_level = os.environ.get("LOG_LEVEL", "WARNING").upper()
     app_level = os.environ.get("APP_LOG_LEVEL", "INFO").upper()
@@ -79,6 +120,9 @@ def create_app(config_name, start_scheduler=False):
     register_cli(app)
 
     # === Request Hooks (Auth Logic) ===
+    app.before_request(_assign_csp_nonce)
+    app.after_request(_set_security_headers)
+
     @app.before_request
     def authenticate():
         return authenticate_request(app)
@@ -127,6 +171,7 @@ def create_app(config_name, start_scheduler=False):
             "current_user": user,
             "static_version": app.config.get("STATIC_VERSION", "dev"),
             "pending_friend_requests_count": _pending_friend_requests_count(user),
+            "csp_nonce": g.get("csp_nonce", ""),
         }
 
     return app

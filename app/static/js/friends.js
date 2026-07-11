@@ -78,21 +78,23 @@ async function loadFriendsList() {
 function renderFriendsList(friends) {
   const friendsListContainer = document.getElementById("friends-list-container");
 
+  const esc = CineTagIt.Utils.escapeHtml;
   const friendsHtml = friends
     .map((friend) => {
-      const initials = getInitials(friend.display_name || friend.name || "User");
+      const name = friend.display_name || friend.name || "User";
+      const initials = getInitials(name);
 
       return `
-            <div class="friend-card" data-friend-id="${friend.id}">
-                <div class="friend-avatar">${initials}</div>
+            <div class="friend-card" data-friend-id="${esc(friend.id)}">
+                <div class="friend-avatar">${esc(initials)}</div>
                 <div class="friend-info">
-                    <div class="friend-name">${friend.display_name || friend.name || "User"}</div>
-                    <div class="friend-since">Friends since ${formatDate(friend.created_at)}</div>
+                    <div class="friend-name">${esc(name)}</div>
+                    <div class="friend-since">Friends since ${esc(formatDate(friend.created_at))}</div>
                 </div>
                 <div class="friend-actions">
                     <button class="view-common-movies-btn">Common Movies</button>
                     <button class="view-friend-picks-btn">Their picks</button>
-                    <button class="remove-friend-btn" data-friend-id="${friend.id}">Remove</button>
+                    <button class="remove-friend-btn" data-friend-id="${esc(friend.id)}">Remove</button>
                 </div>
             </div>
         `;
@@ -155,28 +157,31 @@ function renderFriendRequests(requests) {
     return;
   }
 
+  const esc = CineTagIt.Utils.escapeHtml;
   const requestsHtml = requests
     .map((request) => {
-      const initials = getInitials(request.display_name || "User");
+      const name = request.display_name || "User";
+      const initials = getInitials(name);
       const isReceived = request.type === "received";
+      const requestType = request.type === "received" ? "received" : "sent";
 
       return `
-            <div class="request-card ${request.type}" data-request-id="${request.id}">
-                <div class="friend-avatar">${initials}</div>
+            <div class="request-card ${requestType}" data-request-id="${esc(request.id)}">
+                <div class="friend-avatar">${esc(initials)}</div>
                 <div class="request-info">
-                    <span class="request-type ${request.type}">${isReceived ? "Received" : "Sent"}</span>
-                    <div class="friend-name">${request.display_name || "User"}</div>
-                    <div class="request-date">Requested on ${formatDate(request.created_at)}</div>
+                    <span class="request-type ${requestType}">${isReceived ? "Received" : "Sent"}</span>
+                    <div class="friend-name">${esc(name)}</div>
+                    <div class="request-date">Requested on ${esc(formatDate(request.created_at))}</div>
                 </div>
                 <div class="request-actions">
                     ${
                       isReceived
                         ? `
-                        <button class="accept-request-btn" data-request-id="${request.id}">Accept</button>
-                        <button class="reject-request-btn" data-request-id="${request.id}">Reject</button>
+                        <button class="accept-request-btn" data-request-id="${esc(request.id)}">Accept</button>
+                        <button class="reject-request-btn" data-request-id="${esc(request.id)}">Reject</button>
                     `
                         : `
-                        <button class="cancel-request-btn danger" data-request-id="${request.id}">Cancel</button>
+                        <button class="cancel-request-btn danger" data-request-id="${esc(request.id)}">Cancel</button>
                     `
                     }
                 </div>

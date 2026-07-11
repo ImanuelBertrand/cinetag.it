@@ -1,18 +1,77 @@
 import base64
 import http
+import ipaddress
 import json
 import logging
 import os
+import socket
 import threading
+from urllib.parse import urlsplit
 
 from cryptography.hazmat.primitives import serialization
 from flask import current_app
 from py_vapid import Vapid
 from pywebpush import WebPushException, webpush
 
-from app.errors import WebPushSubscriptionExpiredError
+from app.errors import UserFeedbackError, WebPushSubscriptionExpiredError
 
 _logger = logging.getLogger(__name__)
+
+
+def validate_push_endpoint(endpoint: str | None) -> None:
+    """Reject push endpoints that would let the scheduler make requests to
+    internal hosts (SSRF). The endpoint is later POSTed to by the server from
+    inside the network, so it must be a public HTTPS URL.
+
+    Raises UserFeedbackError on an invalid endpoint.
+    """
+    if not endpoint or not isinstance(endpoint, str):
+        raise UserFeedbackError("Invalid push endpoint.")
+
+    parts = urlsplit(endpoint)
+    if parts.scheme != "https":
+        raise UserFeedbackError("Push endpoint must use https.")
+
+    host = parts.hostname
+    if not host:
+        raise UserFeedbackError("Push endpoint has no host.")
+
+    # Resolve every address the host maps to and reject if any is non-public.
+    # (A hostname that resolves to a mix of public and private addresses is
+    # still treated as unsafe.)
+    try:
+        addrinfos = socket.getaddrinfo(
+            host, parts.port or 443, proto=socket.IPPROTO_TCP
+        )
+    except socket.gaierror as exc:
+        raise UserFeedbackError("Push endpoint host cannot be resolved.") from exc
+
+    addresses = {info[4][0] for info in addrinfos}
+    if not addresses:
+        raise UserFeedbackError("Push endpoint host cannot be resolved.")
+
+    for addr in addresses:
+        try:
+            ip = ipaddress.ip_address(addr)
+        except ValueError:
+            raise UserFeedbackError("Push endpoint host is invalid.") from None
+        if not _is_public_ip(ip):
+            raise UserFeedbackError("Push endpoint resolves to a disallowed address.")
+
+
+def _is_public_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Whether an address is safe to POST to from inside the network."""
+    return not any(
+        (
+            ip.is_private,
+            ip.is_loopback,
+            ip.is_link_local,
+            ip.is_multicast,
+            ip.is_reserved,
+            ip.is_unspecified,
+        )
+    )
+
 
 # Serialises VAPID lazy init across threads. Without it, concurrent first
 # requests could each call create_vapid(); when no key is pre-configured that
@@ -73,6 +132,12 @@ def create_vapid() -> Vapid:
     vapid = Vapid()
     vapid.generate_keys()
     vapid.save_key(private_key_path)
+    # save_key writes with the default umask (often world-readable); tighten the
+    # EC private key to owner-only immediately.
+    try:
+        os.chmod(private_key_path, 0o600)
+    except OSError:
+        _logger.exception("Could not chmod VAPID key file %s", private_key_path)
 
     return vapid
 
@@ -127,6 +192,14 @@ def send_web_push(
         except json.JSONDecodeError:
             _logger.exception("Failed to parse subscription_info JSON")
             return False
+
+    # Re-validate at send time: the endpoint was checked at subscription, but
+    # DNS could have been repointed at an internal host since (SSRF).
+    try:
+        validate_push_endpoint(subscription_info.get("endpoint"))
+    except UserFeedbackError:
+        _logger.warning("Refusing to send push to disallowed endpoint")
+        return False
 
     try:
         webpush(
