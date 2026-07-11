@@ -10,7 +10,7 @@
         <div class="decision-icon"></div>
         <div class="movie-details movie-details-view">
             <div class="poster-col">
-                <img class="poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}"/>
+                <img class="poster" src="{{ movie.poster_url }}"{% if movie.poster_srcset %} srcset="{{ movie.poster_srcset }}" sizes="300px"{% endif %} alt="{{ movie.title }}"/>
 
                 <div class="decide" aria-label="Your decision for this movie">
                     <div data-decision="approve" data-movie-id="{{ movie.id }}" role="button" tabindex="0" aria-pressed="{{ 'true' if movie.decision == 'approve' else 'false' }}">👍️</div>

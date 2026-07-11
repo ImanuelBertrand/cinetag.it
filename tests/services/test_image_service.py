@@ -1,7 +1,10 @@
 import os
 from unittest.mock import MagicMock, patch
 
+from PIL import Image
+
 from app.services.image_service import (
+    POSTER_JPEG_QUALITY,
     ensure_image_exists,
     fetch_image,
     get_image_base_path,
@@ -120,7 +123,9 @@ def test_resize_image() -> None:
         resize_image("/test/original.jpg", 500, "/test/resized.jpg")
 
         mock_open.assert_called_once_with("/test/original.jpg")
-        mock_image.thumbnail.assert_called_once_with((500, 1500))
+        mock_image.thumbnail.assert_called_once_with(
+            (500, 1500), resample=Image.Resampling.LANCZOS
+        )
         mock_makedirs.assert_called_once_with(
             os.path.dirname("/test/resized.jpg"), exist_ok=True
         )
@@ -128,6 +133,7 @@ def test_resize_image() -> None:
         # which is then atomically renamed onto the target.
         save_args = mock_image.save.call_args.args
         assert len(save_args) == 1
+        assert mock_image.save.call_args.kwargs["quality"] == POSTER_JPEG_QUALITY
         tmp_path = save_args[0]
         assert tmp_path.startswith("/test/resized.jpg.")
         assert tmp_path.endswith(".jpg")

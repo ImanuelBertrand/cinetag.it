@@ -433,8 +433,11 @@ CineTagIt.Movies = {
       .map((movie) => {
         const decisionClass = movie.decision ? `decided decided-${movie.decision}` : "";
         const posterClass = movie.poster_url ? "" : "has-no-poster";
+        const posterSrcset = movie.poster_srcset
+          ? ` srcset="${movie.poster_srcset}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
+          : "";
         const poster = movie.poster_url
-          ? `<img src="${movie.poster_url}" alt="${movie.title}" class="movie-poster" loading="lazy"/>`
+          ? `<img src="${movie.poster_url}"${posterSrcset} alt="${movie.title}" class="movie-poster" loading="lazy"/>`
           : `<span class="no-poster">${movie.title}</span>`;
 
         const release_dates =

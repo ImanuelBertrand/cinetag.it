@@ -12,7 +12,20 @@ from app.errors import ImageFetchError
 
 _logger = logging.getLogger(__name__)
 
-POSTER_WIDTHS = (500,)
+# Rungs span the real render sizes: ~200px (smallest desktop grid cell at 1x)
+# up to ~1200px (a near-full-width mobile poster on a 3x-DPR phone). Spaced at
+# roughly 1.5x so no device over-fetches by much. 500 is retained so the
+# existing warm w500/ cache stays valid. Widening this only adds storage plus a
+# one-time resize per new width; browsers still download a single source each.
+POSTER_WIDTHS = (200, 300, 500, 780, 1200)
+
+# Width used for the plain `src` fallback when a browser ignores `srcset`.
+# Must be a member of POSTER_WIDTHS.
+POSTER_SRC_WIDTH = 500
+
+# JPEG encode quality for resized posters. PIL defaults to 75, which softens
+# poster detail; 85 is the usual quality/size sweet spot.
+POSTER_JPEG_QUALITY = 85
 
 
 def get_image_base_path() -> str:
@@ -56,13 +69,15 @@ def fetch_image(remote_filename: str, size: str = "original") -> None:
 
 def resize_image(original_file: str, width: int, target_filename: str) -> None:
     image = Image.open(original_file)
-    image.thumbnail((width, width * 3))
+    # LANCZOS downscales noticeably sharper than PIL's default (BICUBIC).
+    image.thumbnail((width, width * 3), resample=Image.Resampling.LANCZOS)
     os.makedirs(os.path.dirname(target_filename), exist_ok=True)
     # Keep the original extension on the tmp file so PIL infers the format.
     ext = os.path.splitext(target_filename)[1]
     tmp_filename = f"{target_filename}.{uuid.uuid4().hex}.tmp{ext}"
     try:
-        image.save(tmp_filename)
+        # quality only affects JPEG output; PIL ignores it for other formats.
+        image.save(tmp_filename, quality=POSTER_JPEG_QUALITY)
         os.replace(tmp_filename, target_filename)
     except BaseException:
         with contextlib.suppress(FileNotFoundError):
@@ -85,6 +100,20 @@ def get_image_url(filename: str | None, width: int) -> str | None:
     if not filename:
         return None
     return f"/poster/{width}/{filename.lstrip('/')}"
+
+
+def get_image_srcset(
+    filename: str | None, widths: tuple[int, ...] = POSTER_WIDTHS
+) -> str | None:
+    """Build a `srcset` string listing each cached width as a candidate.
+
+    Returns e.g. "/poster/185/x.jpg 185w, /poster/342/x.jpg 342w, ..." so the
+    browser can pick the smallest source that fits the rendered size and DPR.
+    """
+    if not filename:
+        return None
+    cleaned = filename.lstrip("/")
+    return ", ".join(f"/poster/{width}/{cleaned} {width}w" for width in widths)
 
 
 def delete_local_poster(filename: str | None) -> None:

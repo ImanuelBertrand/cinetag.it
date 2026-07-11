@@ -186,7 +186,10 @@ function renderMoviesWithFriendData(container, movies) {
       // Create poster element
       let poster;
       if (movie.poster_url) {
-        poster = `<img class="movie-poster" src="${movie.poster_url}" alt="${movie.title} poster">`;
+        const posterSrcset = movie.poster_srcset
+          ? ` srcset="${movie.poster_srcset}" sizes="(max-width: 430px) 95vw, (max-width: 600px) 45vw, 300px"`
+          : "";
+        poster = `<img class="movie-poster" src="${movie.poster_url}"${posterSrcset} alt="${movie.title} poster" loading="lazy">`;
       } else {
         poster = `<div class="no-poster"><div class="movie-title">${movie.title}</div></div>`;
       }

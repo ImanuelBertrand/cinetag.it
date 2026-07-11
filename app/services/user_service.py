@@ -23,7 +23,7 @@ from app.models.tmdb_genre import MovieGenre, TmdbGenreName
 from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_movie import UserMovie
-from app.services.image_service import get_image_url
+from app.services.image_service import get_image_srcset, get_image_url
 from app.services.movie_service import get_region_infos
 from app.utils.email import queue_email
 from app.utils.jwt_keys import decode_with_fallback, encode_with_kid
@@ -457,6 +457,7 @@ def _map_movie_to_dict(
         "release_date": main_region_info.release_date,
         "overview": lang_info["overview"],
         "poster_url": get_image_url(lang_info["poster_path"], 500),
+        "poster_srcset": get_image_srcset(lang_info["poster_path"]),
         "popularity": movie.popularity,
         "decision": user_movie.decision if user_movie else None,
         "all_release_dates": all_release_dates,

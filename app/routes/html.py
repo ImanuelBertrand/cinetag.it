@@ -33,7 +33,12 @@ from app.models.tmdb_region import TmdbRegion
 from app.models.user import User
 from app.models.user_calendar import UserCalendar
 from app.models.user_movie import UserMovie
-from app.services.image_service import ensure_image_exists, get_image_url
+from app.services.image_service import (
+    POSTER_WIDTHS,
+    ensure_image_exists,
+    get_image_srcset,
+    get_image_url,
+)
 from app.services.user_service import (
     authenticate_user,
     confirm_user_email,
@@ -872,6 +877,7 @@ def get_movie_details(movie_id):
             "title": lang_info["title"],
             "overview": lang_info["overview"],
             "poster_url": get_image_url(lang_info["poster_path"], 500),
+            "poster_srcset": get_image_srcset(lang_info["poster_path"]),
             "release_date": (
                 format_date(region_info.release_date, locale=language)
                 if region_info and region_info.release_date
@@ -1032,8 +1038,7 @@ def get_poster(width, filename):
             return "image/webp"
         raise ValueError(f"Unsupported file type: {f_name}")
 
-    valid_widths = {500}
-    if width not in valid_widths:
+    if width not in POSTER_WIDTHS:
         return "Invalid width", 400
 
     ensure_image_exists(filename, int(width))
