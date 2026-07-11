@@ -81,6 +81,11 @@ class Config:
     APP_DIR = os.path.join(ROOT_DIR, "app")
     STORAGE_DIR = os.path.join(ROOT_DIR, "storage")
     POSTER_DIR = os.path.join(STORAGE_DIR, "posters")
+    # Cached poster files unused (not accessed or modified) for longer than this
+    # are pruned by a scheduled job. The cache self-heals on the next request.
+    POSTER_CACHE_RETENTION_DAYS = int(
+        os.environ.get("POSTER_CACHE_RETENTION_DAYS", "30")
+    )
     TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original/"
     STATIC_VERSION = os.environ.get("STATIC_VERSION", "dev")
 

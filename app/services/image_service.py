@@ -2,6 +2,7 @@ import contextlib
 import http
 import logging
 import os
+import time
 import uuid
 
 import requests
@@ -130,6 +131,51 @@ def delete_local_poster(filename: str | None) -> None:
             continue
         except OSError:
             _logger.exception("Failed to delete cached poster %s", path)
+
+
+def prune_poster_cache(retention_days: int, dry_run: bool = False) -> dict:
+    """Delete cached poster files unused for longer than the retention window.
+
+    Eviction is based on ``max(atime, mtime)``: access time evicts by last use
+    where the filesystem records it (``relatime``, the common default, keeps hot
+    posters warm), degrading to modification time — which equals creation time
+    for these write-once files — when atime is disabled (``noatime``). The cache
+    is self-healing: a pruned poster is re-fetched and re-resized on its next
+    request, so this only trades a little bandwidth to bound disk usage.
+
+    Walks every width directory (``original/``, ``w200/`` ...). Best-effort:
+    per-file errors are logged and skipped rather than aborting the sweep.
+    Returns a summary dict for logging; with ``dry_run`` nothing is deleted.
+    """
+    base_path = get_image_base_path()
+    cutoff = time.time() - retention_days * 86400
+    scanned = deleted = bytes_freed = 0
+    for root, _dirs, files in os.walk(base_path):
+        for name in files:
+            path = os.path.join(root, name)
+            try:
+                stat = os.stat(path)
+            except OSError:
+                continue
+            scanned += 1
+            if max(stat.st_atime, stat.st_mtime) >= cutoff:
+                continue
+            if not dry_run:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    _logger.exception("Failed to prune cached poster %s", path)
+                    continue
+            deleted += 1
+            bytes_freed += stat.st_size
+    return {
+        "scanned": scanned,
+        "deleted": deleted,
+        "bytes_freed": bytes_freed,
+        "dry_run": dry_run,
+    }
 
 
 def prefetch_poster(filename: str | None) -> None:

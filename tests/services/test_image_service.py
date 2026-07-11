@@ -1,4 +1,5 @@
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 from PIL import Image
@@ -11,6 +12,7 @@ from app.services.image_service import (
     get_image_url,
     get_tmdb_image_base_url,
     get_tmdb_image_url,
+    prune_poster_cache,
     resize_image,
 )
 
@@ -211,3 +213,57 @@ def test_ensure_image_exists_triggers_fetch_and_resize(app) -> None:
                 500,
                 "/test/path/w500/test/image.jpg",
             )
+
+
+def test_prune_poster_cache_removes_only_stale_files(app, tmp_path) -> None:
+    """Files unused past the window are pruned; recently-used ones are kept."""
+    with app.app_context():
+        app.config["POSTER_DIR"] = str(tmp_path)
+        (tmp_path / "w500").mkdir()
+        (tmp_path / "original").mkdir()
+
+        stale = tmp_path / "w500" / "stale.jpg"
+        stale.write_bytes(b"x" * 100)
+        recent = tmp_path / "w500" / "recent.jpg"
+        recent.write_bytes(b"y" * 50)
+        hot = tmp_path / "original" / "hot.jpg"
+        hot.write_bytes(b"z" * 200)
+
+        now = time.time()
+        old = now - 40 * 86400
+        # Both timestamps old -> pruned.
+        os.utime(stale, (old, old))
+        # Modified recently -> kept (covers the noatime / creation-time case).
+        os.utime(recent, (now, now))
+        # Created long ago but accessed recently -> kept via atime.
+        os.utime(hot, (now, old))
+
+        result = prune_poster_cache(retention_days=30, dry_run=False)
+
+        assert not stale.exists()
+        assert recent.exists()
+        assert hot.exists()
+        assert result == {
+            "scanned": 3,
+            "deleted": 1,
+            "bytes_freed": 100,
+            "dry_run": False,
+        }
+
+
+def test_prune_poster_cache_dry_run_deletes_nothing(app, tmp_path) -> None:
+    """dry_run reports what would be pruned without touching the filesystem."""
+    with app.app_context():
+        app.config["POSTER_DIR"] = str(tmp_path)
+        (tmp_path / "w500").mkdir()
+        stale = tmp_path / "w500" / "stale.jpg"
+        stale.write_bytes(b"x" * 100)
+        old = time.time() - 40 * 86400
+        os.utime(stale, (old, old))
+
+        result = prune_poster_cache(retention_days=30, dry_run=True)
+
+        assert stale.exists()
+        assert result["deleted"] == 1
+        assert result["bytes_freed"] == 100
+        assert result["dry_run"] is True

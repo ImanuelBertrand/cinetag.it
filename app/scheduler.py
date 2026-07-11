@@ -9,6 +9,7 @@ from typing import Any, cast
 from app.extensions import scheduler
 from app.models.allowed_refresh_token import AllowedRefreshToken
 from app.services.backup_service import run_backup_if_due
+from app.services.image_service import prune_poster_cache
 from app.services.maintenance_service import (
     purge_abandoned_guests,
     purge_inactive_empty_guests_with_tokens,
@@ -119,6 +120,23 @@ def job_purge_empty_guests() -> None:
         _logger.exception("Error purging empty guests")
 
 
+def job_prune_poster_cache() -> None:
+    try:
+        app = scheduler.app
+        if app is None:
+            return
+        days = app.config.get("POSTER_CACHE_RETENTION_DAYS", 30)
+        result = prune_poster_cache(retention_days=days, dry_run=False)
+        _logger.info(
+            "Pruned poster cache: removed %s of %s files (%s bytes freed)",
+            result["deleted"],
+            result["scanned"],
+            result["bytes_freed"],
+        )
+    except Exception:
+        _logger.exception("Error pruning poster cache")
+
+
 def setup_cron_jobs() -> None:
     # Check if scheduler is enabled in config
     if (
@@ -191,6 +209,10 @@ def setup_cron_jobs() -> None:
         "run_db_backup": {
             "func": job_run_backup,
             "options": {"hours": 1},
+        },
+        "prune_poster_cache": {
+            "func": job_prune_poster_cache,
+            "options": {"hours": 24},
         },
     }
     for job_id, job_definition in job_definitions.items():
