@@ -9,7 +9,10 @@ repos:
     hooks:
       - id: prettier
         name: prettier
-        entry: npx prettier --write --ignore-unknown --log-level warn --no-error-on-unmatched-pattern
-        language: system
+        entry: prettier --write --ignore-unknown --log-level warn --no-error-on-unmatched-pattern
+        language: node
+        additional_dependencies:
+          - prettier@3.9.5
+          - prettier-plugin-jinja-template@2.2.0
         types_or: [javascript, css, scss, html, json]
         pass_filenames: true
