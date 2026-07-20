@@ -26,9 +26,13 @@
 {% block scripts %}
     {% if view == 'calendar' %}
         {% set lang = current_user.language or 'en' %}
-        <script defer src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}?v={{ static_version }}"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fullcalendar/skeleton.css') }}?v={{ static_version }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fullcalendar/theme.css') }}?v={{ static_version }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fullcalendar/palette.css') }}?v={{ static_version }}">
+        <script defer src="{{ url_for('static', filename='vendor/fullcalendar/all.global.js') }}?v={{ static_version }}"></script>
+        <script defer src="{{ url_for('static', filename='vendor/fullcalendar/classic.global.js') }}?v={{ static_version }}"></script>
         {% if lang != 'en' %}
-            <script defer src="{{ url_for('static', filename='vendor/fullcalendar/locales/' + lang + '.global.js') }}?v={{ static_version }}"></script>
+            <script defer src="{{ url_for('static', filename='vendor/fullcalendar/locales/' + lang + '/global.js') }}?v={{ static_version }}"></script>
         {% endif %}
         <script defer src="{{ url_for('static', filename='js/calendar.js') }}?v={{ static_version }}"></script>
     {% endif %}
