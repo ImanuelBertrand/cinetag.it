@@ -48,6 +48,4 @@ jobs:
           DATABASE_URI: "postgresql://localhost/cinetag_db"
         run: |
           uv run flask build-assets
-          mkdir -p app/static/vendor/fullcalendar
-          cp node_modules/fullcalendar/index.global.min.js app/static/vendor/fullcalendar/
-          cp -r node_modules/@fullcalendar/core/locales app/static/vendor/fullcalendar/
+          sh scripts/vendor-fullcalendar.sh

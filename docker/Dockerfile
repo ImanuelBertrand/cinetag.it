@@ -44,18 +44,8 @@ ENV FLASK_APP="app.create_app:create_app('testing')"
 ENV DATABASE_URI="postgresql://placeholder:placeholder@localhost/placeholder"
 RUN python -m flask build-assets
 
-# Copy fullcalendar files to static directory.
-# v7 splits the browser build into a core bundle, a theme plugin, and separate
-# CSS (skeleton + theme + palette); the core bundle also embeds the Temporal
-# polyfill, so no extra global is required.
-RUN target_dir="app/static/vendor/fullcalendar" && \
-    mkdir -p "$target_dir" && \
-    cp node_modules/fullcalendar/all/global.js "$target_dir/all.global.js" && \
-    cp node_modules/fullcalendar/themes/classic/global.js "$target_dir/classic.global.js" && \
-    cp node_modules/fullcalendar/skeleton.css "$target_dir/" && \
-    cp node_modules/fullcalendar/themes/classic/theme.css "$target_dir/" && \
-    cp node_modules/fullcalendar/themes/classic/palette.css "$target_dir/" && \
-    cp -r node_modules/fullcalendar/locales "$target_dir/"
+# Copy fullcalendar files to static directory
+RUN sh scripts/vendor-fullcalendar.sh
 
 # --- Production Stage ---
 FROM python:3.14-slim AS production
