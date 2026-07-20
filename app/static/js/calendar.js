@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridMonth",
+    colorScheme: "dark",
     events: "/api/user/events",
     headerToolbar: {
       left: "prev,next today",
