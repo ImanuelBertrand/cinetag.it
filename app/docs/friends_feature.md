@@ -35,12 +35,24 @@ class FriendRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="pending")  # pending, accepted, rejected
+    status = db.Column(
+        db.String(20), nullable=False, default="pending"
+    )  # pending, accepted, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
-    requester = db.relationship("User", foreign_keys=[requester_id], backref=db.backref("sent_friend_requests", lazy="dynamic"))
-    recipient = db.relationship("User", foreign_keys=[recipient_id], backref=db.backref("received_friend_requests", lazy="dynamic"))
+    requester = db.relationship(
+        "User",
+        foreign_keys=[requester_id],
+        backref=db.backref("sent_friend_requests", lazy="dynamic"),
+    )
+    recipient = db.relationship(
+        "User",
+        foreign_keys=[recipient_id],
+        backref=db.backref("received_friend_requests", lazy="dynamic"),
+    )
 
     __table_args__ = (
         db.Index("friend_request_idx", "requester_id", "recipient_id", unique=True),
@@ -69,7 +81,9 @@ class Friendship(db.Model):
     # Always the higher user ID of the two friends
     user2_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     # Relationships to the User model
     user1 = db.relationship(
@@ -131,6 +145,7 @@ def load_words(filename):
     with open(file_path, "r") as f:
         return [line.strip() for line in f if line.strip()]
 
+
 # Load word lists
 ADJECTIVES = load_words("adjectives.txt")
 NOUNS = load_words("nouns.txt")
@@ -164,7 +179,9 @@ def _generate_unique_friend_code(self):
     Helper method to generate a unique friend code.
     """
     max_attempts = 10  # Reasonable number of attempts
-    old_friend_code = self.friend_code  # Store the old code in case we need to restore it
+    old_friend_code = (
+        self.friend_code
+    )  # Store the old code in case we need to restore it
 
     for _ in range(max_attempts):
         try:
@@ -180,7 +197,9 @@ def _generate_unique_friend_code(self):
             # Restore the old friend code if needed
             if old_friend_code:
                 self.friend_code = old_friend_code
-            if "UNIQUE constraint failed" not in str(e) and "duplicate key" not in str(e):
+            if "UNIQUE constraint failed" not in str(e) and "duplicate key" not in str(
+                e
+            ):
                 # If it's not a uniqueness violation, re-raise the exception
                 raise
 
