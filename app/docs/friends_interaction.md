@@ -77,7 +77,9 @@ class Friendship(db.Model):
     # Always the higher user ID of the two friends
     user2_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     # Relationships to the User model
     user1 = db.relationship(
@@ -124,16 +126,12 @@ def get_movie_list_query(
     # Start with the existing query
     upcoming_movie_query = Movie.query.join(
         MovieRegionInfo,
-        db.and_(
-            MovieRegionInfo.region == region, MovieRegionInfo.movie_id == Movie.id
-        ),
+        db.and_(MovieRegionInfo.region == region, MovieRegionInfo.movie_id == Movie.id),
     ).filter(MovieRegionInfo.release_date > datetime.now().date())
 
     # Apply existing filters
     if need_imdb:
-        upcoming_movie_query = upcoming_movie_query.filter(
-            Movie.imdb_id.isnot(None)
-        )
+        upcoming_movie_query = upcoming_movie_query.filter(Movie.imdb_id.isnot(None))
 
     if need_poster:
         poster_subquery = db.exists().where(
@@ -154,9 +152,7 @@ def get_movie_list_query(
         )
 
         if user_decision is None:
-            upcoming_movie_query = upcoming_movie_query.filter(
-                UserMovie.id.is_(None)
-            )
+            upcoming_movie_query = upcoming_movie_query.filter(UserMovie.id.is_(None))
         else:
             upcoming_movie_query = upcoming_movie_query.filter(
                 UserMovie.decision == user_decision
@@ -165,12 +161,16 @@ def get_movie_list_query(
     # Apply friend filters if specified
     if friend_ids and len(friend_ids) > 0:
         # Subquery to find movies any friend has disapproved
-        disapproved_subquery = db.session.query(UserMovie.movie_id).filter(
-            db.and_(
-                UserMovie.user_id.in_(friend_ids),
-                UserMovie.decision == "disapprove"
+        disapproved_subquery = (
+            db.session.query(UserMovie.movie_id)
+            .filter(
+                db.and_(
+                    UserMovie.user_id.in_(friend_ids),
+                    UserMovie.decision == "disapprove",
+                )
             )
-        ).subquery()
+            .subquery()
+        )
 
         # Exclude movies any friend has disapproved
         upcoming_movie_query = upcoming_movie_query.filter(
@@ -179,12 +179,16 @@ def get_movie_list_query(
 
         if not include_unrated:
             # Subquery to find movies at least one friend has approved or maybe'd
-            approved_subquery = db.session.query(UserMovie.movie_id).filter(
-                db.and_(
-                    UserMovie.user_id.in_(friend_ids),
-                    UserMovie.decision.in_(["approve", "maybe"])
+            approved_subquery = (
+                db.session.query(UserMovie.movie_id)
+                .filter(
+                    db.and_(
+                        UserMovie.user_id.in_(friend_ids),
+                        UserMovie.decision.in_(["approve", "maybe"]),
+                    )
                 )
-            ).subquery()
+                .subquery()
+            )
 
             # Only include movies at least one friend has approved or maybe'd
             upcoming_movie_query = upcoming_movie_query.filter(
@@ -220,10 +224,7 @@ def get_friend_ratings(user: User, movie_ids: List[int], friend_ids: List[int] =
 
     # Query all relevant user_movies
     friend_ratings = UserMovie.query.filter(
-        db.and_(
-            UserMovie.user_id.in_(friend_ids),
-            UserMovie.movie_id.in_(movie_ids)
-        )
+        db.and_(UserMovie.user_id.in_(friend_ids), UserMovie.movie_id.in_(movie_ids))
     ).all()
 
     # Organize by movie_id
@@ -233,8 +234,10 @@ def get_friend_ratings(user: User, movie_ids: List[int], friend_ids: List[int] =
         result[movie_id] = {
             "approve_count": sum(1 for r in movie_ratings if r.decision == "approve"),
             "maybe_count": sum(1 for r in movie_ratings if r.decision == "maybe"),
-            "disapprove_count": sum(1 for r in movie_ratings if r.decision == "disapprove"),
-            "total_friends": len(friend_ids)
+            "disapprove_count": sum(
+                1 for r in movie_ratings if r.decision == "disapprove"
+            ),
+            "total_friends": len(friend_ids),
         }
 
     return result
@@ -245,18 +248,23 @@ We'll modify the `get_movies_based_on_filter` function to include friend ratings
 
 ```python
 def get_movies_based_on_filter(
-    user: User, 
-    mode: str, 
-    need_imdb: bool = False, 
+    user: User,
+    mode: str,
+    need_imdb: bool = False,
     need_poster: bool = False,
     friend_ids: List[int] = None,
-    include_unrated: bool = True
+    include_unrated: bool = True,
 ) -> List[Dict[str, str]]:
     # Existing code...
 
     filtered_movies = get_movie_list_query(
-        region, need_imdb, need_poster, filter_user, filter_decision,
-        friend_ids, include_unrated
+        region,
+        need_imdb,
+        need_poster,
+        filter_user,
+        filter_decision,
+        friend_ids,
+        include_unrated,
     )
     movie_ids = {m.id for m in filtered_movies}
 
@@ -314,8 +322,12 @@ def get_movies_api(filter_mode):
             {
                 "success": True,
                 "movies": get_movies_based_on_filter(
-                    user, filter_mode, need_imdb, need_poster, 
-                    friend_ids, include_unrated
+                    user,
+                    filter_mode,
+                    need_imdb,
+                    need_poster,
+                    friend_ids,
+                    include_unrated,
                 ),
             }
         )
