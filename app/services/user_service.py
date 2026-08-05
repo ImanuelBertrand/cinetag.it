@@ -31,7 +31,9 @@ from app.utils.jwt_keys import decode_with_fallback
 from app.utils.profiler import Profiler, profile_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
+
+    from sqlalchemy.orm import Query
 
 _logger = logging.getLogger(__name__)
 
@@ -39,13 +41,15 @@ REGION_STR_LENGTH = 2
 MIN_PASSWORD_LENGTH = 8
 
 
-def validate_password(password: str | None) -> None:
-    """Reject empty or too-short passwords. Mirrors the registration check so
-    the reset flow can't set a weaker password than sign-up allows."""
+def validate_password(password: str | None) -> str:
+    """Reject empty or too-short passwords, returning the validated password.
+    Mirrors the registration check so the reset flow can't set a weaker
+    password than sign-up allows."""
     if not password or len(password) < MIN_PASSWORD_LENGTH:
         raise UserFeedbackError(
             f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
         )
+    return password
 
 
 # A pre-computed bcrypt hash compared against on the unknown-user / no-password
@@ -64,7 +68,7 @@ def _get_dummy_password_hash() -> str:
     return _dummy_password_hash
 
 
-def authenticate_user(data) -> User:
+def authenticate_user(data: Mapping[str, str]) -> User:
     email = data.get("email")
     password = data.get("password")
 
@@ -81,7 +85,7 @@ def authenticate_user(data) -> User:
     return user
 
 
-def confirm_user_email(token) -> None:
+def confirm_user_email(token: str) -> None:
     try:
         data = decode_with_fallback(
             token, "SECRET_KEY", "SECRET_KEY_FALLBACK", "SECRET_KEY_ID"
@@ -106,7 +110,7 @@ def hash_password(password: str) -> str:
     return bcrypt.generate_password_hash(password).decode("utf-8")
 
 
-def reset_user_password(token, new_password) -> None:
+def reset_user_password(token: str, new_password: str | None) -> None:
     try:
         data = decode_with_fallback(
             token, "SECRET_KEY", "SECRET_KEY_FALLBACK", "SECRET_KEY_ID"
@@ -121,7 +125,7 @@ def reset_user_password(token, new_password) -> None:
         ).first()
         if not user:
             raise UserFeedbackError("Invalid reset token.")
-        validate_password(new_password)
+        new_password = validate_password(new_password)
         user.password = hash_password(new_password)
         user.password_reset_token = None
         # Revoke every outstanding refresh token: a password reset is the
@@ -145,7 +149,7 @@ def get_region_flag(region: str) -> str | None:
     return first_flag_char + second_flag_char
 
 
-def get_user_movie_ids(user: User, decision: str | None = None):
+def get_user_movie_ids(user: User, decision: str | None = None) -> Query[UserMovie]:
     user_movies_query = UserMovie.query.filter_by(user_id=user.id)
 
     if decision is not None:
@@ -193,7 +197,13 @@ def validate_friendship(user_id: int, friend_id: int | None) -> None:
         raise UserFeedbackError("Friend not found or friendship does not exist.")
 
 
-def _cursor_by_release_date(query, min_release_date, min_movie_id, *, released):
+def _cursor_by_release_date(
+    query: Query[Any],
+    min_release_date: date | None,
+    min_movie_id: int,
+    *,
+    released: bool,
+) -> Query[Any]:
     """Keyset filter for the release-date sort (ascending, or descending for the
     released view)."""
     if min_release_date is None:
@@ -219,15 +229,15 @@ def _cursor_by_release_date(query, min_release_date, min_movie_id, *, released):
 
 
 def _apply_pagination_cursor(
-    query,
+    query: Query[Any],
     *,
-    sort,
-    released,
-    min_release_date,
-    min_movie_id,
-    min_popularity,
-    popularity,
-):
+    sort: str,
+    released: bool,
+    min_release_date: date | None,
+    min_movie_id: int | None,
+    min_popularity: float | None,
+    popularity: Any,
+) -> Query[Any]:
     """Apply the keyset-pagination filter. min_movie_id is always the tiebreaker;
     the primary cursor column depends on the active sort order."""
     if min_movie_id is None:
@@ -258,7 +268,7 @@ def _build_movies_query(
     user: User,
     region: str,
     language: str,
-    min_release_date,
+    min_release_date: date | None,
     min_movie_id: int | None,
     need_imdb: bool,
     name_filter: str | None,
@@ -267,7 +277,7 @@ def _build_movies_query(
     sort: str = "release",
     min_popularity: float | None = None,
     genre_ids: list[int] | None = None,
-):
+) -> Query[Any]:
     # The "released" view shows movies that are already out; every other mode
     # shows the future. Popularity is coalesced so NULL never breaks the
     # descending sort / cursor comparisons.
@@ -409,7 +419,9 @@ def get_available_genres(language: str) -> list[dict[str, Any]]:
     return sorted(result, key=lambda g: g["name"])
 
 
-def _get_preloaded_movie_data(movie_ids, region, language):
+def _get_preloaded_movie_data(
+    movie_ids: list[int], region: str, language: str
+) -> tuple[dict[int, set[MovieRegionInfo]], dict[int, dict[str, MovieLangInfo]]]:
     # Preload all necessary movie regions
     movie_regions_query = (
         db.session.query(MovieRegionInfo)
@@ -509,7 +521,7 @@ def _get_movie_context_data(
     }
 
 
-def _apply_sort_order(query, *, sort, mode):
+def _apply_sort_order(query: Query[Any], *, sort: str, mode: str) -> Query[Any]:
     """Order for consistent keyset pagination. Popularity sort ranks by
     popularity (desc); the released view lists newest-first; everything else
     lists soonest-upcoming-first."""
@@ -528,8 +540,8 @@ def get_movies_based_on_filter(
     need_imdb: bool = False,
     need_poster: bool = False,
     name_filter: str | None = None,
-    min_release_date=None,
-    min_movie_id=None,
+    min_release_date: date | None = None,
+    min_movie_id: int | None = None,
     limit: int = 20,
     friend_id: int | None = None,
     sort: str = "release",
@@ -545,7 +557,7 @@ def get_movies_based_on_filter(
 
     formatted_dates = {}
 
-    def fmt_date(date: date | None):
+    def fmt_date(date: date | None) -> str | None:
         if not date:
             return None
 
@@ -642,11 +654,11 @@ def get_movies_based_on_filter(
 
 
 def _get_user_movies(
-    user,
+    user: User,
     start: datetime | None = None,
     end: datetime | None = None,
     decisions: list[str] | None = None,
-):
+) -> list[UserMovie]:
     if decisions is None:
         decisions = ["approve"]
 
@@ -698,7 +710,7 @@ def user_has_any_tags(user: User) -> bool:
 
 
 def fetch_user_events(
-    user,
+    user: User | None,
     start: datetime | None = None,
     end: datetime | None = None,
     external_urls: bool = False,
@@ -708,7 +720,7 @@ def fetch_user_events(
     lang = user.language or current_app.config["DEFAULT_LANGUAGE"]
     region = user.region or current_app.config["DEFAULT_REGION"]
 
-    def fmt_date(date):
+    def fmt_date(date: date | None) -> str | None:
         return format_date(date, locale=lang) if date else None
 
     approved_movies = _get_user_movies(user, start, end, ["approve", "maybe"])
