@@ -85,7 +85,15 @@ COPY . .
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy
 ENV UV_PROJECT_ENVIRONMENT=/venv
+# requires-python is an exact pin, so whenever the slim base image's patch
+# version drifts off it, uv downloads its own interpreter rather than reusing
+# /usr/local/bin/python. Its default install dir lives under /root (mode 0700),
+# which the non-root appuser below cannot traverse — the venv's python would be
+# present but unreadable, and PATH lookup would again fall through to the bare
+# interpreter. Keep the managed interpreter somewhere world-readable instead.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
 RUN uv sync --frozen --no-dev \
+    && chmod -R a+rX /opt/uv \
     && rm /usr/local/bin/uv
 
 # Copy precompiled assets from the builder stage
@@ -140,7 +148,8 @@ FROM production AS development
 USER root
 
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
-RUN uv sync --frozen
+RUN uv sync --frozen \
+    && chmod -R a+rX /opt/uv
 
 
 RUN apt-get update && apt-get install -y \
