@@ -92,7 +92,11 @@ ENV UV_PROJECT_ENVIRONMENT=/venv
 # present but unreadable, and PATH lookup would again fall through to the bare
 # interpreter. Keep the managed interpreter somewhere world-readable instead.
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
-RUN uv sync --frozen --no-dev \
+# mkdir first: when the pin and the base image do line up, uv reuses
+# /usr/local/bin/python and never creates the install dir, so an unguarded
+# `chmod -R` on it would fail the build.
+RUN mkdir -p /opt/uv/python \
+    && uv sync --frozen --no-dev \
     && chmod -R a+rX /opt/uv \
     && rm /usr/local/bin/uv
 
@@ -148,7 +152,8 @@ FROM production AS development
 USER root
 
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
-RUN uv sync --frozen \
+RUN mkdir -p /opt/uv/python \
+    && uv sync --frozen \
     && chmod -R a+rX /opt/uv
 
 
