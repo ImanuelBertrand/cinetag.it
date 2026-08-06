@@ -347,7 +347,7 @@ requires-dist = [
     { name = "alembic", specifier = "==1.18.5" },
     { name = "apscheduler", specifier = "==3.11.3" },
     { name = "babel", specifier = "==2.18.0" },
-    { name = "crawlerdetect", specifier = "==0.4.1" },
+    { name = "crawlerdetect", specifier = "==0.4.2" },
     { name = "cryptography", specifier = "==50.0.0" },
     { name = "flask", specifier = "==3.1.3" },
     { name = "flask-apscheduler", specifier = "==1.13.1" },
@@ -452,11 +452,11 @@ wheels = [
 
 [[package]]
 name = "crawlerdetect"
-version = "0.4.1"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/01/af/69f2090fa00e4e4c38095c0d6caf9836d289da5e2b723e10120fac18b5b8/crawlerdetect-0.4.1.tar.gz", hash = "sha256:cde9b7ad0377cff969a5849cfaa8ca8a598908cb40ae43d366b45c5fd2ed545e", size = 2525473, upload-time = "2026-07-29T22:11:29.596Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/7f/fd2d1a8f2bab45c235a87ebeff748acca186947c53e4da9b5b237de576b2/crawlerdetect-0.4.2.tar.gz", hash = "sha256:2ecbc825ec9bbfe94d1878078fbc3d336ed4b247a00dd56691479554ca3cb2ef", size = 2525256, upload-time = "2026-07-30T06:38:05.353Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/f9/da5b7185732ce55d13a118c59192216b9c73a853cbe65bcae1b9f6b24ac7/crawlerdetect-0.4.1-py3-none-any.whl", hash = "sha256:cab0c48039071b3514791b9edd988440273833b112122f53d5ad74f1fb7b2e90", size = 17448, upload-time = "2026-07-29T22:11:26.752Z" },
+    { url = "https://files.pythonhosted.org/packages/80/39/bfc1990a96e68391721d8d76a56f6d8a90f803a4c06c402b73e2a240c6f7/crawlerdetect-0.4.2-py3-none-any.whl", hash = "sha256:62e6dd62afde41d8c934604f0c99c097d456d24e0de3b81f51eca7b1bf94d6a3", size = 17215, upload-time = "2026-07-30T06:38:00.772Z" },
 ]
 
 [[package]]
