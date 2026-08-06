@@ -14,7 +14,7 @@ Connect your watchlist with friends, discover movies you both want to see, and g
 
 ## Tech Stack
 
-- **Backend:** Python 3.14, Flask, SQLAlchemy, PostgreSQL, Redis
+- **Backend:** Python 3.14, Flask, SQLAlchemy, PostgreSQL, Valkey
 - **Auth:** JWT (cookie + header), bcrypt
 - **Frontend:** Vanilla JS, Jinja2 templates
 - **Infrastructure:** Docker Compose, Nginx, Gunicorn

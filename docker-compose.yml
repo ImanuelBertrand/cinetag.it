@@ -20,21 +20,23 @@ services:
       start_period: 10s
       start_interval: 1s
 
+  # Valkey (Redis-compatible). The service keeps the name "redis" so the
+  # redis:// URLs below and in app/config.py resolve without change.
   redis:
-    image: redis:8-alpine
-    container_name: cinetagit_redis
+    image: valkey/valkey:9-alpine
+    container_name: cinetagit_valkey
     restart: always
     command: >
-      redis-server
+      valkey-server
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
       --appendonly yes
     volumes:
-      - ./data/redis:/data
+      - ./data/valkey:/data
     networks:
       - cinetagit_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 2s
       timeout: 5s
       retries: 5

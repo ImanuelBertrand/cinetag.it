@@ -39,7 +39,7 @@ The `make` targets (e.g. `make test`, `make lint`) are wrappers around these com
 HTTP → Nginx (port 8001) → Gunicorn (port 8000) → Flask App
 ```
 
-The Flask app is created by `app/create_app.py` (factory pattern). Extensions are initialized in `app/extensions.py` (SQLAlchemy, Redis, JWT, Bcrypt, APScheduler, Flask-Mail). Three blueprints handle routing: `html` (server-rendered pages + auth), `api` (JSON REST), `friend_api` (friend operations).
+The Flask app is created by `app/create_app.py` (factory pattern). Extensions are initialized in `app/extensions.py` (SQLAlchemy, Flask-Caching, Flask-Limiter, JWT, Bcrypt, APScheduler, Flask-Mail). Three blueprints handle routing: `html` (server-rendered pages + auth), `api` (JSON REST), `friend_api` (friend operations).
 
 ### Layer Structure
 
@@ -60,7 +60,7 @@ PostgreSQL with Alembic migrations (`migrations/`). The test suite uses a dedica
 ### External Services
 
 - **TMDB API** — accessed through `app/utils/tmdb.py`. Dev routes outbound HTTP through a Squid allowlist container (`docker/squid/squid-dev.conf`) to sandbox Claude Code; prod hits the internet directly.
-- **Redis** — caching layer
+- **Valkey** (Redis-compatible) — caching layer (Flask-Caching, DB 0) and rate-limit store (Flask-Limiter, DB 1). Reached with the `redis://` scheme via the `redis` client; the compose service is still named `redis` so those URLs resolve.
 - **SMTP/MailHog** — email, async queue in DB drained by scheduler
 - **Web Push** — VAPID keys in `app/utils/webpush.py`
 
@@ -70,7 +70,7 @@ Jinja2 templates + vanilla JS + SCSS (compiled by LibSass via Flask-Assets). Ful
 
 ## Configuration
 
-`app/config.py` loads environment variables. Key env vars: `DATABASE_URL`, `REDIS_URL`, `TMDB_API_KEY`, `SECRET_KEY`, `VAPID_PRIVATE_KEY`. The config class includes a safety assertion that prevents tests from accidentally running against a non-test database.
+`app/config.py` loads environment variables. Key env vars: `DATABASE_URI`, `CACHE_REDIS_URL`, `RATELIMIT_STORAGE_URI`, `TMDB_API_KEY`, `SECRET_KEY`, `VAPID_PRIVATE_KEY`. The config class includes a safety assertion that prevents tests from accidentally running against a non-test database.
 
 ## Code Style
 

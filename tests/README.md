@@ -6,7 +6,7 @@ This directory contains tests for the CineTagIt application.
 
 ### Using Docker (Recommended)
 
-The easiest way to run the tests is using the Docker environment, which provides all the necessary dependencies (database, Redis, etc.).
+The easiest way to run the tests is using the Docker environment, which provides all the necessary dependencies (database, Valkey, etc.).
 
 ```bash
 # From the repository root

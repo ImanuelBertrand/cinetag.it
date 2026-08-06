@@ -95,11 +95,14 @@ class Config:
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", "300"))
 
-    # Rate limiting (Flask-Limiter). Redis ships alongside the app, so default
+    # Rate limiting (Flask-Limiter). Valkey ships alongside the app, so default
     # to it with no extra configuration — a shared store keeps limits consistent
     # across gunicorn workers. Uses logical DB 1 to stay isolated from the cache
     # (DB 0), so clearing the cache can't wipe rate-limit counters. An explicit
-    # RATELIMIT_STORAGE_URI overrides (e.g. "memory://" for a Redis-less run).
+    # RATELIMIT_STORAGE_URI overrides (e.g. "memory://" for a store-less run).
+    # The redis:// scheme is intentional: it selects the redis-py client, which
+    # speaks to Valkey unchanged. A valkey:// URI would require the separate
+    # valkey PyPI package.
     RATELIMIT_ENABLED = parse_bool(os.environ.get("RATELIMIT_ENABLED", "True"))
     RATELIMIT_STORAGE_URI = os.environ.get(
         "RATELIMIT_STORAGE_URI", "redis://redis:6379/1"
