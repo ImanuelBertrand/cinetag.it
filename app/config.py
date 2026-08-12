@@ -41,6 +41,8 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
+    # Read by send_email() to build a "Name <address>" From header.
+    MAIL_DEFAULT_SENDER_NAME = os.environ.get("MAIL_DEFAULT_SENDER_NAME")
     SECRET_KEY = os.environ.get("SECRET_KEY")
     SECRET_KEY_FALLBACK = os.environ.get("SECRET_KEY_FALLBACK")
     SECRET_KEY_ID = os.environ.get("SECRET_KEY_ID", "primary")
@@ -76,9 +78,21 @@ class Config:
     DEFAULT_REGION = os.environ.get("DEFAULT_REGION", "US")
     DEFAULT_LANGUAGE = os.environ.get("DEFAULT_LANGUAGE", "en")
     TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
-    SERVER_NAME = os.environ.get("SERVER_NAME")
-    APPLICATION_ROOT = os.environ.get("APPLICATION_ROOT", "/")
-    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
+    # docker-compose passes these through unconditionally (`VAR=${VAR}`), so a
+    # variable the operator never set arrives as "" rather than being absent —
+    # and os.environ.get only falls back for *absent* variables. Normalize the
+    # empty string here; every one of these is load-bearing when empty.
+    #
+    # SERVER_NAME "" makes url_for(_external=True) emit "https:///confirm-email/…"
+    # (empty host); None instead lets Flask fall back to the request host.
+    SERVER_NAME = os.environ.get("SERVER_NAME") or None
+    # APPLICATION_ROOT "" becomes the session cookie's Path, so the browser
+    # scopes it to the request's directory (RFC 6265 default-path) and drops it
+    # — flashes included — on the redirect away from /confirm-email/<token>.
+    APPLICATION_ROOT = os.environ.get("APPLICATION_ROOT") or "/"
+    # PREFERRED_URL_SCHEME "" emits schemeless "//host/…" links in the mails the
+    # scheduler sends, where there is no request context to infer a scheme from.
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") or "https"
 
     ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     APP_DIR = os.path.join(ROOT_DIR, "app")
