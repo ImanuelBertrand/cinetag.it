@@ -31,7 +31,7 @@ dependencies = [
   "pytest==9.1.1",
   "pytest-timeout==2.4.0",
   "python-dotenv==1.2.3",
-  "pywebpush==2.4.0",
+  "pywebpush==2.5.0",
   "pyyaml==6.0.3",
   "requests==2.34.2",
   "sqlalchemy==2.0.52",
