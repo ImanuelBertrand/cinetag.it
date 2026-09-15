@@ -246,7 +246,8 @@ def generate_new_tokens(
     return None, None
 
 
-def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
+def _authenticate_via_auth_token(app: Flask, endpoint: str) -> User | None:
+    current_user: User | None = None
     try:
         verify_jwt_in_request(optional=True)  # Verify JWT token (expiry, etc.)
         user_id = get_jwt_identity()
@@ -254,7 +255,7 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
             with app.app_context():  # Ensure context for DB query
                 user = db.session.get(User, user_id)
             if user:
-                g.current_user = user
+                current_user = user
             else:
                 _logger.warning("Access token identity %s not found in DB.", user_id)
     except jwt.ExpiredSignatureError:
@@ -272,19 +273,21 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str) -> None:
 
     # Migrate users only having a valid access token to the refresh token logic
     refresh_token_cookie = request.cookies.get("refresh_token_cookie")
-    if g.current_user and not refresh_token_cookie:
-        _logger.debug("Migrating user %s to refresh tokens", g.current_user)
+    if current_user and not refresh_token_cookie:
+        _logger.debug("Migrating user %s to refresh tokens", current_user)
         try:
             (
                 g.new_access_token,
                 g.new_refresh_token,
-            ) = generate_new_tokens(g.current_user.id)
+            ) = generate_new_tokens(current_user.id)
         except Exception:
             _logger.exception(
                 "Error generating tokens during refresh cookie restoration",
             )
             g.new_access_token = None
             g.new_refresh_token = None
+
+    return current_user
 
 
 def _check_refresh_csrf(refresh_token: str) -> None:
@@ -320,22 +323,22 @@ def _check_refresh_csrf(refresh_token: str) -> None:
         raise CSRFError("CSRF double submit tokens do not match")
 
 
-def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
+def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> User | None:
     refresh_token = request.cookies.get("refresh_token_cookie")
     if not refresh_token:
-        return
+        return None
 
     try:
         result = verify_refresh_token_and_get_identity(refresh_token)
         if not result:
-            return
+            return None
         refreshed_user_id, old_jti = result
 
         if not refreshed_user_id:
             _logger.warning(
                 "Refresh token deemed invalid by verification helper (e.g., revoked)."
             )
-            return
+            return None
 
         _check_refresh_csrf(refresh_token)
 
@@ -349,30 +352,34 @@ def _authenticate_via_refresh_token(app: Flask, endpoint: str) -> None:
                 refreshed_user_id,
                 endpoint,
             )
-            return
+            return None
 
         (
             g.new_access_token,
             g.new_refresh_token,
         ) = generate_new_tokens(refreshed_user_id, old_jti)
-        g.current_user = user
         _logger.debug("User %s authenticated via refresh token.", user.id)
-
     except CSRFError:
         raise
     except jwt.ExpiredSignatureError, jwt.InvalidTokenError:
         _logger.warning("Refresh token verification failed.", exc_info=True)
+    else:
+        return user
+
+    return None
 
 
-def _authenticate_as_guest_user(app: Flask, endpoint: str) -> None:
+def _authenticate_as_guest_user(app: Flask, endpoint: str) -> User | None:
     try:
         # Create temporary user within app context for DB access
         with app.app_context():
             temp_user = create_temporary_user()
         (g.new_access_token, g.new_refresh_token) = generate_new_tokens(temp_user.id)
-        g.current_user = temp_user
     except Exception:
         _logger.exception("Failed to create temporary user for endpoint %s", endpoint)
+        return None
+
+    return temp_user
 
 
 def authenticate_request(app: Flask):
@@ -413,7 +420,7 @@ def authenticate_request(app: Flask):
         # 3. Attempt Access Token Auth
         auth_token = request.cookies.get("access_token_cookie")
         if auth_token:
-            _authenticate_via_auth_token(app, endpoint or "unknown")
+            g.current_user = _authenticate_via_auth_token(app, endpoint or "unknown")
 
         if g.current_user:
             return None
@@ -421,13 +428,13 @@ def authenticate_request(app: Flask):
         # 4. Attempt Refresh Token Auth
         refresh_token = request.cookies.get("refresh_token_cookie")
         if refresh_token:
-            _authenticate_via_refresh_token(app, endpoint or "unknown")
+            g.current_user = _authenticate_via_refresh_token(app, endpoint or "unknown")
 
         if g.current_user:
             return None
 
         # 5. Handle Guest User / Unauthenticated for Protected Route
-        _authenticate_as_guest_user(app, endpoint or "unknown")
+        g.current_user = _authenticate_as_guest_user(app, endpoint or "unknown")
 
         if g.current_user:
             return None
