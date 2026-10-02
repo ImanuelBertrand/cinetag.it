@@ -373,12 +373,12 @@ def add_missing_notifications(
             )
             if scheduled_date < scheduled_at_threshold:
                 continue
-            if (user_movie.movie_id, day) not in user_notification_dict:
+            if (user_movie.movie_id, days_val) not in user_notification_dict:
                 notification = Notification(
                     user_id=channel.user_id,
                     channel_id=channel.id,
                     movie_id=user_movie.movie_id,
-                    days_in_advance=day,
+                    days_in_advance=days_val,
                     scheduled_at=scheduled_date,
                 )
                 db.session.add(notification)
