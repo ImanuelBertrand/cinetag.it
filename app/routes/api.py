@@ -608,7 +608,7 @@ def _find_and_update_subscription(
             if days_in_advance is not None:
                 channel.days_in_advance = days_in_advance
             if include_maybe_movies is not None:
-                channel.include_maybe_movies = include_maybe_movies
+                channel.include_maybe_movies = bool(include_maybe_movies)
             db.session.add(channel)
             return True
 
@@ -635,6 +635,18 @@ def update_push_settings():
             jsonify({"success": False, "error": "No settings provided to update"}),
             400,
         )
+    if days_in_advance is not None:
+        days_in_advance = _normalize_days_list(days_in_advance)
+        if days_in_advance is None:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "days_in_advance must be a list of numbers",
+                    }
+                ),
+                400,
+            )
 
     # Find the push notification channel with this endpoint
     push_channels = NotificationChannel.query.filter_by(
