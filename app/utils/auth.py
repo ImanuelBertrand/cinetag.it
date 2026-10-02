@@ -57,10 +57,15 @@ def _validate_refresh_identity_and_jti(identity, jti) -> bool:
     if not jti:
         # Ensure JTI claim exists for allowlist check
         raise jwt.InvalidTokenError("Refresh token missing 'jti' claim.")
+    try:
+        # 'sub' is a string in the JWT, but user_id is an integer column
+        user_id = int(identity)
+    except TypeError, ValueError:
+        raise jwt.InvalidTokenError("Refresh token has a non-numeric 'sub'.") from None
 
     # 2. Check server-side allowlist using the JTI
     # This requires the DB session to be active
-    if not AllowedRefreshToken.is_token_allowed(jti, identity):
+    if not AllowedRefreshToken.is_token_allowed(jti, user_id):
         _logger.warning(
             "Refresh token JTI '%s' for user %s not "
             "found in allowlist (revoked or invalid).",
@@ -253,7 +258,7 @@ def _authenticate_via_auth_token(app: Flask, endpoint: str) -> User | None:
         user_id = get_jwt_identity()
         if user_id:
             with app.app_context():  # Ensure context for DB query
-                user = db.session.get(User, user_id)
+                user = db.session.get(User, int(user_id))
             if user:
                 current_user = user
             else:
