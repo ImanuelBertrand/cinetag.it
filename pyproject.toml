@@ -27,7 +27,7 @@ dependencies = [
   "pillow==12.3.0",
   "psycopg[binary]==3.3.6",
   "py-vapid==1.9.4",
-  "pyjwt==2.15.0",
+  "pyjwt==2.15.1",
   "pytest==9.1.1",
   "pytest-timeout==2.4.0",
   "python-dotenv==1.2.3",
