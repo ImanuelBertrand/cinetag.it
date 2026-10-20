@@ -43,7 +43,7 @@ dependencies = [
 dev = [
   "ruff==0.17.0",
   "taplo==0.9.3",
-  "pre-commit==4.6.2",
+  "pre-commit==4.7.0",
   "ty==0.0.86",
   "pytest-cov==7.1.0",
 ]
