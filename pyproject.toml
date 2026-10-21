@@ -24,7 +24,7 @@ dependencies = [
   "icalendar==7.3.0",
   "libsass==0.23.0",
   "natsort==8.4.0",
-  "pillow==12.3.0",
+  "pillow==13.0.0",
   "psycopg[binary]==3.3.6",
   "py-vapid==1.9.4",
   "pyjwt==2.15.1",
