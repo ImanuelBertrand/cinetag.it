@@ -26,7 +26,7 @@ dependencies = [
   "natsort==8.4.0",
   "pillow==13.0.0",
   "psycopg[binary]==3.3.6",
-  "py-vapid==1.9.4",
+  "py-vapid==1.9.6",
   "pyjwt==2.15.1",
   "pytest==9.1.1",
   "pytest-timeout==2.4.0",
