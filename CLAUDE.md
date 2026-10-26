@@ -27,6 +27,9 @@ uv run ruff check --fix .    # Lint + autofix
 uv run ruff format .         # Autoformat
 
 uv run ty check              # Type checking
+
+uv run pre-commit run --all-files     # All pre-commit hooks (ruff, prettier, taplo)
+npx eslint app/static/js eslint.config.mjs  # Lint JS (needs `npm ci` first)
 ```
 
 The `make` targets (e.g. `make test`, `make lint`) are wrappers around these commands and require Docker — use the `uv run` equivalents directly.
@@ -75,6 +78,8 @@ Jinja2 templates + vanilla JS + SCSS (compiled by LibSass via Flask-Assets). Ful
 ## Code Style
 
 - **Python**: Ruff (line length 88). Run `make fix` before committing.
-- **JS/HTML**: Prettier with `prettier-plugin-jinja-template`.
+- **JS/HTML**: Prettier with `prettier-plugin-jinja-template`; ESLint (flat config in `eslint.config.mjs`). App scripts are classic `<script>` tags sharing the global `CineTagIt` namespace, not ES modules.
+- **TOML**: taplo formatting, enforced via pre-commit.
 - **Type checking**: `ty` (not mypy).
-- CI runs ruff → prettier → pylint → ty → pytest in sequence.
+- CI runs ruff, prettier, eslint, pre-commit, pylint, ty and pytest as parallel jobs; Docker publishing waits for all of them. pylint runs with `--exit-zero`, so it never fails the build.
+- Renovate auto-merges non-major updates of the linters CI actually runs (see `renovate.json`); pylint and the Jinja Prettier plugin are excluded.
