@@ -432,7 +432,7 @@ CineTagIt.init = function () {
 
   // Initialize registered modules
   for (const moduleName in CineTagIt.modules) {
-    if (CineTagIt.modules.hasOwnProperty(moduleName)) {
+    if (Object.hasOwn(CineTagIt.modules, moduleName)) {
       try {
         CineTagIt.modules[moduleName]();
       } catch (error) {

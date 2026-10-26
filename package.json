@@ -26,8 +26,10 @@
   },
   "homepage": "https://github.com/ImanuelBertrand/cinetag.it#readme",
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
     "prettier": "3.9.10",
     "prettier-plugin-jinja-template": "2.2.0"
   },

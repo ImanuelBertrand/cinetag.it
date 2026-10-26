@@ -1,8 +1,8 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.4
+    rev: v0.17.1
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [ --fix ]
       - id: ruff-format
   - repo: local
@@ -12,7 +12,12 @@ repos:
         entry: prettier --write --ignore-unknown --log-level warn --no-error-on-unmatched-pattern
         language: node
         additional_dependencies:
-          - prettier@3.9.5
+          - prettier@3.9.10
           - prettier-plugin-jinja-template@2.2.0
         types_or: [javascript, css, scss, html, json]
         pass_filenames: true
+      - id: taplo
+        name: taplo
+        entry: uv run taplo fmt
+        language: system
+        types: [toml]

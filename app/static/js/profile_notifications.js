@@ -293,14 +293,13 @@ CineTagIt.ProfileNotifications = {
     const addPushButton = document.getElementById("addPush");
     const cancelPushButton = document.getElementById("cancelPush");
 
-    if (Notification.permission === "granted") {
-    } else if (Notification.permission === "denied") {
+    if (Notification.permission === "denied") {
       CineTagIt.UI.displayMessage(
         "Push notifications are blocked. Please enable them in your browser settings.",
         "warning",
       );
       return;
-    } else {
+    } else if (Notification.permission !== "granted") {
       try {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {

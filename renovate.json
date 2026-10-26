@@ -17,19 +17,34 @@
       "pinDigests": true
     },
     {
-      "description": "Auto-merge non-major linter/formatter/type-checker updates once CI is green",
+      "description": "Keep the pyproject and pre-commit copies of ruff in lockstep",
+      "matchPackageNames": ["ruff", "astral-sh/ruff-pre-commit"],
+      "groupName": "ruff"
+    },
+    {
+      "description": "Keep the package.json and pre-commit copies of prettier in lockstep",
+      "matchPackageNames": ["prettier", "prettier-plugin-jinja-template"],
+      "groupName": "prettier"
+    },
+    {
+      "matchPackageNames": ["eslint", "@eslint/js", "eslint-config-prettier", "globals"],
+      "groupName": "eslint"
+    },
+    {
+      "description": "Auto-merge non-major updates of linters that CI actually runs, once CI is green. pylint is excluded because CI runs it with --exit-zero.",
       "matchPackageNames": [
         "ruff",
         "astral-sh/ruff-pre-commit",
         "ty",
-        "pylint",
         "taplo",
         "prettier",
         "prettier-plugin-jinja-template",
         "eslint",
-        "eslint-config-prettier"
+        "@eslint/js",
+        "eslint-config-prettier",
+        "globals"
       ],
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     }
   ]

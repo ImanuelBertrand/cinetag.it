@@ -1,4 +1,5 @@
 "use strict";
+/* global FullCalendar */
 
 document.addEventListener("DOMContentLoaded", function () {
   const calendarEl = document.getElementById("calendar");

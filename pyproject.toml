@@ -36,11 +36,11 @@ dependencies = [
   "requests==2.34.2",
   "sqlalchemy==2.1.5",
   "werkzeug==3.1.9",
-  "pylint==4.1.3",
 ]
 
 [dependency-groups]
 dev = [
+  "pylint==4.1.3",
   "ruff==0.17.1",
   "taplo==0.9.3",
   "pre-commit==4.7.0",
@@ -100,7 +100,7 @@ per-file-ignores = { "tests/*" = [
 ], "migrations/env.py" = [
   "ERA001",
 ], "app/models/*" = [
-  "TC003",  # SQLAlchemy resolves Mapped[T] annotations at runtime via get_type_hints()
+  "TC003", # SQLAlchemy resolves Mapped[T] annotations at runtime via get_type_hints()
 ] }
 
 [tool.ruff.format]
