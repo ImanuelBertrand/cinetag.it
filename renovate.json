@@ -8,10 +8,29 @@
     "enabled": true,
     "schedule": ["* 0-3 * * 4"]
   },
+  "pre-commit": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
       "pinDigests": true
+    },
+    {
+      "description": "Auto-merge non-major linter/formatter/type-checker updates once CI is green",
+      "matchPackageNames": [
+        "ruff",
+        "astral-sh/ruff-pre-commit",
+        "ty",
+        "pylint",
+        "taplo",
+        "prettier",
+        "prettier-plugin-jinja-template",
+        "eslint",
+        "eslint-config-prettier"
+      ],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
     }
   ]
 }
