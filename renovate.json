@@ -4,6 +4,7 @@
   "rangeStrategy": "pin",
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
+  "platformAutomerge": false,
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["* 0-3 * * 4"]
@@ -31,14 +32,13 @@
       "groupName": "eslint"
     },
     {
-      "description": "Auto-merge non-major updates of linters that CI actually runs, once CI is green. pylint is excluded because CI runs it with --exit-zero.",
+      "description": "Auto-merge non-major updates of linters that CI actually runs, once CI is green. pylint is excluded because CI runs it with --exit-zero. prettier-plugin-jinja-template is excluded because templates are prettier-ignored, so CI never loads it.",
       "matchPackageNames": [
         "ruff",
         "astral-sh/ruff-pre-commit",
         "ty",
         "taplo",
         "prettier",
-        "prettier-plugin-jinja-template",
         "eslint",
         "@eslint/js",
         "eslint-config-prettier",

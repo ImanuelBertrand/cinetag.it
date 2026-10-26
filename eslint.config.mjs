@@ -17,6 +17,7 @@ export default [
   {
     // Classic <script> tags sharing the window.CineTagIt namespace
     files: ["app/static/js/**/*.js"],
+    ignores: ["app/static/js/sw.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
@@ -25,7 +26,11 @@ export default [
   },
   {
     files: ["app/static/js/sw.js"],
-    languageOptions: { globals: { ...globals.serviceworker } },
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+      globals: { ...globals.serviceworker },
+    },
   },
   eslintConfigPrettier,
 ];
