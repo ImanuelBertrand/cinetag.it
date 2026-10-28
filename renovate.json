@@ -32,7 +32,7 @@
       "groupName": "eslint"
     },
     {
-      "description": "Auto-merge non-major updates of linters that CI actually runs, once CI is green. pylint is excluded because CI runs it with --exit-zero. prettier-plugin-jinja-template is excluded because templates are prettier-ignored, so CI never loads it.",
+      "description": "Auto-merge non-major updates of linters that CI actually runs, once CI is green. Branch automerge: Renovate pushes the branch, waits for CI and merges it without opening a PR, so there is no notification; a PR is only opened if CI fails. pylint is excluded because CI runs it with --exit-zero. prettier-plugin-jinja-template is excluded because templates are prettier-ignored, so CI never loads it.",
       "matchPackageNames": [
         "ruff",
         "astral-sh/ruff-pre-commit",
@@ -45,7 +45,8 @@
         "globals"
       ],
       "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
+      "automerge": true,
+      "automergeType": "branch"
     }
   ]
 }
