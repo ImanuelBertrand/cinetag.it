@@ -21,7 +21,7 @@ dependencies = [
   "flask-sqlalchemy==3.1.1",
   "redis==8.1.0",
   "gunicorn==27.0.1",
-  "icalendar==7.3.0",
+  "icalendar==7.3.2",
   "libsass==0.23.0",
   "natsort==8.4.0",
   "pillow==13.0.0",
